@@ -523,11 +523,16 @@ class Evaluator:
                                              self.batch_size:(step + 1) * self.batch_size]
                     batch_y = self.test_label[step *
                                               self.batch_size:(step + 1) * self.batch_size]
+                    start_inf = time.time()
                     l, acc_ = sess.run([cross_entropy, accuracy],
                                        feed_dict={x: batch_x, labels: batch_y, train_flag: False})
+                    print(time.time() - start_inf)
                     precision += acc_ / num_iter
                 retrain_log += 'retrain epoch %d: precision = %.3f, cost time %.3f\n' % (
                     ep, precision, float(time.time() - start_time))
+                if __name__ == '__main__':
+                    print('retrain epoch %d: precision = %.3f, cost time %.3f\n' % (
+                        ep, precision, float(time.time() - start_time)))
         NAS_LOG << ('eva', retrain_log)
         return float(precision)
 
@@ -601,7 +606,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     eval.set_data_size(50000)
-    eval.set_epoch(10)
+    eval.set_epoch(200)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
@@ -609,12 +614,29 @@ if __name__ == '__main__':
     # e = eval.evaluate(lenet, [], is_bestNN=True)
     # Network.pre_block.append(lenet)
 
-    graph_full = [[1, 4, 3, 5], [2, 4, 3], [3, 5], [5], [3, 5]]
-    cell_list = [Cell('conv', 24, 1, 'relu'), Cell('conv', 16, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
-                 Cell('conv', 24, 1, 'relu'), Cell('conv', 32, 1, 'relu')]
+    pre_block = []
+    graph_full = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16]]  # , [17]
+    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('pooling', 'max', 2),
+                 Cell('conv', 64, 3, 'relu'),
+                 Cell('conv', 64, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 128, 3, 'relu'),
+                 Cell('conv', 128, 3, 'relu'), Cell('conv', 128, 3, 'relu'), Cell('pooling', 'max', 2),
+                 Cell('conv', 256, 3, 'relu'), Cell('conv', 256, 3, 'relu'), Cell('conv', 256, 3, 'relu'),
+                 Cell('pooling', 'max', 2), Cell('conv', 256, 3, 'relu'), Cell('conv', 256, 3, 'relu'),
+                 Cell('conv', 256, 3, 'relu')]  # , Cell('dense', [4096, 4096, 1000], 'relu')
     network1 = NetworkItem(0, graph_full, cell_list, "")
+    pre_block.append(network1)
+    # graph_full = [[1, 4, 3, 5], [2, 4, 3], [3, 5], [5], [3, 5]]
+    # cell_list = [Cell('conv', 24, 1, 'relu'), Cell('conv', 16, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
+    #              Cell('conv', 24, 1, 'relu'), Cell('conv', 32, 1, 'relu')]
     # network2 = NetworkItem(1, graph_full, cell_list, "")
-    e = eval.evaluate(network1, [], is_bestNN=True)
+    # pre_block.append(network2)
+    # graph_full = [[1, 4, 3, 5], [2, 4, 3], [3, 5], [5], [3, 5]]
+    # cell_list = [Cell('conv', 24, 1, 'relu'), Cell('conv', 16, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
+    #              Cell('conv', 24, 1, 'relu'), Cell('conv', 32, 1, 'relu')]
+    # network3 = NetworkItem(2, graph_full, cell_list, "")
+    # pre_block.append(network3)
+    eval.retrain(pre_block)
+    # e = eval.evaluate(network1, [], is_bestNN=True)
     # eval.set_data_size(500)
     # e = eval.evaluate(network2, [network1], is_bestNN=True)
     # eval.set_epoch(2)
@@ -646,4 +668,4 @@ if __name__ == '__main__':
     # e = eval.evaluate(network3, is_bestNN=True)
     # e=eval.train(network.graph_full,cellist)
     # print(e)
-    eval.retrain()
+    # eval.retrain()

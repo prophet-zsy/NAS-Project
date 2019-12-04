@@ -22,7 +22,7 @@ MAIN_CONFIG = NAS_CONFIG['nas_main']
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
-def _subproc_eva(params, eva, gpuq):
+def _subproc_eva(params, eva, gpuq, resultq):
     ngpu = gpuq.get()
     start_time = time.time()
 
@@ -39,7 +39,8 @@ def _subproc_eva(params, eva, gpuq):
 
     # NAS_LOG << ('eva_ing', len(Network.pre_block)+1, rd, nn_id,
     #             pl_len, spl_id, bt_nm, score, time_cost, os.getpid())
-    return score, time_cost, nn_id, spl_id
+    resultq.put((score, time_cost, nn_id, spl_id))
+    # com.event.set()
 
 
 def _save_net_info(net, *args):
@@ -63,26 +64,25 @@ def _do_task(pool, cmnct, eva):
         except:
             break
         if MAIN_CONFIG['subp_eva_debug']:
-            result = _subproc_eva(task_params, eva, cmnct.idle_gpuq)
+            _subproc_eva(task_params, eva, cmnct.idle_gpuq, cmnct.result)
         else:
-            result = pool.apply_async(
+            pool.apply_async(
                 _subproc_eva,
-                (task_params, eva, cmnct.idle_gpuq))
-        cmnct.result.put(result)
+                (task_params, eva, cmnct.idle_gpuq, cmnct.result))
     # pool.close()
     # pool.join()
 
 
 def _arrange_result(cmnct, net_pl):
+    net_id_pl_for_spl = []
     while not cmnct.result.empty():
-        r_ = cmnct.result.get()
-        if MAIN_CONFIG['subp_eva_debug']:
-            score, time_cost, nn_id, spl_id = r_
-        else:
-            score, time_cost, nn_id, spl_id = r_.get()
+        score, time_cost, nn_id, spl_id = cmnct.result.get()
         NAS_LOG << ('eva_result', nn_id, spl_id, score, time_cost)
         # mark down the score
         net_pl[nn_id - 1].item_list[-spl_id].score = score
+        # pick up the network needed to spl
+        net_id_pl_for_spl.append(nn_id - 1)
+    return net_id_pl_for_spl
 
 
 def _init_ops_dup_chk(network, pred, task_num=MAIN_CONFIG['spl_network_round']):
@@ -195,40 +195,60 @@ def _pred_ops(nn, pred, graph, table):
     return graph, cell, table
 
 
-def _gpu_batch_task_inqueue(para):
+def _gpu_batch_task_inqueue(para, spl_num):
     """
 
     :param para:
     :return:
     """
     nn, com, round, nn_id, pool_len, batch_num, finetune_sign = para
+    if round == 1:
+        batch_num = spl_num
     for spl_id in range(1, batch_num + 1):
         item = nn.item_list[-spl_id]
+        if round > 1:
+            spl_id = len(nn.item_list) % spl_num if len(nn.item_list) % spl_num else spl_num
         task_param = [
-            item, Network.pre_block, round, nn_id, pool_len, spl_id, batch_num, finetune_sign
+            item, Network.pre_block, round, nn_id, pool_len, spl_id, spl_num, finetune_sign
         ]
         com.task.put(task_param)
 
 
-def _assign_task(net_pool, com, round, batch_num=MAIN_CONFIG['spl_network_round']):
+def _assign_task(net_pool, com, round, batch_num=MAIN_CONFIG['spl_network_round'],
+                 spl_num=MAIN_CONFIG['spl_network_round']):
     pool_len = len(net_pool)
     finetune_sign = True if MAIN_CONFIG['pattern'] == "Global" else \
         (pool_len < MAIN_CONFIG['finetune_threshold'])
     for nn, nn_id in zip(net_pool, range(1, pool_len+1)):
         if round > 1:
-            _gpu_batch_update_model(nn)
+            _gpu_batch_update_model(nn, batch_num)
             _gpu_batch_spl(nn, batch_num)
         para = nn, com, round, nn_id, pool_len, \
             batch_num, finetune_sign
-        _gpu_batch_task_inqueue(para)
+        _gpu_batch_task_inqueue(para, spl_num)
 
 
-def _game(eva, net_pool, com, ds, round, process_pool):
-    _assign_task(net_pool, com, round)
+def _game(eva, net_pool, com, ds, round, process_pool, batch_num=MAIN_CONFIG['spl_network_round']):
     ds.control(stage="game")
     _epoch_ctrl(eva, stage="game")
-    _do_task(process_pool, com, eva)
-    _arrange_result(com, net_pool)
+
+    cnt_for_net_pl = [batch_num for _ in range(len(net_pool))]
+    net_pl_for_spl = net_pool
+    while net_pl_for_spl and sum(cnt_for_net_pl) > batch_num:
+        _assign_task(net_pl_for_spl, com, round, batch_num=1, spl_num=batch_num)
+        _do_task(process_pool, com, eva)
+        # com.event.wait()
+        # com.event.clear()
+        while com.result.empty():
+            time.sleep(20)
+        net_ids_for_spl = _arrange_result(com, net_pool)
+        net_pl_for_spl = []
+        for id in net_ids_for_spl:
+            if cnt_for_net_pl[id] > 1:
+                cnt_for_net_pl[id] -= 1
+                net_pl_for_spl.append(net_pool[id])
+        print(net_ids_for_spl)
+        print(cnt_for_net_pl)
 
 
 def _eliminate(net_pool=None, round=0):
@@ -278,7 +298,10 @@ def _confirm_train(eva, com, best_nn, best_index, ds, process_pl):
     network_item = NetworkItem(len(best_nn.item_list)+1, tmp.graph, tmp.cell_list, tmp.code)
     ds.control(stage="confirm")
     _epoch_ctrl(eva, stage="confirm")
-    score = process_pl.apply(_subp_confirm_train, (eva, network_item, Network.pre_block, com.idle_gpuq))
+    if MAIN_CONFIG['subp_eva_debug']:
+        score = _subp_confirm_train(eva, network_item, Network.pre_block, com.idle_gpuq)
+    else:
+        score = process_pl.apply(_subp_confirm_train, (eva, network_item, Network.pre_block, com.idle_gpuq))
     network_item.score = score
     best_nn.item_list.append(network_item)
     return network_item
@@ -317,13 +340,9 @@ def _train_winner(eva, net_pl, com, ds, pro_pl, round):
     """
     NAS_LOG << "config_ops_ing"
     start_train_winner = time.time()
-    ds.control(stage="game")
-    _epoch_ctrl(eva, stage="game")
     
     if MAIN_CONFIG['pattern'] == "Block":
-        _assign_task(net_pl, com, round, batch_num=MAIN_CONFIG['num_opt_best'])
-        _do_task(pro_pl, com, eva)
-        _arrange_result(com, net_pl)
+        _game(eva, net_pl, com, ds, round, pro_pl, batch_num=MAIN_CONFIG['num_opt_best'])
     elif MAIN_CONFIG['pattern'] == "Global":
         _global_train(net_pl, com, pro_pl, eva)
     best_nn = net_pl[0]
@@ -443,7 +462,10 @@ def _subp_retrain(eva, pre_blk, gpuq):
 
 def _retrain(eva, com, process_pool):
     _epoch_ctrl(eva, stage="retrain")
-    score = process_pool.apply(_subp_retrain, (eva, Network.pre_block, com.idle_gpuq))
+    if MAIN_CONFIG['subp_eva_debug']:
+        score = _subp_retrain(eva, Network.pre_block, com.idle_gpuq)
+    else:
+        score = process_pool.apply(_subp_retrain, (eva, Network.pre_block, com.idle_gpuq))
     return score
 
 

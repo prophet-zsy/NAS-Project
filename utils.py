@@ -71,10 +71,14 @@ def _epoch_ctrl(eva=None, stage="game"):
 class Communication:
     def __init__(self):
         self.task = queue.Queue()
-        self.result = queue.Queue()
+        #  used passing the result from subprocess to parent process
+        self.result = multiprocessing.Manager().Queue()
         self.idle_gpuq = multiprocessing.Manager().Queue()
         for gpu in range(NAS_CONFIG['nas_main']['num_gpu']):
             self.idle_gpuq.put(gpu)
+        #  used for subprocess to tell parent process that there are some results to be handled
+        self.event = multiprocessing.Event()
+
 
 class Logger(object):
     def __init__(self):
@@ -83,7 +87,7 @@ class Logger(object):
         self._network_log = open(ifs.network_info_path, 'a')
         self._nas_log = open(ifs.naslog_path, 'a')
 
-        self._log_map = { # module x func -> log
+        self._log_map = {  # module x func -> log
             'nas': {
                 '_subproc_eva': self._sub_proc_log,
                 '_save_net_info': self._network_log,
