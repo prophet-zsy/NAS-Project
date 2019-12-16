@@ -50,6 +50,12 @@
 + 'pooling' items
     1. ptype (string, 'avg' or 'max' or 'global')
     2. kernel_size (int, 1 ~ 10)
++ Cell.get_format
+    > **Args**:
+    > 1. *cell_type* (string, type of cell defined in configuration)
+    >
+    > **Returns**:
+    > 1. *format* (tuple, keys order)
 
 ## info_str (abbr. ifs)
 
@@ -80,15 +86,11 @@
 >
 > You can get Nas parameter directly with its name.
 >
-> Ex. `nas_config['num_gpu']`, `nas_config['enum']['max_depth']`
-
-## Communication
-
-> No method
-
-+ task (queue.Queue)
-+ result (queue.Queue)
-+ idle_gpuq (mutilprocessing.Manager.Queue)
+> Example:
+>```python 
+> NAS_CONFIG['num_gpu']
+> NAS_CONFIG['enum']['max_depth']
+>```
 
 ## Logger
 
@@ -102,9 +104,14 @@
 >         The first value must be action.
 > Return:
 >     None
+>
 > Example:
->     NAS_LOG = Logger() # 'Nas.run' func in nas.py 
+>
+>```python
+>     NAS_LOG = Logger() # 'Nas.run' func in nas.py
 >     NAS_LOG << 'enuming'
+>```
+>
 
 + _eva_log = (string, from ifs.evalog_path)
 + _sub_proc_log = (string, from ifs.subproc_log_path)
@@ -125,8 +132,13 @@
 + spl_network_round (int, >= 1)
 + eliminate_policy (str, "best")
 + pattern (string, "Global" or "Block")
-+ add_data_per_round(int, > 0)
-+ add_data_for_winner(int, > 0 or -1(all))
++ add_data_per_round (int, > 0)
++ add_data_for_winner (int, > 0 or -1(all))
++ add_data_mode ?
++ init_data_size ?
++ data_increase_scale ?
++ add_data_for_confirm_train ?
++ repeat_search (int, >= 1)
 
 ### Method
 
@@ -137,28 +149,13 @@
     > **Returns**:
     > 1. *best_nn* (Network)
 
-## Logger
-
-> Write log or print system information.
-> Use `from utils import NAS_LOG` to get project logger
-> No attributes. Use '<<' operator to save information.
->
-> Example:
->
-> `NAS_LOG << 'enuming # 'run' in nas.py'`
->
-> `NAS_LOG << ('eva_result', nn_id, score, time_cost) # '_subproc_eva' in nas.py`
->
-> Logger saves the result from evaluator in log file (like 'memory\evaluating_log.txt') automatically.
-
 ## Enumerater
 
 ### Config
 
-<!-- TODO -->
-1. depth (int, any)
-2. width (int, any)
-3. max_depth (int, any)
+1. depth (int, any) 所枚举的网络结构的深度
+2. width (int, any) 所枚举的网络结构的支链个数
+3. max_depth (int, any) 约束支链上节点的最大个数
 
 ### Method
 
@@ -166,7 +163,7 @@
     > **Args**: None
     >
     > **Returns**:
-    > 1. *pool* (1d Network list)
+    > 1. *pool* (1d Network list) 返回由base中Network结构组成的list
 
 ## Evaluator
 
@@ -187,12 +184,10 @@
 + num_epochs_per_decay (float, ?)
 + moving_average_decay (float, 1.0 ~ 1e-5)
 + batch_size (int, <= 200)
-+ epoch (int, any) *deprecated*
 + search_epoch (int, any)
 + retrain_epoch (int, any)
 + weight_decay (float, 0 ~ 1.0)
 + momentum_rate (float, 0 ~ 1.0)
-+ repeat_search (int, >= 1)
 + model_path (string, file path)
 + dataset_path (string, file path)
 + eva_log_path (string, file path)
@@ -206,8 +201,8 @@
     > **Args**:
     > 1. *network* (NetworkItem)
     > 2. *pre_block* (1d list of NetworkItem)
-    > 2. *is_bestNN* (boolean)
-    > 3. *update_pre_weight* (boolean)
+    > 3. *is_bestNN* (boolean)
+    > 4. *update_pre_weight* (boolean)
     >
     > **Returns**:
     > 1. *Accuracy* (float, 0 ~ 1.0)
@@ -236,53 +231,57 @@
 
 ### Config
 
-+ skip_max_dist (int, 0 ~ max_depth)
-+ skip_max_num (int, 0 ~ max_depth - 1)
-+ conv_space (dict)
-  + filter_size (2d int list, value as Cell.filter_size)
-  + kernel_size (1d int list, value as Cell.kernel_size)
-  + activation (1d string list, value as Cell.activation)
-+ pool_space (dict)
-  + pooling_type (1d string list, value as Cell.pooling_type)
-  + kernel_size (1d int list, value as Cell.kernel_size)
-+ pool_switch (boolean)
++ pool_switch (int ,0 or 1) 控制搜索空间是否加入池化操作，block搜索下设置为0
++ skip_max_dist (int, 0 ~ max_depth) 最大跨层长度
++ skip_max_num (int, 0 ~ max_depth - 1) 最大跨层个数
++ space (dict, user defined) 搜索空间
 
 ### Method
 
-+ __init__
++ \_\_init\_\_
+    > Sample类初始化
+    >
     > **Args**:
-    > 1. graph_part (2d int list, as Network.graph_part)
-    > 2. block_num (int, 0 ~ any)
+    > 1. graph_part (2d int list, as Network.graph_template) 类型二维列表，是Network类的graph_template参数
+    > 2. block_num (int, 0 ~ any) 搜索空间block_num id 
     >
     > **Returns**: None
     >
 + sample
-    > **Args**: None
+    > sample方法
+    > 作用：进行一次采样
+    > **Args**: None 传入参数空
     >
-    > **Returns**:
-    > 1. *cell*: (1d Cell list)
-    > 2. *graph_full*: (2d int list, as NetworkItem.graph_full)
-    > 3. *table*: (1d int list, depending on dimension)
+    > **Returns**: 返回值三个
+    > 1. *cell*: (1d Cell list) 配置列表
+    > 2. *graph_full*: (2d int list, as NetworkItem.graph) 完整的拓扑结构(包含跨层链接) 是NetworkItem类的graph参数
+    > 3. *table*: (1d int list, depending on dimension) cell和graph_full 所对应的优化空间的code编码
 + update_model
+    > 更新模型方法
+    >
     > **Args**:
-    > 1. *table* (1d int list, depending on dimension)
-    > 2. *score* （float, 0 ~ 1.0)
+    > 1. *table* (1d int list, depending on dimension) 某一组拓扑结构和配置列表的code编码 根据优化空间定义的
+    > 2. *score* （float, 0 ~ 1.0) 评估返回后的分数
     >
     > **Returns**: None
 + ops2table
+    > 预测模块的结果转化为code编码的方法
+    >
     > **Args**
-    > 1. *ops*
+    > 1. *ops* (2d list) 预测模块传入特定的ops参数
     >
     > **Retruns**:
-    > 1. *table*: (1d int list, depending on dimension)
+    > 1. *table*: (1d int list, depending on dimension) 返回一组code编码，根据优化空间的定义
     >
 + convert
+    > code转cell_list和graph方法
+    >
     > **Args**:
-    > 1. *table*: (1d int list, depending on dimension)
+    > 1. *table*: (1d int list, depending on dimension) code编码，根据优化空间的定义
     >
     > **Returns**:
-    > 1. *cell_list*: (1d Cell list)
-    > 2. *graph_full*: (2d int list, as NetworkItem.graph_full)
+    > 1. *cell_list*: (1d Cell list) 一组配置列表
+    > 2. *graph_full*: (2d int list, as NetworkItem.graph) 一个完整的拓扑结构(包含跨层链接)
 
 ## Predictor
 
