@@ -9,7 +9,6 @@
     "eliminate_policy": "best",
     "add_data_mode": "linear",
     "add_data_per_round": 1600,
-    "add_data_for_winner": -1,
     "init_data_size": 1600,
     "data_increase_scale": 1.5,
     "add_data_for_confirm_train": -1,
