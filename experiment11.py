@@ -671,7 +671,7 @@ class Evaluator:
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     eval.set_data_size(50000)
     eval.set_epoch(200)
@@ -683,18 +683,18 @@ if __name__ == '__main__':
     # Network.pre_block.append(lenet)
     pre_block = []
     graph_full = [[1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], [3, 4, 5, 6], [4, 5, 6], [5, 6], [6]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     pre_block.append(network1)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                   [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [4, 5, 6, 7, 8, 9, 10, 11, 12], [5, 6, 7, 8, 9, 10, 11, 12],
                   [6, 7, 8, 9, 10, 11, 12], [7, 8, 9, 10, 11, 12], [8, 9, 10, 11, 12], [9, 10, 11, 12], [10, 11, 12],
                   [11, 12], [12]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6')]
     network2 = NetworkItem(1, graph_full, cell_list, "")
     pre_block.append(network2)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
@@ -713,14 +713,14 @@ if __name__ == '__main__':
                   [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
                   [16, 17, 18, 19, 20, 21, 22, 23, 24], [17, 18, 19, 20, 21, 22, 23, 24], [18, 19, 20, 21, 22, 23, 24],
                   [19, 20, 21, 22, 23, 24], [20, 21, 22, 23, 24], [21, 22, 23, 24], [22, 23, 24], [23, 24], [24]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6')]
     network3 = NetworkItem(2, graph_full, cell_list, "")
     pre_block.append(network3)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -730,12 +730,12 @@ if __name__ == '__main__':
                   [7, 8, 9, 10, 11, 12, 13, 14, 15, 16], [8, 9, 10, 11, 12, 13, 14, 15, 16],
                   [9, 10, 11, 12, 13, 14, 15, 16], [10, 11, 12, 13, 14, 15, 16], [11, 12, 13, 14, 15, 16],
                   [12, 13, 14, 15, 16], [13, 14, 15, 16], [14, 15, 16], [15, 16], [16]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'), Cell('conv', 32, 3, 'relu6'),
+                 Cell('conv', 32, 3, 'relu6')]
     network4 = NetworkItem(3, graph_full, cell_list, "")
     pre_block.append(network4)
     # pre_block = []

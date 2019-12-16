@@ -200,9 +200,10 @@ class Evaluator:
                                          initializer=tf.contrib.keras.initializers.he_normal())
                 conv = tf.nn.conv2d(
                     inputs, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = tf.get_variable(
-                'biases', hplist.filter_size, initializer=tf.constant_initializer(0.0))
-            bias = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            # biases = tf.get_variable(
+            #     'biases', hplist.filter_size, initializer=tf.constant_initializer(0.0))
+            # bias = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            bias = self._batch_norm(conv, train_flag)
             if hplist.activation == 'relu':
                 conv1 = tf.nn.relu(bias, name=scope.name)
             elif hplist.activation == 'relu6':

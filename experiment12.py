@@ -172,7 +172,7 @@ class Evaluator:
 
     def _batch_norm(self, input, train_flag):
         return tf.contrib.layers.batch_norm(input, decay=0.9, center=True, scale=True, epsilon=1e-3,
-                                            updates_collections=None, is_training=train_flag)
+                                            updates_collections=tf.GraphKeys.UPDATE_OPS, is_training=train_flag)
 
     def _makeconv(self, inputs, hplist, node, train_flag, sep=False):
         """Generates a convolutional layer according to information in hplist
@@ -185,6 +185,21 @@ class Evaluator:
         """
         # print('Evaluater:right now we are making conv layer, its node is %d, and the inputs is'%node,inputs,'and the node before it is ',cellist[node-1])
         with tf.variable_scope('conv' + str(node) + 'block' + str(self.block_num)) as scope:
+            if node<-2200:
+                bias = self._batch_norm(inputs, train_flag)
+                if hplist.activation == 'relu':
+                    conv1 = tf.nn.relu(bias, name=scope.name)
+                elif hplist.activation == 'relu6':
+                    conv1 = tf.nn.relu6(bias, name=scope.name)
+                elif hplist.activation == 'tanh':
+                    conv1 = tf.tanh(bias, name=scope.name)
+                elif hplist.activation == 'sigmoid':
+                    conv1 = tf.sigmoid(bias, name=scope.name)
+                elif hplist.activation == 'leakyrelu':
+                    conv1 = tf.nn.leaky_relu(bias, name=scope.name)
+                else:
+                    conv1 = tf.identity(bias, name=scope.name)
+                return conv1
             inputdim = inputs.shape[3]
             if sep:
                 kernel = tf.get_variable('weights', shape=[hplist.kernel_size, hplist.kernel_size, inputdim, 1],
@@ -200,9 +215,12 @@ class Evaluator:
                                          initializer=tf.contrib.keras.initializers.he_normal())
                 conv = tf.nn.conv2d(
                     inputs, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = tf.get_variable(
-                'biases', hplist.filter_size, initializer=tf.constant_initializer(0.0))
-            bias = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            if node < -1200:
+                return conv
+            # biases = tf.get_variable(
+            #     'biases', hplist.filter_size, initializer=tf.constant_initializer(0.0))
+            # bias = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            bias = self._batch_norm(conv, train_flag)
             if hplist.activation == 'relu':
                 conv1 = tf.nn.relu(bias, name=scope.name)
             elif hplist.activation == 'relu6':
@@ -293,12 +311,16 @@ class Evaluator:
             # print('Evaluater:right now we are processing node %d'%node,', ',cellist[node])
             if cellist[node].type == 'conv':
                 layer = self._makeconv(inputs[node], Cell('conv', 128, 1, 'relu'), node-1000, train_flag)
-                layer = self._makeconv(
-                    layer, cellist[node], node, train_flag)
+                layer = self._makeconv(layer, cellist[node], node, train_flag)
             elif cellist[node].type == 'pooling':
-                out_channel = inputs[node].shape[-1].value // 2
-                layer = self._makeconv(inputs[node], Cell('conv', out_channel, 1, 'relu'), node-2000, train_flag)
-                layer = self._makepool(layer, cellist[node])
+                if cellist[node].ptype == 'global':
+                    layer = tf.nn.leaky_relu(inputs[node], name="last_pool")
+                    layer = self._makepool(layer, cellist[node])
+                else:
+                    out_channel = inputs[node].shape[-1].value // 2
+                    layer = self._makeconv(inputs[node], Cell('conv', out_channel, 1, 'relu'), node-2000, train_flag)
+                    layer = self._makepool(layer, cellist[node])
+                    layer = self._makeconv(layer, Cell('conv', out_channel, 1, 'relu'), node-3000, train_flag)
             elif cellist[node].type == 'sep_conv':
                 layer = self._makeconv(
                     inputs[node], cellist[node], node, train_flag, sep=True)
@@ -368,11 +390,12 @@ class Evaluator:
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-
-        opt = tf.train.MomentumOptimizer(lr, self.momentum_rate, name='Momentum' + str(self.block_num),
-                                         use_nesterov=True)
-        grad = opt.compute_gradients(loss)
-        train_op = opt.minimize(loss, global_step=global_step)
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            opt = tf.train.MomentumOptimizer(lr, self.momentum_rate, name='Momentum' + str(self.block_num),
+                                             use_nesterov=True)
+            grad = opt.compute_gradients(loss)
+            train_op = opt.minimize(loss, global_step=global_step)
         return train_op, grad
 
     def evaluate(self, network, pre_block=[], is_bestNN=False, update_pre_weight=False):
@@ -559,7 +582,7 @@ class Evaluator:
                 if i == NAS_CONFIG['nas_main']['block_num']:
                     cell_list.append(Cell('pooling', 'global', 1))
                 else:
-                    cell_list.append(Cell('pooling', 'max', 2))
+                    cell_list.append(Cell('pooling', 'avg', 2))
                 logits = self._inference(logits, graph, cell_list, train_flag)
                 self.block_num += 1
             logits = tf.nn.dropout(logits, keep_prob=1.0)
@@ -674,7 +697,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     eval.set_data_size(50000)
-    eval.set_epoch(200)
+    eval.set_epoch(60)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
@@ -684,7 +707,7 @@ if __name__ == '__main__':
     pre_block = []
     graph_full = [[1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], [3, 4, 5, 6], [4, 5, 6], [5, 6], [6]]
     cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, '')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     pre_block.append(network1)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -694,7 +717,7 @@ if __name__ == '__main__':
     cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, '')]
     network2 = NetworkItem(1, graph_full, cell_list, "")
     pre_block.append(network2)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
@@ -720,7 +743,7 @@ if __name__ == '__main__':
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, '')]
     network3 = NetworkItem(2, graph_full, cell_list, "")
     pre_block.append(network3)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -735,7 +758,7 @@ if __name__ == '__main__':
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu')]
+                 Cell('conv', 32, 3, '')]
     network4 = NetworkItem(3, graph_full, cell_list, "")
     pre_block.append(network4)
     # pre_block = []

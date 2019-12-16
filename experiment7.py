@@ -185,6 +185,21 @@ class Evaluator:
         """
         # print('Evaluater:right now we are making conv layer, its node is %d, and the inputs is'%node,inputs,'and the node before it is ',cellist[node-1])
         with tf.variable_scope('conv' + str(node) + 'block' + str(self.block_num)) as scope:
+            if node<-2200:
+                bias = self._batch_norm(inputs, train_flag)
+                if hplist.activation == 'relu':
+                    conv1 = tf.nn.relu(bias, name=scope.name)
+                elif hplist.activation == 'relu6':
+                    conv1 = tf.nn.relu6(bias, name=scope.name)
+                elif hplist.activation == 'tanh':
+                    conv1 = tf.tanh(bias, name=scope.name)
+                elif hplist.activation == 'sigmoid':
+                    conv1 = tf.sigmoid(bias, name=scope.name)
+                elif hplist.activation == 'leakyrelu':
+                    conv1 = tf.nn.leaky_relu(bias, name=scope.name)
+                else:
+                    conv1 = tf.identity(bias, name=scope.name)
+                return conv1
             inputdim = inputs.shape[3]
             if sep:
                 kernel = tf.get_variable('weights', shape=[hplist.kernel_size, hplist.kernel_size, inputdim, 1],
@@ -200,9 +215,12 @@ class Evaluator:
                                          initializer=tf.contrib.keras.initializers.he_normal())
                 conv = tf.nn.conv2d(
                     inputs, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = tf.get_variable(
-                'biases', hplist.filter_size, initializer=tf.constant_initializer(0.0))
-            bias = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            if node < -1200:
+                return conv
+            # biases = tf.get_variable(
+            #     'biases', hplist.filter_size, initializer=tf.constant_initializer(0.0))
+            # bias = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            bias = self._batch_norm(conv, train_flag)
             if hplist.activation == 'relu':
                 conv1 = tf.nn.relu(bias, name=scope.name)
             elif hplist.activation == 'relu6':
@@ -299,6 +317,7 @@ class Evaluator:
                 out_channel = inputs[node].shape[-1].value // 2
                 layer = self._makeconv(inputs[node], Cell('conv', out_channel, 1, 'relu'), node-2000, train_flag)
                 layer = self._makepool(layer, cellist[node])
+                layer = self._makeconv(layer, Cell('conv', out_channel, 1, 'relu'), node-3000, train_flag)
             elif cellist[node].type == 'sep_conv':
                 layer = self._makeconv(
                     inputs[node], cellist[node], node, train_flag, sep=True)
@@ -559,7 +578,7 @@ class Evaluator:
                 if i == NAS_CONFIG['nas_main']['block_num']:
                     cell_list.append(Cell('pooling', 'global', 1))
                 else:
-                    cell_list.append(Cell('pooling', 'max', 2))
+                    cell_list.append(Cell('pooling', 'avg', 2))
                 logits = self._inference(logits, graph, cell_list, train_flag)
                 self.block_num += 1
             logits = tf.nn.dropout(logits, keep_prob=1.0)
@@ -671,7 +690,7 @@ class Evaluator:
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     eval.set_data_size(50000)
     eval.set_epoch(200)
@@ -683,18 +702,18 @@ if __name__ == '__main__':
     # Network.pre_block.append(lenet)
     pre_block = []
     graph_full = [[1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], [3, 4, 5, 6], [4, 5, 6], [5, 6], [6]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, '')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     pre_block.append(network1)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                   [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [4, 5, 6, 7, 8, 9, 10, 11, 12], [5, 6, 7, 8, 9, 10, 11, 12],
                   [6, 7, 8, 9, 10, 11, 12], [7, 8, 9, 10, 11, 12], [8, 9, 10, 11, 12], [9, 10, 11, 12], [10, 11, 12],
                   [11, 12], [12]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, '')]
     network2 = NetworkItem(1, graph_full, cell_list, "")
     pre_block.append(network2)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
@@ -713,14 +732,14 @@ if __name__ == '__main__':
                   [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
                   [16, 17, 18, 19, 20, 21, 22, 23, 24], [17, 18, 19, 20, 21, 22, 23, 24], [18, 19, 20, 21, 22, 23, 24],
                   [19, 20, 21, 22, 23, 24], [20, 21, 22, 23, 24], [21, 22, 23, 24], [22, 23, 24], [23, 24], [24]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, '')]
     network3 = NetworkItem(2, graph_full, cell_list, "")
     pre_block.append(network3)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -730,35 +749,35 @@ if __name__ == '__main__':
                   [7, 8, 9, 10, 11, 12, 13, 14, 15, 16], [8, 9, 10, 11, 12, 13, 14, 15, 16],
                   [9, 10, 11, 12, 13, 14, 15, 16], [10, 11, 12, 13, 14, 15, 16], [11, 12, 13, 14, 15, 16],
                   [12, 13, 14, 15, 16], [13, 14, 15, 16], [14, 15, 16], [15, 16], [16]]
-    cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu')]
+    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'),
+                 Cell('conv', 32, 3, '')]
     network4 = NetworkItem(3, graph_full, cell_list, "")
     pre_block.append(network4)
     # pre_block = []
     # graph_full = [[1, 4], [2, 3], [3], [5], [2]]
-    # cell_list = [Cell('sep_conv', 24, 3, 'relu6'), Cell('sep_conv', 24, 3, 'relu6'), Cell('sep_conv', 16, 5, 'relu6'),
-    #                Cell('sep_conv', 32, 5, 'relu6'), Cell('sep_conv', 24, 3, 'relu6')]
+    # cell_list = [Cell('sep_conv', 24, 3, 'leakyrelu6'), Cell('sep_conv', 24, 3, 'leakyrelu6'), Cell('sep_conv', 16, 5, 'leakyrelu6'),
+    #                Cell('sep_conv', 32, 5, 'leakyrelu6'), Cell('sep_conv', 24, 3, 'leakyrelu6')]
     # network1 = NetworkItem(0, graph_full, cell_list, "")
     # pre_block.append(network1)
     # graph_full = [[1, 4, 5], [2, 3], [3], [7], [3], [6, 3], [3]]
-    # cell_list = [Cell('sep_conv', 64, 5, 'relu6'), Cell('sep_conv', 64, 5, 'relu6'), Cell('sep_conv', 32, 5, 'relu6'),
-    #                Cell('sep_conv', 64, 3, 'relu6'), Cell('sep_conv', 24, 1, 'relu6'), Cell('sep_conv', 32, 1, 'relu6'),
-    #                Cell('sep_conv', 32, 5, 'relu6')]
+    # cell_list = [Cell('sep_conv', 64, 5, 'leakyrelu6'), Cell('sep_conv', 64, 5, 'leakyrelu6'), Cell('sep_conv', 32, 5, 'leakyrelu6'),
+    #                Cell('sep_conv', 64, 3, 'leakyrelu6'), Cell('sep_conv', 24, 1, 'leakyrelu6'), Cell('sep_conv', 32, 1, 'leakyrelu6'),
+    #                Cell('sep_conv', 32, 5, 'leakyrelu6')]
     # network2 = NetworkItem(1, graph_full, cell_list, "")
     # pre_block.append(network2)
     # graph_full = [[1, 4, 5], [2, 3], [3], [6], [3], [3]]
-    # cell_list = [Cell('sep_conv', 96, 1, 'relu6'), Cell('sep_conv', 96, 3, 'relu6'), Cell('sep_conv', 64, 1, 'relu6'),
-    #                Cell('sep_conv', 96, 5, 'relu6'), Cell('sep_conv', 32, 5, 'relu6'), Cell('sep_conv', 96, 3, 'relu6')]
+    # cell_list = [Cell('sep_conv', 96, 1, 'leakyrelu6'), Cell('sep_conv', 96, 3, 'leakyrelu6'), Cell('sep_conv', 64, 1, 'leakyrelu6'),
+    #                Cell('sep_conv', 96, 5, 'leakyrelu6'), Cell('sep_conv', 32, 5, 'leakyrelu6'), Cell('sep_conv', 96, 3, 'leakyrelu6')]
     # network3 = NetworkItem(2, graph_full, cell_list, "")
     # pre_block.append(network3)
     # graph_full = [[1, 4, 5, 2, 6], [2, 3], [3], [7], [3], [6, 3], [3]]
-    # cell_list = [Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 128, 1, 'relu6'), Cell('sep_conv', 64, 1, 'relu6'),
-    #              Cell('sep_conv', 128, 3, 'relu6'), Cell('sep_conv', 64, 3, 'relu6'), Cell('sep_conv', 128, 3, 'relu6'),
-    #              Cell('sep_conv', 128, 1, 'relu6')]
+    # cell_list = [Cell('sep_conv', 128, 5, 'leakyrelu6'), Cell('sep_conv', 128, 1, 'leakyrelu6'), Cell('sep_conv', 64, 1, 'leakyrelu6'),
+    #              Cell('sep_conv', 128, 3, 'leakyrelu6'), Cell('sep_conv', 64, 3, 'leakyrelu6'), Cell('sep_conv', 128, 3, 'leakyrelu6'),
+    #              Cell('sep_conv', 128, 1, 'leakyrelu6')]
     # network4 = NetworkItem(3, graph_full, cell_list, "")
     # pre_block.append(network4)
     # e = eval.evaluate(network1, [], is_bestNN=True)
@@ -770,20 +789,20 @@ if __name__ == '__main__':
     # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
     #       4, 5, 6, 8], [5, 7], [6, 7, 9, 10], [7, 9], [8], [9, 10], [10]]))
     # graph_full = [[1], [2], [3], []]
-    # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
+    # cell_list = [Cell('conv', 64, 5, 'leakyrelu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'leakyrelu'),
     #              Cell('pooling', 'max', 3)]
     # cell_list = [cell_list]
     # e=eval.evaluate(graph_full,cell_list[-1])#,is_bestNN=True)
     # print(e)
-    # cellist=[('conv', 128, 1, 'relu'), ('conv', 32, 1, 'relu'), ('conv', 256, 1, 'relu'), ('pooling', 'max', 2), ('pooling', 'global', 3), ('conv', 32, 1, 'relu')]
-    # cellist=[('pooling', 'global', 2), ('pooling', 'max', 3), ('conv', 21, 32, 'leakyrelu'), ('conv', 16, 32, 'leakyrelu'), ('pooling', 'max', 3), ('conv', 16, 32, 'leakyrelu')]
+    # cellist=[('conv', 128, 1, 'leakyrelu'), ('conv', 32, 1, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('pooling', 'max', 2), ('pooling', 'global', 3), ('conv', 32, 1, 'leakyrelu')]
+    # cellist=[('pooling', 'global', 2), ('pooling', 'max', 3), ('conv', 21, 32, 'leakyleakyrelu'), ('conv', 16, 32, 'leakyleakyrelu'), ('pooling', 'max', 3), ('conv', 16, 32, 'leakyleakyrelu')]
     # graph_part = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], []]
-    # cell_list = [('conv', 64, 3, 'relu'), ('conv', 64, 3, 'relu'), ('pooling', 'max', 2), ('conv', 128, 3, 'relu'),
-    #              ('conv', 128, 3, 'relu'), ('pooling', 'max', 2), ('conv', 256, 3, 'relu'),
-    #              ('conv', 256, 3, 'relu'), ('conv', 256, 3, 'relu'), ('pooling', 'max', 2),
-    #              ('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'),
-    #              ('pooling', 'max', 2), ('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'),
-    #              ('conv', 512, 3, 'relu'), ('dense', [4096, 4096, 1000], 'relu')]
+    # cell_list = [('conv', 64, 3, 'leakyrelu'), ('conv', 64, 3, 'leakyrelu'), ('pooling', 'max', 2), ('conv', 128, 3, 'leakyrelu'),
+    #              ('conv', 128, 3, 'leakyrelu'), ('pooling', 'max', 2), ('conv', 256, 3, 'leakyrelu'),
+    #              ('conv', 256, 3, 'leakyrelu'), ('conv', 256, 3, 'leakyrelu'), ('pooling', 'max', 2),
+    #              ('conv', 512, 3, 'leakyrelu'), ('conv', 512, 3, 'leakyrelu'), ('conv', 512, 3, 'leakyrelu'),
+    #              ('pooling', 'max', 2), ('conv', 512, 3, 'leakyrelu'), ('conv', 512, 3, 'leakyrelu'),
+    #              ('conv', 512, 3, 'leakyrelu'), ('dense', [4096, 4096, 1000], 'leakyrelu')]
     # pre_block = [network]
     # Network.pre_block.append(network1)
     # network2 = NetworkItem(1, graph_full, cell_list, "")

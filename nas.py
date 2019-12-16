@@ -368,7 +368,7 @@ def _train_winner(eva, net_pl, com, ds, pro_pl, round):
 
     if MAIN_CONFIG['pattern'] == "Block":
         _assign_task(net_pl, com, round, batch_num=MAIN_CONFIG['num_gpu'], block_winner=True)
-        com.net_pool = net_pl;
+        com.net_pool = net_pl
         com.round = round
         com.tw_count = NAS_CONFIG['nas_main']['num_opt_best'] - NAS_CONFIG['nas_main']['num_gpu']
         _do_task(pro_pl, com, eva)
