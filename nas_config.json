@@ -1,7 +1,7 @@
 {
   "nas_main": {
     "pattern": "Block",
-    "num_gpu": 2,
+    "num_gpu": 1,
     "block_num": 2,
     "num_opt_best":2,
     "finetune_threshold": 5,
@@ -36,9 +36,9 @@
     "learning_rate_decay_factor": 0.1,
     "moving_average_decay": 0.98,
     "batch_size": 50,
-    "search_epoch": 16,
-    "confirm_epoch": 64,
-    "retrain_epoch": 300,
+    "search_epoch": 2,
+    "confirm_epoch": 3,
+    "retrain_epoch": 4,
     "weight_decay": 0.0003,
     "momentum_rate": 0.9,
     "model_path": "model",

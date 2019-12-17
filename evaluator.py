@@ -11,7 +11,7 @@ import tensorflow as tf
 from base import Cell, NetworkItem
 from info_str import NAS_CONFIG
 from utils import NAS_LOG
-from data import cifar10
+# from data import cifar10
 
 
 class DataSet:
@@ -22,7 +22,7 @@ class DataSet:
         self.NUM_EXAMPLES_FOR_TRAIN = 40000
         self.NUM_EXAMPLES_FOR_EVAL = 10000
         self.task = "cifar-10"
-        self.data_path = '/home/amax/Desktop'
+        self.data_path = 'data'
         return
 
     def inputs(self):
