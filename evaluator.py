@@ -22,7 +22,7 @@ class DataSet:
         self.NUM_EXAMPLES_FOR_TRAIN = 40000
         self.NUM_EXAMPLES_FOR_EVAL = 10000
         self.task = "cifar-10"
-        self.data_path = 'data'
+        self.data_path = './data'
         return
 
     def inputs(self):
