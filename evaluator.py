@@ -3,6 +3,7 @@ import pickle
 import random
 import sys
 import time
+import copy
 
 import numpy as np
 import tensorflow as tf

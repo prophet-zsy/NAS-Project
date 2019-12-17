@@ -7,6 +7,7 @@
     "finetune_threshold": 5,
     "spl_network_round": 3,
     "eliminate_policy": "best",
+    "repeat_search": 1,
     "add_data_mode": "linear",
     "add_data_per_round": 1600,
     "init_data_size": 1600,

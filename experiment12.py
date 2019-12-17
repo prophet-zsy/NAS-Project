@@ -694,10 +694,10 @@ class Evaluator:
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     eval.set_data_size(50000)
-    eval.set_epoch(60)
+    eval.set_epoch(200)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
@@ -707,7 +707,7 @@ if __name__ == '__main__':
     pre_block = []
     graph_full = [[1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], [3, 4, 5, 6], [4, 5, 6], [5, 6], [6]]
     cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, '')]
+                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'identity')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     pre_block.append(network1)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -717,7 +717,7 @@ if __name__ == '__main__':
     cell_list = [Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, '')]
+                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'identity')]
     network2 = NetworkItem(1, graph_full, cell_list, "")
     pre_block.append(network2)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
@@ -743,7 +743,7 @@ if __name__ == '__main__':
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, '')]
+                 Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'identity')]
     network3 = NetworkItem(2, graph_full, cell_list, "")
     pre_block.append(network3)
     graph_full = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
@@ -758,7 +758,7 @@ if __name__ == '__main__':
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 32, 3, 'relu'),
-                 Cell('conv', 32, 3, '')]
+                 Cell('conv', 32, 3, 'identity')]
     network4 = NetworkItem(3, graph_full, cell_list, "")
     pre_block.append(network4)
     # pre_block = []
