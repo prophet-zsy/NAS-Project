@@ -286,13 +286,13 @@ class Evaluator:
         Returns:
             tensor.
         """
-        if hplist.ptype == 'avg':
+        if hplist.pooling_type == 'avg':
             return tf.nn.avg_pool(inputs, ksize=[1, hplist.kernel_size, hplist.kernel_size, 1],
                                   strides=[1, hplist.kernel_size, hplist.kernel_size, 1], padding='SAME')
-        elif hplist.ptype == 'max':
+        elif hplist.pooling_type == 'max':
             return tf.nn.max_pool(inputs, ksize=[1, hplist.kernel_size, hplist.kernel_size, 1],
                                   strides=[1, hplist.kernel_size, hplist.kernel_size, 1], padding='SAME')
-        elif hplist.ptype == 'global':
+        elif hplist.pooling_type == 'global':
             return tf.reduce_mean(inputs, [1, 2], keep_dims=True)
 
     def _makedense(self, inputs, hplist):
@@ -368,7 +368,7 @@ class Evaluator:
             logits = self._inference(block_input, graph_full, cell_list, train_flag)
 
             logits = tf.nn.dropout(logits, keep_prob=1.0)
-            logits = self._makedense(logits, ('', [self.NUM_CLASSES], ''))
+            logits = self._makedense(logits, ('', [256, self.NUM_CLASSES], 'relu'))
 
             precision, saver, log = self._eval(sess, data_x, data_y, logits, train_flag)
             self.log += log
@@ -553,7 +553,7 @@ class Evaluator:
         return loss
 
     def _train_op(self, global_step, loss):
-        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step)
+        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, self.epoch)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
@@ -569,8 +569,9 @@ class Evaluator:
         return 1, params.total_parameters
 
     def _cal_multi_target(self, precision, time):
-        flops, model_size = self._stats_graph()
-        return precision + 1 / time + 1 / flops + 1 / model_size
+        # flops, model_size = self._stats_graph()
+        return precision
+        # return precision + 1 / time + 1 / flops + 1 / model_size
 
     def set_data_size(self, num):
         if num > self.NUM_EXAMPLES_FOR_TRAIN or num < 0:
@@ -588,8 +589,8 @@ class Evaluator:
 if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
-    eval.set_data_size(5000)
-    eval.set_epoch(1)
+    eval.set_data_size(50000)
+    eval.set_epoch(6)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
@@ -597,18 +598,23 @@ if __name__ == '__main__':
     # e = eval.evaluate(lenet, [], is_bestNN=True)
     # Network.pre_block.append(lenet)
 
-    graph_full = [[1, 3], [2, 3], [3], [4]]
-    cell_list = [Cell('conv', 24, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu')]
+    graph_full = [[1, 3, 2], [2, 4], [4], [2, 4]]
+    cell_list = [Cell('conv', 32, 1, 'relu'), Cell('conv', 48, 5, 'relu6'), Cell('sep_conv', 32, 3, 'relu6'),
+                 Cell('conv', 48, 5, 'relu6')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
-    network2 = NetworkItem(1, graph_full, cell_list, "")
-    e = eval.evaluate(network1, is_bestNN=True)
-    print(e)
-    eval.set_data_size(500)
-    e = eval.evaluate(network2, [network1], is_bestNN=True)
-    print(e)
-    eval.set_epoch(2)
-    print(eval.retrain([network1, network2]))
+
+    # network2 = NetworkItem(1, graph_full, cell_list, "")
+    graph_full = [[1, 2], [2, 3], [3]]
+    cell_list = [Cell('sep_conv', 48, 3, 'relu'), Cell('sep_conv', 128, 3, 'relu6'), Cell('conv', 64, 1, 'relu6')]
+    network3 = NetworkItem(3, graph_full, cell_list, "")
+    # network4 = NetworkItem(4, graph_full, cell_list, "")
+    # e = eval.evaluate(network1, is_bestNN=True)
+    # print(e)
+    # eval.set_data_size(500)
+    # e = eval.evaluate(network2, [network1], is_bestNN=True)
+    # print(e)
+    # eval.set_epoch(2)
+    print(eval.retrain([network1, network3]))
     # eval.add_data(5000)
     # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
     #       4, 5, 6, 8], [5, 7], [6, 7, 9, 10], [7, 9], [8], [9, 10], [10]]))
@@ -630,4 +636,4 @@ if __name__ == '__main__':
     # e = eval.evaluate(network3, is_bestNN=True)
     # e=eval.train(network.graph_full,cellist)
     # print(e)
-    eval.retrain(pre_block)
+    # eval.retrain(pre_block)
