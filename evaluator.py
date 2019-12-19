@@ -590,23 +590,23 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     eval.set_data_size(50000)
-    eval.set_epoch(6)
+    eval.set_epoch(200)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
     # lenet = NetworkItem(0, graph_full, cell_list, "")
     # e = eval.evaluate(lenet, [], is_bestNN=True)
     # Network.pre_block.append(lenet)
+    graph_full = [[1, 5, 2, 4, 7], [2, 3, 4], [3, 4, 7], [4, 7], [7], [6, 4, 7], [4, 7]]
+    cell_list = [('conv', 32, 3, 'relu'), ('sep_conv', 32, 3, 'relu6'), ('conv', 16, 5, 'leakyrelu'),
+                 ('conv', 32, 5, 'relu'), ('conv', 32, 1, 'leakyrelu'), ('conv', 32, 3, 'relu'),
+                 ('sep_conv', 32, 1, 'relu')]
 
-    graph_full = [[1, 3, 2], [2, 4], [4], [2, 4]]
-    cell_list = [Cell('conv', 32, 1, 'relu'), Cell('conv', 48, 5, 'relu6'), Cell('sep_conv', 32, 3, 'relu6'),
-                 Cell('conv', 48, 5, 'relu6')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
 
     # network2 = NetworkItem(1, graph_full, cell_list, "")
-    graph_full = [[1, 2], [2, 3], [3]]
-    cell_list = [Cell('sep_conv', 48, 3, 'relu'), Cell('sep_conv', 128, 3, 'relu6'), Cell('conv', 64, 1, 'relu6')]
-    network3 = NetworkItem(3, graph_full, cell_list, "")
+
+    # network3 = NetworkItem(3, graph_full, cell_list, "")
     # network4 = NetworkItem(4, graph_full, cell_list, "")
     # e = eval.evaluate(network1, is_bestNN=True)
     # print(e)
@@ -614,7 +614,7 @@ if __name__ == '__main__':
     # e = eval.evaluate(network2, [network1], is_bestNN=True)
     # print(e)
     # eval.set_epoch(2)
-    print(eval.retrain([network1, network3]))
+    print(eval.retrain([network1, network1, network1, network1]))
     # eval.add_data(5000)
     # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
     #       4, 5, 6, 8], [5, 7], [6, 7, 9, 10], [7, 9], [8], [9, 10], [10]]))
