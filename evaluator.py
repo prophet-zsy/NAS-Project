@@ -242,13 +242,13 @@ class Evaluator:
                 'weights', shape=[hplist.kernel_size, hplist.kernel_size, inputdim, 1])
             pfilter = self._get_variable(
                 'pointwise_filter', [1, 1, inputdim, hplist.filter_size])
+            inputs = self._activation_layer(hplist.activation, inputs, scope)
             conv = tf.nn.separable_conv2d(
                 inputs, kernel, pfilter, strides=[1, 1, 1, 1], padding='SAME')
             biases = self._get_variable('biases', hplist.filter_size)
             bn = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
-            conv_layer = self._activation_layer(hplist.activation, bn, scope)
 
-        return conv_layer
+        return bn
 
     def _batch_norm(self, input, train_flag):
         return tf.contrib.layers.batch_norm(input, decay=0.9, center=True, scale=True, epsilon=1e-3,
