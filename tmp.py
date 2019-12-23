@@ -489,12 +489,12 @@ class Evaluator:
                 batch_y = self.train_label[step *
                                            self.batch_size:(step + 1) * self.batch_size]
                 batch_x = DataSet().process(batch_x)
-                _, loss_value, ce_value, l2_value, acc = sess.run([train_op, loss, ce, l2, accuracy],
+                _, Gstep, loss_value, ce_value, l2_value, acc = sess.run([train_op, global_step, loss, ce, l2, accuracy],
                                               feed_dict={data_x: batch_x, labels: batch_y, train_flag: True})
                 train_loss += loss_value
                 if np.isnan(loss_value):
                     return [-1], saver, log
-                sys.stdout.write("\r>> train %d/%d loss %.4f ce %.4f l2 %.4f acc %.4f" % (step, max_steps, loss_value, ce_value, l2_value, acc))
+                sys.stdout.write("\r>> train %d/%d step %d loss %.4f ce %.4f l2 %.4f acc %.4f" % (step, max_steps, Gstep, loss_value, ce_value, l2_value, acc))
             sys.stdout.write("\n")
             train_loss /= max_steps
 
@@ -505,11 +505,11 @@ class Evaluator:
                                     self.batch_size:(step + 1) * self.batch_size]
                 batch_y = test_label[step *
                                      self.batch_size:(step + 1) * self.batch_size]
-                l, ce_value, l2_value, acc_ = sess.run([loss, ce, l2, accuracy],
+                Gstep, l, ce_value, l2_value, acc_ = sess.run([global_step, loss, ce, l2, accuracy],
                                                        feed_dict={data_x: batch_x, labels: batch_y, train_flag: False})
                 precision[ep] += acc_ / num_iter
                 test_loss += l
-                sys.stdout.write("\r>> valid %d/%d loss %.4f ce %.4f l2 %.4f acc %.4f" % (step, num_iter, l, ce_value, l2_value, acc_))
+                sys.stdout.write("\r>> valid %d/%d step %d loss %.4f ce %.4f l2 %.4f acc %.4f" % (step, num_iter, Gstep, l, ce_value, l2_value, acc_))
             sys.stdout.write("\n")
             test_loss /= num_iter
 
@@ -564,7 +564,7 @@ class Evaluator:
     def _train_op(self, global_step, loss):
         num_batches_per_epoch = self.train_num / self.batch_size
         decay_steps = int(num_batches_per_epoch * self.epoch)
-        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, decay_steps)
+        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, decay_steps, 0.0001)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
