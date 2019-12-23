@@ -7,7 +7,7 @@
     "finetune_threshold": 5,
     "spl_network_round": 2,
     "eliminate_policy": "best",
-    "repeat_search": 1,
+    "repeat_search": 2,
     "add_data_mode": "linear",
     "add_data_per_round": 100,
     "init_data_size": 1600,
@@ -26,8 +26,8 @@
   },
   "eva": {
     "search_epoch": 6,
-    "confirm_epoch": 3,
-    "retrain_epoch": 4,
+    "confirm_epoch": 7,
+    "retrain_epoch": 8,
     "model_path": "model"
   },
   "opt": {

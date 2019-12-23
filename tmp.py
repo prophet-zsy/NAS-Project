@@ -23,7 +23,7 @@ class DataSet:
         self.NUM_EXAMPLES_FOR_TRAIN = 40000
         self.NUM_EXAMPLES_FOR_EVAL = 10000
         self.task = "cifar-10"
-        self.data_path = './data'
+        self.data_path = 'data'
         return
 
     def inputs(self):
@@ -243,13 +243,13 @@ class Evaluator:
                 'weights', shape=[hplist.kernel_size, hplist.kernel_size, inputdim, 1])
             pfilter = self._get_variable(
                 'pointwise_filter', [1, 1, inputdim, hplist.filter_size])
-            inputs = self._activation_layer(hplist.activation, inputs, scope)
             conv = tf.nn.separable_conv2d(
                 inputs, kernel, pfilter, strides=[1, 1, 1, 1], padding='SAME')
             biases = self._get_variable('biases', hplist.filter_size)
             bn = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            conv_layer = self._activation_layer(hplist.activation, bn, scope)
 
-        return bn
+        return conv_layer
 
     def _batch_norm(self, input, train_flag):
         return tf.contrib.layers.batch_norm(input, decay=0.9, center=True, scale=True, epsilon=1e-3,
@@ -365,7 +365,7 @@ class Evaluator:
             logits = self._inference(block_input, graph_full, cell_list, train_flag)
 
             logits = tf.nn.dropout(logits, keep_prob=1.0)
-            logits = self._makedense(logits, ('', [256, self.NUM_CLASSES], 'relu'))
+            logits = self._makedense(logits, ('', [self.NUM_CLASSES], ''))
 
             precision, saver, log = self._eval(sess, data_x, data_y, logits, train_flag)
             self.log += log
@@ -374,7 +374,7 @@ class Evaluator:
                 saver.save(sess, os.path.join(
                     self.model_path, 'model' + str(network.id)))
 
-        NAS_LOG << ('eva', self.log)
+        print(self.log)
         return precision
 
     def retrain(self, pre_block):
@@ -409,7 +409,7 @@ class Evaluator:
         precision, _, log = self._eval(sess, data_x, labels, logits, train_flag, retrain=True)
         retrain_log += log
 
-        NAS_LOG << ('eva', retrain_log)
+        print(retrain_log)
         return float(precision)
 
     def _get_input(self, sess, pre_block, update_pre_weight=False):
@@ -454,7 +454,7 @@ class Evaluator:
         global_step = tf.Variable(
             0, trainable=False, name='global_step' + str(self.block_num))
         accuracy = self._cal_accuracy(logits, labels)
-        loss = self._loss(labels, logits)
+        loss, ce, l2 = self._loss(labels, logits)
         train_op = self._train_op(global_step, loss)
 
         saver = tf.train.Saver(tf.global_variables())
@@ -482,30 +482,36 @@ class Evaluator:
             # print("epoch", ep, ":")
             # train step
             start_time = time.time()
+            train_loss = 0
             for step in range(max_steps):
                 batch_x = self.train_data[step *
                                           self.batch_size:(step + 1) * self.batch_size]
                 batch_y = self.train_label[step *
                                            self.batch_size:(step + 1) * self.batch_size]
                 batch_x = DataSet().process(batch_x)
-                _, loss_value, acc = sess.run([train_op, loss, accuracy],
+                _, loss_value, ce_value, l2_value, acc = sess.run([train_op, loss, ce, l2, accuracy],
                                               feed_dict={data_x: batch_x, labels: batch_y, train_flag: True})
+                train_loss += loss_value
                 if np.isnan(loss_value):
                     return [-1], saver, log
-            #     sys.stdout.write("\r>> train %d/%d loss %.4f acc %.4f" % (step, max_steps, loss_value, acc))
-            # sys.stdout.write("\n")
+                sys.stdout.write("\r>> train %d/%d loss %.4f ce %.4f l2 %.4f acc %.4f" % (step, max_steps, loss_value, ce_value, l2_value, acc))
+            sys.stdout.write("\n")
+            train_loss /= max_steps
 
             # evaluation step
+            test_loss = 0
             for step in range(num_iter):
                 batch_x = test_data[step *
                                     self.batch_size:(step + 1) * self.batch_size]
                 batch_y = test_label[step *
                                      self.batch_size:(step + 1) * self.batch_size]
-                l, acc_ = sess.run([loss, accuracy],
-                                   feed_dict={data_x: batch_x, labels: batch_y, train_flag: False})
+                l, ce_value, l2_value, acc_ = sess.run([loss, ce, l2, accuracy],
+                                                       feed_dict={data_x: batch_x, labels: batch_y, train_flag: False})
                 precision[ep] += acc_ / num_iter
-            #     sys.stdout.write("\r>> valid %d/%d loss %.4f acc %.4f" % (step, num_iter, l, acc_))
-            # sys.stdout.write("\n")
+                test_loss += l
+                sys.stdout.write("\r>> valid %d/%d loss %.4f ce %.4f l2 %.4f acc %.4f" % (step, num_iter, l, ce_value, l2_value, acc_))
+            sys.stdout.write("\n")
+            test_loss /= num_iter
 
             # early stop
             if ep > 5 and not retrain:
@@ -518,10 +524,10 @@ class Evaluator:
                     break
 
             cost_time += (float(time.time() - start_time)) / self.epoch
-            log += 'epoch %d: precision = %.3f, cost time %.3f\n' % (
-                ep, precision[ep], float(time.time() - start_time))
-            # print('precision = %.3f, cost time %.3f' %
-            #       (precision[ep], float(time.time() - start_time)))
+            log += 'epoch %d: precision = %.3f, train_loss = %.3f, test_loss = %.3f, cost time %.3f\n' % (
+                    ep, precision[ep], train_loss, test_loss, float(time.time() - start_time))
+            print('epoch %d: precision = %.3f, train_loss = %.3f, test_loss = %.3f, cost time %.3f\n' % (
+                    ep, precision[ep], train_loss, test_loss, float(time.time() - start_time)))
 
         # target = self._cal_multi_target(precision[-1], cost_time)
         return precision[-1], saver, log
@@ -551,11 +557,14 @@ class Evaluator:
         cross_entropy = tf.reduce_mean(
             tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits))
         l2 = tf.add_n([tf.nn.l2_loss(var) for var in tf.trainable_variables()])
+        print([var for var in tf.trainable_variables()])
         loss = cross_entropy + l2 * self.weight_decay
-        return loss
+        return loss, cross_entropy, l2
 
     def _train_op(self, global_step, loss):
-        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, self.epoch)
+        num_batches_per_epoch = self.train_num / self.batch_size
+        decay_steps = int(num_batches_per_epoch * self.epoch)
+        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, decay_steps)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
@@ -571,9 +580,8 @@ class Evaluator:
         return flops.total_float_ops, params.total_parameters
 
     def _cal_multi_target(self, precision, time):
-        # flops, model_size = self._stats_graph()
-        return precision
-        # return precision + 1 / time + 1 / flops + 1 / model_size
+        flops, model_size = self._stats_graph()
+        return precision + 1 / time + 1 / flops + 1 / model_size
 
     def set_data_size(self, num):
         if num > self.NUM_EXAMPLES_FOR_TRAIN or num < 0:
@@ -589,9 +597,9 @@ class Evaluator:
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
-    eval.set_data_size(50000)
+    eval.set_data_size(10000)
     eval.set_epoch(10)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
@@ -599,18 +607,18 @@ if __name__ == '__main__':
     # lenet = NetworkItem(0, graph_full, cell_list, "")
     # e = eval.evaluate(lenet, [], is_bestNN=True)
     # Network.pre_block.append(lenet)
-    graph_full = [[1, 2], [2, 3], [3]]
-    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('sep_conv', 32, 1, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu')]
+
+    graph_full = [[1, 3], [2, 3], [3], [4]]
+    cell_list = [Cell('conv', 24, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
+                 Cell('conv', 32, 3, 'relu')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
-    graph_full = [[1, 3], [2, 3], [3]]
-    cell_list = [Cell('sep_conv', 128, 3, 'leakyrelu'), Cell('conv', 64, 1, 'relu6'), Cell('sep_conv', 48, 5, 'leakyrelu')]
     network2 = NetworkItem(1, graph_full, cell_list, "")
-    # e = eval.evaluate(network1, is_bestNN=True)
-    # print(e)
-    # eval.set_data_size(10000)
-    # e = eval.evaluate(network2, [network1], is_bestNN=True)
-    # print(e)
-    # eval.set_epoch(5)
+    e = eval.evaluate(network1, is_bestNN=True)
+    print(e)
+    eval.set_data_size(10000)
+    e = eval.evaluate(network2, [network1], is_bestNN=True)
+    print(e)
+    eval.set_epoch(5)
     print(eval.retrain([network1, network2]))
     # eval.add_data(5000)
     # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
