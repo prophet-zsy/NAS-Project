@@ -12,7 +12,7 @@ from tensorflow.python.client import timeline
 from base import Cell, NetworkItem
 from info_str import NAS_CONFIG
 from utils import NAS_LOG
-from data import cifar10
+# from data import cifar10
 
 
 class DataSet:
@@ -23,7 +23,7 @@ class DataSet:
         self.NUM_EXAMPLES_FOR_TRAIN = 40000
         self.NUM_EXAMPLES_FOR_EVAL = 10000
         self.task = "cifar-10"
-        self.data_path = '/home/amax/Desktop'
+        self.data_path = 'data'
         return
 
     def inputs(self):
@@ -286,13 +286,13 @@ class Evaluator:
         Returns:
             tensor.
         """
-        if hplist.ptype == 'avg':
+        if hplist.pooling_type == 'avg':
             return tf.nn.avg_pool(inputs, ksize=[1, hplist.kernel_size, hplist.kernel_size, 1],
                                   strides=[1, hplist.kernel_size, hplist.kernel_size, 1], padding='SAME')
-        elif hplist.ptype == 'max':
+        elif hplist.pooling_type == 'max':
             return tf.nn.max_pool(inputs, ksize=[1, hplist.kernel_size, hplist.kernel_size, 1],
                                   strides=[1, hplist.kernel_size, hplist.kernel_size, 1], padding='SAME')
-        elif hplist.ptype == 'global':
+        elif hplist.pooling_type == 'global':
             return tf.reduce_mean(inputs, [1, 2], keep_dims=True)
 
     def _makedense(self, inputs, hplist):
@@ -555,7 +555,7 @@ class Evaluator:
     def _train_op(self, global_step, loss):
         num_batches_per_epoch = self.train_num / self.batch_size
         decay_steps = int(num_batches_per_epoch * self.epoch)
-        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, decay_steps, 0.0001)
+        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, decay_steps)
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
