@@ -8,7 +8,7 @@
     "spl_network_round": 2,
     "eliminate_policy": "best",
     "add_data_mode": "linear",
-    "add_data_per_round": 100,
+    "add_data_per_round": 1000,
     "init_data_size": 1600,
     "data_increase_scale": 1.5,
     "add_data_for_confirm_train": 100,
@@ -20,7 +20,7 @@
   },
   "enum":{
     "depth": 3,
-    "width": 1,
+    "width": 3,
     "max_depth": 2,
     "enum_debug": 0
   },

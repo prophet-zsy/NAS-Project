@@ -17,12 +17,12 @@ from utils import NAS_LOG
 
 class DataSet:
 
-    def __init__(self, image_size=32, num_class=10):
+    def __init__(self, image_size=32, num_class=100):
         self.IMAGE_SIZE = image_size
         self.NUM_CLASSES = num_class
         self.NUM_EXAMPLES_FOR_TRAIN = 40000
         self.NUM_EXAMPLES_FOR_EVAL = 10000
-        self.task = "cifar-10"
+        self.task = "cifar-100"
         self.data_path = 'data'
         return
 
@@ -128,7 +128,7 @@ class DataSet:
 class Evaluator:
     def __init__(self):
         image_size = 32
-        num_class = 10
+        num_class = 100
         self.data_set = DataSet(image_size, num_class)
         # don't change the parameters below
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
