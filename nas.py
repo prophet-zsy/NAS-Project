@@ -533,3 +533,5 @@ if __name__ == '__main__':
     pool = Pool(processes=MAIN_CONFIG["num_gpu"])
     nas = Nas(pool)
     nas.run()
+    pool.close()
+    pool.join()
