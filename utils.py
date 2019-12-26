@@ -81,9 +81,8 @@ class Communication:
             self.idle_gpuq.put(gpu)
 
     def wake_up_train_winner(self, res):
-        print("train_winner wake up")
         score, time_cost, nn_id, spl_id = res
-        print("nn_id spl_id item_list_length", nn_id, spl_id, len(self.net_pool[nn_id - 1].item_list))
+        # print("nn_id spl_id item_list_length", nn_id, spl_id, len(self.net_pool[nn_id - 1].item_list))
         self.net_pool[nn_id - 1].item_list[spl_id - 1].score = score
         self.net_pool[nn_id - 1].spl.update_opt_model(self.net_pool[nn_id - 1].item_list[spl_id - 1].code,
                                                       -self.net_pool[nn_id - 1].item_list[spl_id - 1].score)
@@ -93,7 +92,6 @@ class Communication:
             cell, graph, table = self.net_pool[nn_id - 1].spl.sample()
             if table not in self.tables:
                 self.tables.append(table)
-                print("sample success", cnt)
                 break
             cnt += 1
         if self.tw_count > 0:
@@ -104,7 +102,6 @@ class Communication:
                 NAS_CONFIG['nas_main']['spl_network_round'] * (self.round - 1) + NAS_CONFIG['nas_main']['num_opt_best'],
                 True, True
             ]
-            print("train winner new task put")
             self.task.put(task_param)
         self.tw_count -= 1
 
