@@ -5,10 +5,10 @@
     "block_num": 3,
     "num_opt_best":12,
     "finetune_threshold": 5,
-    "spl_network_round": 2,
+    "spl_network_round": 3,
     "eliminate_policy": "best",
     "add_data_mode": "linear",
-    "add_data_per_round": 800,
+    "add_data_per_round": 1600,
     "init_data_size": 1600,
     "data_increase_scale": 1.5,
     "add_data_for_confirm_train": -1,
@@ -19,15 +19,15 @@
     "ops_debug": 0
   },
   "enum":{
-    "depth": 5,
+    "depth": 4,
     "width": 2,
     "max_depth": 2,
     "enum_debug": 0
   },
   "eva": {
-    "search_epoch": 16,
-    "confirm_epoch": 10,
-    "retrain_epoch": 40
+    "search_epoch": 8,
+    "confirm_epoch": 16,
+    "retrain_epoch": 200
   },
   "opt": {
       "sample_size": 3,
