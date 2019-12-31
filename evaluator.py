@@ -508,14 +508,15 @@ class Evaluator:
             # sys.stdout.write("\n")
 
             # early stop
-            if ep > 5 and not retrain:
-                if precision[ep] < 1.2 / DataSet().NUM_CLASSES:
-                    precision = [-1]
-                    break
-                if 2 * precision[ep] - precision[ep - 5] - precision[ep - 1] < 0.001 / DataSet().NUM_CLASSES:
-                    precision = precision[:ep]
-                    log += 'early stop at %d epoch\n' % ep
-                    break
+            # if ep > 5 and not retrain:
+                # if precision[ep] < 1.2 / DataSet().NUM_CLASSES:
+                #     print("early stop")
+                #     precision = [-1]
+                #     break
+                # if 2 * precision[ep] - precision[ep - 5] - precision[ep - 1] < 0.001 / DataSet().NUM_CLASSES:
+                #     precision = precision[:ep]
+                #     log += 'early stop at %d epoch\n' % ep
+                #     break
 
             cost_time += (float(time.time() - start_time)) / self.epoch
             log += 'epoch %d: precision = %.3f, cost time %.3f\n' % (ep, precision[ep], float(time.time() - start_time))
@@ -599,9 +600,9 @@ if __name__ == '__main__':
     # e = eval.evaluate(lenet, [], is_bestNN=True)
     # Network.pre_block.append(lenet)
 
-    graph_full = [[1, 3], [2, 3], [3], [4]]
-    cell_list = [Cell('conv', 24, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu')]
+    graph_full = [[1, 2], [2, 4], [3, 4], [4, 5], [5]]
+    cell_list = [Cell('sep_conv', 48, 1, 'leakyrelu'), Cell('sep_conv', 32, 1, 'leakyrelu'),
+                 Cell('sep_conv', 32, 1, 'relu6'), Cell('conv', 48, 3, 'relu6'), Cell('conv', 32, 3, 'relu')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     network2 = NetworkItem(1, graph_full, cell_list, "")
     e = eval.evaluate(network1, is_bestNN=True)

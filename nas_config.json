@@ -2,13 +2,13 @@
   "nas_main": {
     "pattern": "Block",
     "num_gpu": 2,
-    "block_num": 4,
+    "block_num": 3,
     "num_opt_best":12,
     "finetune_threshold": 5,
-    "spl_network_round": 3,
+    "spl_network_round": 2,
     "eliminate_policy": "best",
     "add_data_mode": "linear",
-    "add_data_per_round": 1600,
+    "add_data_per_round": 800,
     "init_data_size": 1600,
     "data_increase_scale": 1.5,
     "add_data_for_confirm_train": -1,
@@ -19,43 +19,15 @@
     "ops_debug": 0
   },
   "enum":{
-    "depth": 3,
-    "width": 1,
+    "depth": 5,
+    "width": 2,
     "max_depth": 2,
     "enum_debug": 0
   },
   "eva": {
-    "task_name": "cifar-100",
-    "image_size": 32,
-    "num_classes": 100,
-    "num_examples_for_train": 40000,
-    "num_examples_per_epoch_for_eval": 10000,
-    "regularaztion_rate": 0.001,
-    "initial_learning_rate": 0.025,
-    "num_epochs_per_decay": 80.0,
-    "learning_rate_decay_factor": 0.1,
-    "moving_average_decay": 0.98,
-    "batch_size": 50,
     "search_epoch": 16,
-    "confirm_epoch": 64,
-    "retrain_epoch": 200,
-    "weight_decay": 0.0003,
-    "momentum_rate": 0.9,
-    "model_path": "model",
-    "dataset_path": "data",
-    "eva_log_path": "",
-    "retrain_switch": 0,
-    "learning_rate_type": "cos",
-    "boundaries": [
-      0,
-      80,
-      120
-    ],
-    "learing_rate": [
-      0.1,
-      0.01,
-      0.001
-    ]
+    "confirm_epoch": 10,
+    "retrain_epoch": 40
   },
   "opt": {
       "sample_size": 3,

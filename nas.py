@@ -331,12 +331,12 @@ def _confirm_train(eva, com, best_nn, best_index, ds, process_pl):
 def _rm_other_model(network_item):
     if MAIN_CONFIG['eva_debug']:
         return
-    models = os.listdir(NAS_CONFIG['eva']['model_path'])
+    models = os.listdir('model')
     NAS_LOG << ("model_save", str(network_item.id))
     models = [model for model in models
               if not re.search("model" + str(network_item.id), model)]
     for model in models:
-        os.remove(os.path.join(NAS_CONFIG['eva']['model_path'], model))
+        os.remove(os.path.join('model', model))
 
 
 def _global_train(net_pl, com, pro_pl, eva_winner):
@@ -368,7 +368,7 @@ def _train_winner(eva, net_pl, com, ds, pro_pl, round):
 
     if MAIN_CONFIG['pattern'] == "Block":
         _assign_task(net_pl, com, round, batch_num=MAIN_CONFIG['num_gpu'], block_winner=True)
-        com.net_pool = net_pl;
+        com.net_pool = net_pl
         com.round = round
         com.tw_count = NAS_CONFIG['nas_main']['num_opt_best'] - NAS_CONFIG['nas_main']['num_gpu']
         _do_task(pro_pl, com, eva)
@@ -530,7 +530,7 @@ class Nas:
 
 
 if __name__ == '__main__':
-    pool = Pool(processes=MAIN_CONFIG["num_gpu"])
+    pool = Pool(processes=MAIN_CONFIG["num_gpu"], maxtasksperchild=1)
     nas = Nas(pool)
     nas.run()
     pool.close()
