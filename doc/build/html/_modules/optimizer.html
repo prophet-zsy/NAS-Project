@@ -1,0 +1,1245 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>optimizer &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for optimizer</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">RACOS is an algorithm for solving derivative-free non-convex optimization problems</span>
+<span class="sd">In this class, there are three RACOS methods aimed for continuous, discrete and mixed optimization</span>
+
+<span class="sd">Author:</span>
+<span class="sd">    Yi-Qi Hu</span>
+
+<span class="sd">Time:</span>
+<span class="sd">    2016.6.13</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd"> This program is free software; you can redistribute it and/or</span>
+<span class="sd"> modify it under the terms of the GNU General Public License</span>
+<span class="sd"> as published by the Free Software Foundation; either version 2</span>
+<span class="sd"> of the License, or (at your option) any later version.</span>
+
+<span class="sd"> This program is distributed in the hope that it will be useful,</span>
+<span class="sd"> but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="sd"> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="sd"> GNU General Public License for more details.</span>
+
+<span class="sd"> You should have received a copy of the GNU General Public License</span>
+<span class="sd"> along with this program; if not, write to the Free Software</span>
+<span class="sd"> Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.</span>
+
+<span class="sd"> Copyright (C) 2015 Nanjing University, Nanjing, China</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="time_formulate"><a class="viewcode-back" href="../optimizer.html#optimizer.time_formulate">[docs]</a><span class="k">def</span> <span class="nf">time_formulate</span><span class="p">(</span><span class="n">start_t</span><span class="p">,</span> <span class="n">end_t</span><span class="p">):</span>
+    <span class="n">time_l</span> <span class="o">=</span> <span class="n">end_t</span> <span class="o">-</span> <span class="n">start_t</span>
+    <span class="k">if</span> <span class="n">time_l</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># print &#39;time error!&#39;</span>
+        <span class="n">hour</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">minute</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">second</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">hour</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_l</span> <span class="o">/</span> <span class="mi">3600</span><span class="p">)</span>
+        <span class="n">time_l</span> <span class="o">=</span> <span class="n">time_l</span> <span class="o">-</span> <span class="n">hour</span><span class="o">*</span><span class="mi">3600</span>
+        <span class="n">minute</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time_l</span> <span class="o">/</span> <span class="mi">60</span><span class="p">)</span>
+        <span class="n">second</span> <span class="o">=</span> <span class="n">time_l</span> <span class="o">-</span> <span class="n">minute</span><span class="o">*</span><span class="mi">60</span>
+    <span class="k">return</span> <span class="n">hour</span><span class="p">,</span> <span class="n">minute</span><span class="p">,</span> <span class="n">second</span></div>
+
+
+<span class="c1"># Instance class, each sample is an instance</span>
+<div class="viewcode-block" id="Instance"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance">[docs]</a><span class="k">class</span> <span class="nc">Instance</span><span class="p">:</span>
+
+    <span class="n">__feature</span> <span class="o">=</span> <span class="p">[]</span>        <span class="c1"># feature value in each dimension</span>
+    <span class="n">__fitness</span> <span class="o">=</span> <span class="mi">0</span>         <span class="c1"># fitness of objective function under those features</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__fitness</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span> <span class="o">=</span> <span class="n">dim</span>
+
+    <span class="c1"># return feature value in index-th dimension</span>
+<div class="viewcode-block" id="Instance.get_feature"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.get_feature">[docs]</a>    <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div>
+
+    <span class="c1"># return features of all dimensions</span>
+<div class="viewcode-block" id="Instance.get_features"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.get_features">[docs]</a>    <span class="k">def</span> <span class="nf">get_features</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span></div>
+
+    <span class="c1"># set feature value in index-th dimension</span>
+<div class="viewcode-block" id="Instance.set_feature"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.set_feature">[docs]</a>    <span class="k">def</span> <span class="nf">set_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span></div>
+
+    <span class="c1"># set features of all dimension</span>
+<div class="viewcode-block" id="Instance.set_features"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.set_features">[docs]</a>    <span class="k">def</span> <span class="nf">set_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span> <span class="o">=</span> <span class="n">v</span></div>
+
+    <span class="c1"># return fitness under those features</span>
+<div class="viewcode-block" id="Instance.get_fitness"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.get_fitness">[docs]</a>    <span class="k">def</span> <span class="nf">get_fitness</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fitness</span></div>
+
+    <span class="c1"># set fitness</span>
+<div class="viewcode-block" id="Instance.set_fitness"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.set_fitness">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fit</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__fitness</span> <span class="o">=</span> <span class="n">fit</span></div>
+
+    <span class="c1">#</span>
+<div class="viewcode-block" id="Instance.equal"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.equal">[docs]</a>    <span class="k">def</span> <span class="nf">equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">__feature</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">ins</span><span class="o">.</span><span class="n">__feature</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+    <span class="c1"># copy this instance</span>
+<div class="viewcode-block" id="Instance.copy_instance"><a class="viewcode-back" href="../optimizer.html#optimizer.Instance.copy_instance">[docs]</a>    <span class="k">def</span> <span class="nf">copy_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">copy</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">)):</span>
+            <span class="n">copy</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__feature</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">copy</span><span class="o">.</span><span class="n">set_fitness</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fitness</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">copy</span></div></div>
+
+    <span class="c1">#def show_instance(self):</span>
+        <span class="c1"># print &#39;func-v:&#39;, self.__fitness, &#39; - &#39;, self.__feature</span>
+
+<span class="c1"># Dimension class</span>
+<span class="c1"># dimension message</span>
+<div class="viewcode-block" id="Dimension"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension">[docs]</a><span class="k">class</span> <span class="nc">Dimension</span><span class="p">:</span>
+
+    <span class="n">__size</span> <span class="o">=</span> <span class="mi">0</span>       <span class="c1"># dimension size</span>
+    <span class="n">__region</span> <span class="o">=</span> <span class="p">[]</span>    <span class="c1"># lower and upper bound in each dimension</span>
+    <span class="n">__type</span> <span class="o">=</span> <span class="p">[]</span>      <span class="c1"># the type of each dimension, 0 is float, 1 is integer, 2 is categorical</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="Dimension.set_dimension_size"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.set_dimension_size">[docs]</a>    <span class="k">def</span> <span class="nf">set_dimension_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__size</span> <span class="o">=</span> <span class="n">s</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__type</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+            <span class="n">ori_reg</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ori_reg</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__type</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># set index-th dimension region</span>
+<div class="viewcode-block" id="Dimension.set_region"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.set_region">[docs]</a>    <span class="k">def</span> <span class="nf">set_region</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">reg</span><span class="p">,</span> <span class="n">ty</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">reg</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">reg</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__type</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">ty</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Dimension.set_regions"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.set_regions">[docs]</a>    <span class="k">def</span> <span class="nf">set_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regs</span><span class="p">,</span> <span class="n">tys</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__size</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">regs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">regs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__type</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tys</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Dimension.get_size"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.get_size">[docs]</a>    <span class="k">def</span> <span class="nf">get_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__size</span></div>
+
+<div class="viewcode-block" id="Dimension.get_region"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.get_region">[docs]</a>    <span class="k">def</span> <span class="nf">get_region</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Dimension.get_regions"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.get_regions">[docs]</a>    <span class="k">def</span> <span class="nf">get_regions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span></div>
+
+<div class="viewcode-block" id="Dimension.get_type"><a class="viewcode-back" href="../optimizer.html#optimizer.Dimension.get_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__type</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div></div>
+
+
+<span class="c1"># used for generating number randomly</span>
+<div class="viewcode-block" id="RandomOperator"><a class="viewcode-back" href="../optimizer.html#optimizer.RandomOperator">[docs]</a><span class="k">class</span> <span class="nc">RandomOperator</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="RandomOperator.get_uniform_integer"><a class="viewcode-back" href="../optimizer.html#optimizer.RandomOperator.get_uniform_integer">[docs]</a>    <span class="k">def</span> <span class="nf">get_uniform_integer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RandomOperator.get_uniform_double"><a class="viewcode-back" href="../optimizer.html#optimizer.RandomOperator.get_uniform_double">[docs]</a>    <span class="k">def</span> <span class="nf">get_uniform_double</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RacosOptimization"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization">[docs]</a><span class="k">class</span> <span class="nc">RacosOptimization</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span> <span class="o">=</span> <span class="p">[]</span>                     <span class="c1"># population set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span> <span class="o">=</span> <span class="p">[]</span>                 <span class="c1"># positive sample set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># the best sample so far</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span> <span class="o">=</span> <span class="p">[]</span>                  <span class="c1"># the region of model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__label</span> <span class="o">=</span> <span class="p">[]</span>                   <span class="c1"># the random label, if true random in this dimension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">=</span> <span class="mi">0</span>              <span class="c1"># the instance size of sampling in an iteration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__budget</span> <span class="o">=</span> <span class="mi">0</span>                   <span class="c1"># budget of evaluation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">=</span> <span class="mi">0</span>             <span class="c1"># positive sample set size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span> <span class="o">=</span> <span class="mf">0.0</span>       <span class="c1"># the probability of sampling in model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__uncertain_bit</span> <span class="o">=</span> <span class="mi">0</span>            <span class="c1"># the dimension size of sampling randomly</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span> <span class="o">=</span> <span class="n">dimension</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># sampling saving</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span> <span class="o">=</span> <span class="p">[]</span>               <span class="c1"># positive sample used to modeling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span> <span class="o">=</span> <span class="p">[]</span>            <span class="c1"># negative set used to modeling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span> <span class="o">=</span> <span class="p">[]</span>                 <span class="c1"># new sample</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span> <span class="o">=</span> <span class="p">[]</span>            <span class="c1"># the label of each sample</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="n">region</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span> <span class="o">=</span> <span class="n">RandomOperator</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="c1"># --------------------------------------------------</span>
+    <span class="c1"># debugging</span>
+    <span class="c1"># print positive set</span>
+    <span class="c1"># def show_pos_pop(self):</span>
+    <span class="c1">#     print &#39;positive set:------------------&#39;</span>
+    <span class="c1">#     for i in range(self.__positive_num):</span>
+    <span class="c1">#         self.__pos_pop[i].show_instance()</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#     return</span>
+
+    <span class="c1"># # print negative set</span>
+    <span class="c1"># def show_pop(self):</span>
+    <span class="c1">#     print &#39;negative set:------------------&#39;</span>
+    <span class="c1">#     for i in range(self.__sample_size):</span>
+    <span class="c1">#         self.__pop[i].show_instance()</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#     return</span>
+
+    <span class="c1"># # print optimal</span>
+    <span class="c1"># def show_optimal(self):</span>
+    <span class="c1">#     print &#39;optimal:-----------------------&#39;</span>
+    <span class="c1">#     self.__optimal.show_instance()</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+
+    <span class="c1"># # print region</span>
+    <span class="c1"># def show_region(self):</span>
+    <span class="c1">#     print &#39;region:------------------------&#39;</span>
+    <span class="c1">#     for i in range(self.__dimension.get_size()):</span>
+    <span class="c1">#         print &#39;dimension &#39;, i, &#39; [&#39;, self.__region[i][0], &#39;,&#39;, self.__region[i][1], &#39;]&#39;</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#     return</span>
+
+    <span class="c1"># # print label</span>
+    <span class="c1"># def show_label(self):</span>
+    <span class="c1">#     print &#39;label:-------------------------&#39;</span>
+    <span class="c1">#     print self.__label</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+
+    <span class="c1"># --------------------------------------------------</span>
+
+    <span class="c1"># clear sampling log</span>
+<div class="viewcode-block" id="RacosOptimization.log_clear"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.log_clear">[docs]</a>    <span class="k">def</span> <span class="nf">log_clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># get log</span>
+<div class="viewcode-block" id="RacosOptimization.get_log"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.get_log">[docs]</a>    <span class="k">def</span> <span class="nf">get_log</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span></div>
+
+    <span class="c1"># generate environment that should be logged</span>
+    <span class="c1"># return is 2-d list</span>
+<div class="viewcode-block" id="RacosOptimization.generate_environment"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.generate_environment">[docs]</a>    <span class="k">def</span> <span class="nf">generate_environment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">,</span> <span class="n">new_ins</span><span class="p">):</span>
+
+        <span class="n">trajectory</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">array_best</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">())):</span>
+                <span class="n">array_best</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">new_sam</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">())):</span>
+                <span class="n">new_sam</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">sorted_neg</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">):</span>
+                <span class="n">trajectory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sorted_neg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_features</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">array_best</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">,</span> <span class="n">new_sam</span></div>
+
+    <span class="c1"># clear parameters of saving</span>
+<div class="viewcode-block" id="RacosOptimization.clear"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># parameters setting</span>
+<div class="viewcode-block" id="RacosOptimization.set_parameters"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.set_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">set_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ss</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bud</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">pn</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rp</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ub</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">=</span> <span class="n">ss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__budget</span> <span class="o">=</span> <span class="n">bud</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">=</span> <span class="n">pn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span> <span class="o">=</span> <span class="n">rp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__uncertain_bit</span> <span class="o">=</span> <span class="n">ub</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># get optimal</span>
+<div class="viewcode-block" id="RacosOptimization.get_optimal"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.get_optimal">[docs]</a>    <span class="k">def</span> <span class="nf">get_optimal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span></div>
+
+    <span class="c1"># generate an instance randomly</span>
+<div class="viewcode-block" id="RacosOptimization.random_instance"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.random_instance">[docs]</a>    <span class="k">def</span> <span class="nf">random_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dim</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">ins</span></div>
+
+    <span class="c1"># generate an instance based on a positive sample</span>
+<div class="viewcode-block" id="RacosOptimization.pos_random_instance"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.pos_random_instance">[docs]</a>    <span class="k">def</span> <span class="nf">pos_random_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">pos_instance</span><span class="p">):</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dim</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">pos_instance</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">ins</span></div>
+
+    <span class="c1"># reset model</span>
+<div class="viewcode-block" id="RacosOptimization.reset_model"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.reset_model">[docs]</a>    <span class="k">def</span> <span class="nf">reset_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># if an instance exists in a list, return true</span>
+<div class="viewcode-block" id="RacosOptimization.instance_in_list"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.instance_in_list">[docs]</a>    <span class="k">def</span> <span class="nf">instance_in_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">,</span> <span class="n">this_list</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">this_list</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">end</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">this_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+    <span class="c1"># initialize pop, pos_pop, optimal</span>
+<div class="viewcode-block" id="RacosOptimization.initialize"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+
+        <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+
+        <span class="c1"># sample in original region under uniform distribution</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">):</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="n">ins</span><span class="o">.</span><span class="n">set_fitness</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()))</span>
+            <span class="n">temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+
+        <span class="c1"># sorted by fitness</span>
+        <span class="n">temp</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">())</span>
+
+        <span class="c1"># initialize pos_pop</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="c1"># initialize pop</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">+</span> <span class="n">i</span><span class="p">])</span>
+
+        <span class="c1"># initialize optimal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_instance</span><span class="p">()</span>
+
+        <span class="k">return</span></div>
+
+    <span class="c1"># distinguish function for mixed optimization</span>
+<div class="viewcode-block" id="RacosOptimization.distinguish"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.distinguish">[docs]</a>    <span class="k">def</span> <span class="nf">distinguish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exa</span><span class="p">,</span> <span class="n">neg_set</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">):</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">():</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">and</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">!=</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">):</span>
+                        <span class="k">break</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+    <span class="c1"># update positive set and negative set using a new sample by online strategy</span>
+<div class="viewcode-block" id="RacosOptimization.online_update"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.online_update">[docs]</a>    <span class="k">def</span> <span class="nf">online_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">):</span>
+
+        <span class="c1"># update positive set</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">ins</span>
+            <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">k</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span>
+
+        <span class="c1"># update negative set</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">:</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">ins</span>
+            <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span>
+
+        <span class="k">return</span></div>
+
+    <span class="c1"># update optimal</span>
+<div class="viewcode-block" id="RacosOptimization.update_optimal"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.update_optimal">[docs]</a>    <span class="k">def</span> <span class="nf">update_optimal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_instance</span><span class="p">()</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># generate instance randomly based on positive sample for mixed optimization</span>
+<div class="viewcode-block" id="RacosOptimization.pos_random_mix_isntance"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.pos_random_mix_isntance">[docs]</a>    <span class="k">def</span> <span class="nf">pos_random_mix_isntance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exa</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># float random</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="c1"># integer random</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="c1"># categorical random</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                                                     <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">ins</span></div>
+
+    <span class="c1"># generate model based on mixed optimization for next sampling</span>
+    <span class="c1"># label[i] = false means this dimension should be set as the value in same dimension of positive sample</span>
+<div class="viewcode-block" id="RacosOptimization.shrink_model"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.shrink_model">[docs]</a>    <span class="k">def</span> <span class="nf">shrink_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exa</span><span class="p">,</span> <span class="n">neg_set</span><span class="p">):</span>
+
+        <span class="n">dist_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">chosen_dim</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">non_chosen_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">())]</span>
+
+        <span class="n">remain_neg</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">)]</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+
+            <span class="n">dist_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">temp_dim</span> <span class="o">=</span> <span class="n">non_chosen_dim</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_chosen_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+            <span class="n">chosen_neg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># float dimension shrink</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">):</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">),</span>
+                                                          <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">),</span>
+                                                          <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="n">r_i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">r_i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> \
+                            <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="n">remain_neg</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">r_i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># integer dimension shrink</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">):</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">),</span>
+                                                           <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                           <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">chosen_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                    <span class="n">non_chosen_dim</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">r_i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">r_i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> \
+                                    <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="n">remain_neg</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">r_i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># categorical</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">chosen_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                <span class="n">non_chosen_dim</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">r_i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">r_i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">):</span>
+                        <span class="n">remain_neg</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">r_i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_chosen_dim</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__uncertain_bit</span><span class="p">:</span>
+            <span class="n">temp_dim</span> <span class="o">=</span> <span class="n">non_chosen_dim</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_chosen_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+            <span class="n">chosen_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+            <span class="n">non_chosen_dim</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">dist_count</span></div>
+
+    <span class="c1"># sequential Racos for mixed optimization</span>
+    <span class="c1"># the dimension type includes float, integer and categorical</span>
+<div class="viewcode-block" id="RacosOptimization.mix_opt"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.mix_opt">[docs]</a>    <span class="k">def</span> <span class="nf">mix_opt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj_fct</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ss</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">bud</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">pn</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rp</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">ub</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+
+        <span class="n">sample_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">all_dist_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># initialize sample set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_parameters</span><span class="p">(</span><span class="n">ss</span><span class="o">=</span><span class="n">ss</span><span class="p">,</span> <span class="n">bud</span><span class="o">=</span><span class="n">bud</span><span class="p">,</span> <span class="n">pn</span><span class="o">=</span><span class="n">pn</span><span class="p">,</span> <span class="n">rp</span><span class="o">=</span><span class="n">rp</span><span class="p">,</span> <span class="n">ub</span><span class="o">=</span><span class="n">ub</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">obj_fct</span><span class="p">)</span>
+
+        <span class="c1"># ------------------------------------------------------</span>
+        <span class="c1"># print &#39;after initialization------------&#39;</span>
+        <span class="c1"># self.show_pos_pop()</span>
+        <span class="c1"># self.show_pop()</span>
+        <span class="c1"># ------------------------------------------------------</span>
+
+        <span class="c1"># optimization</span>
+        <span class="n">budget_c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span>
+        <span class="k">while</span> <span class="n">budget_c</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__budget</span><span class="p">:</span>
+            <span class="n">budget_c</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># if budget_c % 1 == 0:</span>
+                <span class="c1"># print &#39;======================================================&#39;</span>
+                <span class="c1"># print &#39;budget &#39;, budget_c, &#39;:&#39;, self.__optimal.get_fitness()</span>
+                <span class="c1"># self.__optimal.show_instance()</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+                <span class="n">chosen_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">model_sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">model_sample</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span><span class="p">:</span>
+                    <span class="n">dc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">)</span>
+                    <span class="n">all_dist_count</span> <span class="o">+=</span> <span class="n">dc</span>
+
+                <span class="c1"># -----------------------------------------------------------</span>
+                <span class="c1"># self.show_region()</span>
+                <span class="c1"># self.show_label()</span>
+                <span class="c1"># -----------------------------------------------------------</span>
+
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_random_mix_isntance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+
+                <span class="n">sample_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">):</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_fitness</span><span class="p">(</span><span class="n">obj_fct</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()))</span>
+
+                    <span class="c1"># logging</span>
+                    <span class="n">model_instance</span><span class="p">,</span> <span class="n">neg_set</span><span class="p">,</span> <span class="n">new_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_environment</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="n">ins</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model_instance</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">neg_set</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_instance</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="c1"># ------------------------------------------------------</span>
+                    <span class="c1"># print &#39;new sample:-------------------&#39;</span>
+                    <span class="c1"># ins.show_instance()</span>
+                    <span class="c1"># print &#39;------------------------------&#39;</span>
+                    <span class="c1"># ------------------------------------------------------</span>
+
+                    <span class="k">break</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">online_update</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+
+            <span class="c1"># ------------------------------------------------------</span>
+            <span class="c1"># print &#39;after updating------------&#39;</span>
+            <span class="c1"># self.show_pos_pop()</span>
+            <span class="c1"># self.show_pop()</span>
+            <span class="c1"># ------------------------------------------------------</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_optimal</span><span class="p">()</span>
+        <span class="c1"># print &#39;average sample times of each sample:&#39;, float(sample_count) / self.__budget</span>
+        <span class="c1"># print &#39;average shrink times of each sample:&#39;, float(all_dist_count) / sample_count</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="RacosOptimization.sample"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.sample">[docs]</a>    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="c1"># initialization step</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="c1"># optimization step</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+                <span class="n">chosen_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">model_sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">model_sample</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span><span class="p">:</span>
+                    <span class="n">dc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">)</span>
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_random_mix_isntance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">):</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()</span></div>
+
+    <span class="c1"># x is a list, f_x is the evaluation value of x</span>
+<div class="viewcode-block" id="RacosOptimization.update_model"><a class="viewcode-back" href="../optimizer.html#optimizer.RacosOptimization.update_model">[docs]</a>    <span class="k">def</span> <span class="nf">update_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">f_x</span><span class="p">):</span>
+
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">)</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">set_features</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">set_fitness</span><span class="p">(</span><span class="n">f_x</span><span class="p">)</span>
+
+        <span class="c1"># initialization update</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+        <span class="c1"># optimization update</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">online_update</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_optimal</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># initialization process</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_instance</span><span class="p">()</span>
+
+        <span class="k">return</span></div></div>
+
+
+<div class="viewcode-block" id="Optimizer"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer">[docs]</a><span class="k">class</span> <span class="nc">Optimizer</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span> <span class="n">ls</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span> <span class="o">=</span> <span class="p">[]</span>                     <span class="c1"># population set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span> <span class="o">=</span> <span class="p">[]</span>                 <span class="c1"># positive sample set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># the best sample so far</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span> <span class="o">=</span> <span class="p">[]</span>                  <span class="c1"># the region of model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__label</span> <span class="o">=</span> <span class="p">[]</span>                   <span class="c1"># the random label, if true random in this dimension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">=</span> <span class="mi">0</span>              <span class="c1"># the instance size of sampling in an iteration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__budget</span> <span class="o">=</span> <span class="mi">0</span>                   <span class="c1"># budget of evaluation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">=</span> <span class="mi">0</span>             <span class="c1"># positive sample set size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span> <span class="o">=</span> <span class="mf">0.0</span>       <span class="c1"># the probability of sampling in model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__uncertain_bit</span> <span class="o">=</span> <span class="mi">0</span>            <span class="c1"># the dimension size of sampling randomly</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span> <span class="o">=</span> <span class="n">dimension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__constraint</span> <span class="o">=</span> <span class="n">ls</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># sampling saving</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span> <span class="o">=</span> <span class="p">[]</span>               <span class="c1"># positive sample used to modeling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span> <span class="o">=</span> <span class="p">[]</span>            <span class="c1"># negative set used to modeling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span> <span class="o">=</span> <span class="p">[]</span>                 <span class="c1"># new sample</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span> <span class="o">=</span> <span class="p">[]</span>            <span class="c1"># the label of each sample</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="n">region</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span> <span class="o">=</span> <span class="n">RandomOperator</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="c1"># --------------------------------------------------</span>
+    <span class="c1"># debugging</span>
+    <span class="c1"># print positive set</span>
+    <span class="c1"># def show_pos_pop(self):</span>
+    <span class="c1">#     print &#39;positive set:------------------&#39;</span>
+    <span class="c1">#     for i in range(self.__positive_num):</span>
+    <span class="c1">#         self.__pos_pop[i].show_instance()</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#     return</span>
+    <span class="c1">#</span>
+    <span class="c1"># # print negative set</span>
+    <span class="c1"># def show_pop(self):</span>
+    <span class="c1">#     print &#39;negative set:------------------&#39;</span>
+    <span class="c1">#     for i in range(self.__sample_size):</span>
+    <span class="c1">#         self.__pop[i].show_instance()</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#     return</span>
+    <span class="c1">#</span>
+    <span class="c1"># # print optimal</span>
+    <span class="c1"># def show_optimal(self):</span>
+    <span class="c1">#     print &#39;optimal:-----------------------&#39;</span>
+    <span class="c1">#     self.__optimal.show_instance()</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#</span>
+    <span class="c1"># # print region</span>
+    <span class="c1"># def show_region(self):</span>
+    <span class="c1">#     print &#39;region:------------------------&#39;</span>
+    <span class="c1">#     for i in range(self.__dimension.get_size()):</span>
+    <span class="c1">#         print &#39;dimension &#39;, i, &#39; [&#39;, self.__region[i][0], &#39;,&#39;, self.__region[i][1], &#39;]&#39;</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+    <span class="c1">#     return</span>
+    <span class="c1">#</span>
+    <span class="c1"># # print label</span>
+    <span class="c1"># def show_label(self):</span>
+    <span class="c1">#     print &#39;label:-------------------------&#39;</span>
+    <span class="c1">#     print self.__label</span>
+    <span class="c1">#     print &#39;-------------------------------&#39;</span>
+
+    <span class="c1"># --------------------------------------------------</span>
+
+    <span class="c1"># clear sampling log</span>
+<div class="viewcode-block" id="Optimizer.log_clear"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.log_clear">[docs]</a>    <span class="k">def</span> <span class="nf">log_clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># get log</span>
+<div class="viewcode-block" id="Optimizer.get_log"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.get_log">[docs]</a>    <span class="k">def</span> <span class="nf">get_log</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__model_ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__negative_set</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__new_ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_label</span></div>
+
+    <span class="c1"># generate environment that should be logged</span>
+    <span class="c1"># return is 2-d list</span>
+<div class="viewcode-block" id="Optimizer.generate_environment"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.generate_environment">[docs]</a>    <span class="k">def</span> <span class="nf">generate_environment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">,</span> <span class="n">new_ins</span><span class="p">):</span>
+
+        <span class="n">trajectory</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">array_best</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">())):</span>
+                <span class="n">array_best</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">new_sam</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">())):</span>
+                <span class="n">new_sam</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">sorted_neg</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">):</span>
+                <span class="n">trajectory</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sorted_neg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_features</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">array_best</span><span class="p">,</span> <span class="n">trajectory</span><span class="p">,</span> <span class="n">new_sam</span></div>
+
+    <span class="c1"># clear parameters of saving</span>
+<div class="viewcode-block" id="Optimizer.clear"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># parameters setting</span>
+<div class="viewcode-block" id="Optimizer.set_parameters"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.set_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">set_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ss</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">bud</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">pn</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rp</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ub</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">=</span> <span class="n">ss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__budget</span> <span class="o">=</span> <span class="n">bud</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">=</span> <span class="n">pn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span> <span class="o">=</span> <span class="n">rp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__uncertain_bit</span> <span class="o">=</span> <span class="n">ub</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># get optimal</span>
+<div class="viewcode-block" id="Optimizer.get_optimal"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.get_optimal">[docs]</a>    <span class="k">def</span> <span class="nf">get_optimal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span></div>
+
+    <span class="c1"># generate an instance randomly</span>
+<div class="viewcode-block" id="Optimizer.random_instance"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.random_instance">[docs]</a>    <span class="k">def</span> <span class="nf">random_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dim</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">ins</span></div>
+
+    <span class="c1"># generate an instance based on a positive sample</span>
+<div class="viewcode-block" id="Optimizer.pos_random_instance"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.pos_random_instance">[docs]</a>    <span class="k">def</span> <span class="nf">pos_random_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">pos_instance</span><span class="p">):</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dim</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">pos_instance</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">ins</span></div>
+
+    <span class="c1"># reset model</span>
+<div class="viewcode-block" id="Optimizer.reset_model"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.reset_model">[docs]</a>    <span class="k">def</span> <span class="nf">reset_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># if an instance exists in a list, return true</span>
+<div class="viewcode-block" id="Optimizer.instance_in_list"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.instance_in_list">[docs]</a>    <span class="k">def</span> <span class="nf">instance_in_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">,</span> <span class="n">this_list</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">this_list</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">end</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">this_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+    <span class="c1"># initialize pop, pos_pop, optimal</span>
+<div class="viewcode-block" id="Optimizer.initialize"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+
+        <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+
+        <span class="c1"># sample in original region under uniform distribution</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">):</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="n">ins</span><span class="o">.</span><span class="n">set_fitness</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()))</span>
+            <span class="n">temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+
+        <span class="c1"># sorted by fitness</span>
+        <span class="n">temp</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">())</span>
+
+        <span class="c1"># initialize pos_pop</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="c1"># initialize pop</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">+</span> <span class="n">i</span><span class="p">])</span>
+
+        <span class="c1"># initialize optimal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_instance</span><span class="p">()</span>
+
+        <span class="k">return</span></div>
+
+    <span class="c1"># distinguish function for mixed optimization</span>
+<div class="viewcode-block" id="Optimizer.distinguish"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.distinguish">[docs]</a>    <span class="k">def</span> <span class="nf">distinguish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exa</span><span class="p">,</span> <span class="n">neg_set</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">):</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">():</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">and</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">!=</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">j</span><span class="p">):</span>
+                        <span class="k">break</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+    <span class="c1"># update positive set and negative set using a new sample by online strategy</span>
+<div class="viewcode-block" id="Optimizer.online_update"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.online_update">[docs]</a>    <span class="k">def</span> <span class="nf">online_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins</span><span class="p">):</span>
+
+        <span class="c1"># update positive set</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">ins</span>
+            <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">k</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span>
+
+        <span class="c1"># update negative set</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">:</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">ins</span>
+            <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">k</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span>
+
+        <span class="k">return</span></div>
+
+    <span class="c1"># update optimal</span>
+<div class="viewcode-block" id="Optimizer.update_optimal"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.update_optimal">[docs]</a>    <span class="k">def</span> <span class="nf">update_optimal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_instance</span><span class="p">()</span>
+        <span class="k">return</span></div>
+
+    <span class="c1"># generate instance randomly based on positive sample for mixed optimization</span>
+<div class="viewcode-block" id="Optimizer.pos_random_mix_isntance"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.pos_random_mix_isntance">[docs]</a>    <span class="k">def</span> <span class="nf">pos_random_mix_isntance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exa</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># float random</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="c1"># integer random</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="c1"># categorical random</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ins</span><span class="o">.</span><span class="n">set_feature</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                                                                     <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="n">i</span><span class="p">)[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">ins</span></div>
+
+    <span class="c1"># generate model based on mixed optimization for next sampling</span>
+    <span class="c1"># label[i] = false means this dimension should be set as the value in same dimension of positive sample</span>
+<div class="viewcode-block" id="Optimizer.shrink_model"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.shrink_model">[docs]</a>    <span class="k">def</span> <span class="nf">shrink_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exa</span><span class="p">,</span> <span class="n">neg_set</span><span class="p">):</span>
+
+        <span class="n">dist_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">chosen_dim</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">non_chosen_dim</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_size</span><span class="p">())]</span>
+
+        <span class="n">remain_neg</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">)]</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+
+            <span class="n">dist_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="n">temp_dim</span> <span class="o">=</span> <span class="n">non_chosen_dim</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_chosen_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+            <span class="n">chosen_neg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="c1"># float dimension shrink</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">):</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">),</span>
+                                                          <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">),</span>
+                                                          <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="n">r_i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">r_i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> \
+                            <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="n">remain_neg</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">r_i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># integer dimension shrink</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">):</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">),</span>
+                                                           <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">temp_v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">chosen_neg</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                           <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">temp_v</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_v</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">chosen_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                    <span class="n">non_chosen_dim</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">r_i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">r_i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> \
+                                    <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                        <span class="n">remain_neg</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">r_i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># categorical</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">chosen_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                <span class="n">non_chosen_dim</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">r_i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">r_i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">neg_set</span><span class="p">[</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">]]</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span> <span class="o">!=</span> <span class="n">exa</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">):</span>
+                        <span class="n">remain_neg</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">remain_neg</span><span class="p">[</span><span class="n">r_i</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">r_i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_chosen_dim</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__uncertain_bit</span><span class="p">:</span>
+            <span class="n">temp_dim</span> <span class="o">=</span> <span class="n">non_chosen_dim</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">non_chosen_dim</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+            <span class="n">chosen_dim</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+            <span class="n">non_chosen_dim</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_dim</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">[</span><span class="n">temp_dim</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">dist_count</span>
+
+    <span class="c1"># sequential Racos for mixed optimization</span>
+    <span class="c1"># the dimension type includes float, integer and categorical</span>
+    <span class="c1"># def mix_opt(self, obj_fct=None, ss=2, bud=20, pn=1, rp=0.95, ub=1):</span>
+    <span class="c1">#</span>
+    <span class="c1">#     sample_count = 0</span>
+    <span class="c1">#     all_dist_count = 0</span>
+    <span class="c1">#</span>
+    <span class="c1">#     # initialize sample set</span>
+    <span class="c1">#     self.clear()</span>
+    <span class="c1">#     self.log_clear()</span>
+    <span class="c1">#     self.set_parameters(ss=ss, bud=bud, pn=pn, rp=rp, ub=ub)</span>
+    <span class="c1">#     self.reset_model()</span>
+    <span class="c1">#     self.initialize(obj_fct)</span>
+    <span class="c1">#</span>
+    <span class="c1">#     # ------------------------------------------------------</span>
+    <span class="c1">#     # print &#39;after initialization------------&#39;</span>
+    <span class="c1">#     # self.show_pos_pop()</span>
+    <span class="c1">#     # self.show_pop()</span>
+    <span class="c1">#     # ------------------------------------------------------</span>
+    <span class="c1">#</span>
+    <span class="c1">#     # optimization</span>
+    <span class="c1">#     budget_c = self.__sample_size + self.__positive_num</span>
+    <span class="c1">#     while budget_c &lt; self.__budget:</span>
+    <span class="c1">#         budget_c += 1</span>
+    <span class="c1">#         if budget_c % 1 == 0:</span>
+    <span class="c1">#             # print &#39;======================================================&#39;</span>
+    <span class="c1">#             print &#39;budget &#39;, budget_c, &#39;:&#39;, self.__optimal.get_fitness()</span>
+    <span class="c1">#             # self.__optimal.show_instance()</span>
+    <span class="c1">#         while True:</span>
+    <span class="c1">#             self.reset_model()</span>
+    <span class="c1">#             chosen_pos = self.__ro.get_uniform_integer(0, self.__positive_num - 1)</span>
+    <span class="c1">#             model_sample = self.__ro.get_uniform_double(0.0, 1.0)</span>
+    <span class="c1">#             if model_sample &lt;= self.__rand_probability:</span>
+    <span class="c1">#                 dc = self.shrink_model(self.__pos_pop[chosen_pos], self.__pop)</span>
+    <span class="c1">#                 all_dist_count += dc</span>
+    <span class="c1">#</span>
+    <span class="c1">#             # -----------------------------------------------------------</span>
+    <span class="c1">#             # self.show_region()</span>
+    <span class="c1">#             # self.show_label()</span>
+    <span class="c1">#             # -----------------------------------------------------------</span>
+    <span class="c1">#</span>
+    <span class="c1">#             ins = self.pos_random_mix_isntance(self.__pos_pop[chosen_pos], self.__region, self.__label)</span>
+    <span class="c1">#</span>
+    <span class="c1">#             sample_count += 1</span>
+    <span class="c1">#</span>
+    <span class="c1">#             if (self.instance_in_list(ins, self.__pos_pop, self.__positive_num) is False) and (</span>
+    <span class="c1">#                     self.instance_in_list(ins, self.__pop, self.__sample_size) is False):</span>
+    <span class="c1">#                 ins.set_fitness(obj_fct(ins.get_features()))</span>
+    <span class="c1">#</span>
+    <span class="c1">#                 # logging</span>
+    <span class="c1">#                 model_instance, neg_set, new_instance = self.generate_environment(self.__pos_pop[chosen_pos], ins)</span>
+    <span class="c1">#                 self.__model_ins.append(model_instance)</span>
+    <span class="c1">#                 self.__negative_set.append(neg_set)</span>
+    <span class="c1">#                 self.__new_ins.append(new_instance)</span>
+    <span class="c1">#</span>
+    <span class="c1">#                 if ins.get_fitness() &lt; self.__optimal.get_fitness():</span>
+    <span class="c1">#                     self.__sample_label.append(1)</span>
+    <span class="c1">#                 else:</span>
+    <span class="c1">#                     self.__sample_label.append(0)</span>
+    <span class="c1">#                 # ------------------------------------------------------</span>
+    <span class="c1">#                 # print &#39;new sample:-------------------&#39;</span>
+    <span class="c1">#                 # ins.show_instance()</span>
+    <span class="c1">#                 # print &#39;------------------------------&#39;</span>
+    <span class="c1">#                 # ------------------------------------------------------</span>
+    <span class="c1">#</span>
+    <span class="c1">#                 break</span>
+    <span class="c1">#         self.online_update(ins)</span>
+    <span class="c1">#</span>
+    <span class="c1">#         # ------------------------------------------------------</span>
+    <span class="c1">#         # print &#39;after updating------------&#39;</span>
+    <span class="c1">#         # self.show_pos_pop()</span>
+    <span class="c1">#         # self.show_pop()</span>
+    <span class="c1">#         # ------------------------------------------------------</span>
+    <span class="c1">#</span>
+    <span class="c1">#         self.update_optimal()</span>
+    <span class="c1">#     print &#39;average sample times of each sample:&#39;, float(sample_count) / self.__budget</span>
+    <span class="c1">#     print &#39;average shrink times of each sample:&#39;, float(all_dist_count) / sample_count</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Optimizer.follow_constraint"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.follow_constraint">[docs]</a>    <span class="k">def</span> <span class="nf">follow_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__constraint</span><span class="p">)):</span>
+            <span class="n">prob_sum</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__constraint</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+                <span class="n">prob_sum</span> <span class="o">+=</span> <span class="n">x</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__constraint</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="n">prob_sum</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Optimizer.sample"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.sample">[docs]</a>    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="c1"># initialization step</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="c1"># optimization step</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reset_model</span><span class="p">()</span>
+                <span class="n">chosen_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_integer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">model_sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ro</span><span class="o">.</span><span class="n">get_uniform_double</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">model_sample</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__rand_probability</span><span class="p">:</span>
+                    <span class="n">dc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">)</span>
+                <span class="n">ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_random_mix_isntance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="n">chosen_pos</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">instance_in_list</span><span class="p">(</span><span class="n">ins</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">):</span>
+                    <span class="k">break</span>
+                <span class="c1"># if self.follow_constraint(ins.get_features()):</span>
+                <span class="c1">#     break</span>
+        <span class="k">return</span> <span class="n">ins</span><span class="o">.</span><span class="n">get_features</span><span class="p">()</span></div>
+
+    <span class="c1"># x is a list, f_x is the evaluation value of x</span>
+<div class="viewcode-block" id="Optimizer.update_model"><a class="viewcode-back" href="../optimizer.html#optimizer.Optimizer.update_model">[docs]</a>    <span class="k">def</span> <span class="nf">update_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">f_x</span><span class="p">):</span>
+
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">Instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dimension</span><span class="p">)</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">set_features</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">set_fitness</span><span class="p">(</span><span class="n">f_x</span><span class="p">)</span>
+
+        <span class="c1"># initialization update</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+        <span class="c1"># optimization update</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">online_update</span><span class="p">(</span><span class="n">ins</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_optimal</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># initialization process</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sample_size</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_fitness</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__positive_num</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__optimal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pos_pop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy_instance</span><span class="p">()</span>
+
+        <span class="k">return</span></div></div>
+
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

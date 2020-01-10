@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>sampler module &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-sampler">
+<span id="sampler-module"></span><h1>sampler module<a class="headerlink" href="#module-sampler" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="sampler.Sampler">
+<em class="property">class </em><code class="sig-prename descclassname">sampler.</code><code class="sig-name descname">Sampler</code><span class="sig-paren">(</span><em class="sig-param">graph_part</em>, <em class="sig-param">block_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="sampler.Sampler.convert">
+<code class="sig-name descname">convert</code><span class="sig-paren">(</span><em class="sig-param">table_tmp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler.convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler.convert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search corresponding operation configuration based on table.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sampler.Sampler.dfs">
+<code class="sig-name descname">dfs</code><span class="sig-paren">(</span><em class="sig-param">node_id</em>, <em class="sig-param">cnt</em>, <em class="sig-param">ma</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler.dfs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler.dfs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sampler.Sampler.graph_part_add_invisible_node">
+<code class="sig-name descname">graph_part_add_invisible_node</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler.graph_part_add_invisible_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler.graph_part_add_invisible_node" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sampler.Sampler.ops2table">
+<code class="sig-name descname">ops2table</code><span class="sig-paren">(</span><em class="sig-param">ops</em>, <em class="sig-param">table_tmp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler.ops2table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler.ops2table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sampler.Sampler.sample">
+<code class="sig-name descname">sample</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler.sample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get table based on the optimization module sampling,
+update table in Sampler,
+and sample the operation configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cell</strong> – 1d Cell list</p></li>
+<li><p><strong>graph_full</strong> – 2d int list, as NetworkItem.graph_full</p></li>
+<li><p><strong>table</strong> – 1d int list, depending on dimension</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="sampler.Sampler.update_opt_model">
+<code class="sig-name descname">update_opt_model</code><span class="sig-paren">(</span><em class="sig-param">table</em>, <em class="sig-param">score</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sampler.html#Sampler.update_opt_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sampler.Sampler.update_opt_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimization of sampling space based on Evaluation and optimization method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table</strong> – 1d int list, depending on dimension</p></li>
+<li><p><strong>score</strong> – float, 0 ~ 1.0</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/sampler.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

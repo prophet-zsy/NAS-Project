@@ -1,5 +1,6 @@
 import os
 import tensorflow as tf
+import numpy as np
 
 from base import Cell, NetworkItem
 from info_str import NAS_CONFIG
@@ -29,18 +30,16 @@ class Evaluator:
     def __init__(self):
         # don't change the parameters below
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-        self.train_num = 0
         self.block_num = 0
         self.log = ''
+        self.model_path = "./model"
 
         # change the value of parameters below
-        self.batch_size = 64
+        self.batch_size = 50
         self.input_shape = []
         self.output_shape = []
-        self.model_path = "./model"
         self.train_data, self.train_label, self.test_data, self.test_label = DataSet().inputs()
         return
-
 
     def set_epoch(self, e):
         self.epoch = e
@@ -128,7 +127,7 @@ class Evaluator:
                     layer: the output tensor
                 """
         # TODO add your function here if any new operation was added, see _makeconv as an example
-        return layer
+        return
 
     def _makeconv(self, x, hplist, node, train_flag):
         """Generates a convolutional layer according to information in hplist
@@ -139,7 +138,7 @@ class Evaluator:
         Returns:
             conv_layer: the output tensor
         """
-        with tf.variable_scope('conv' + str(node) + 'block' + str(self.block_num)) as scope:
+        with tf.variable_scope('block' + str(self.block_num) + 'conv' + str(node)) as scope:
             inputdim = x.shape[3]
             kernel = self._get_variable('weights',
                                         shape=[hplist.kernel_size, hplist.kernel_size, inputdim, hplist.filter_size])
@@ -150,7 +149,7 @@ class Evaluator:
         return x
 
     def _makesep_conv(self, inputs, hplist, node, train_flag):
-        with tf.variable_scope('conv' + str(node) + 'block' + str(self.block_num)) as scope:
+        with tf.variable_scope('block' + str(self.block_num) + 'conv' + str(node)) as scope:
             inputdim = inputs.shape[3]
             dfilter = self._get_variable('weights', shape=[hplist.kernel_size, hplist.kernel_size, inputdim, 1])
             pfilter = self._get_variable('pointwise_filter', [1, 1, inputdim, hplist.filter_size])
@@ -195,13 +194,13 @@ class Evaluator:
         Returns:
             tensor.
         """
-        if hplist.ptype == 'avg':
+        if hplist.pooling_type == 'avg':
             return tf.nn.avg_pool(inputs, ksize=[1, hplist.kernel_size, hplist.kernel_size, 1],
                                   strides=[1, hplist.kernel_size, hplist.kernel_size, 1], padding='SAME')
-        elif hplist.ptype == 'max':
+        elif hplist.pooling_type == 'max':
             return tf.nn.max_pool(inputs, ksize=[1, hplist.kernel_size, hplist.kernel_size, 1],
                                   strides=[1, hplist.kernel_size, hplist.kernel_size, 1], padding='SAME')
-        elif hplist.ptype == 'global':
+        elif hplist.pooling_type == 'global':
             return tf.reduce_mean(inputs, [1, 2], keep_dims=True)
 
     def _makedense(self, inputs, hplist):
@@ -216,12 +215,11 @@ class Evaluator:
         inputs = tf.reshape(inputs, [self.batch_size, -1])
 
         for i, neural_num in enumerate(hplist[1]):
-            with tf.variable_scope('dense' + str(i) + 'block' + str(self.block_num)) as scope:
+            with tf.variable_scope('block' + str(self.block_num) + 'dense' + str(i)) as scope:
                 weights = self._get_variable('weights', shape=[inputs.shape[-1], neural_num])
                 biases = self._get_variable('biases', [neural_num])
                 mul = tf.matmul(inputs, weights) + biases
-                # TODO ????
-                if neural_num == DataSet().NUM_CLASSES:
+                if neural_num == self.output_shape[-1]:
                     local3 = self._activation_layer('', mul, scope)
                 else:
                     local3 = self._activation_layer(hplist[2], mul, scope)
@@ -230,19 +228,32 @@ class Evaluator:
 
     def _pad(self, inputs, layer):
         # padding
-        a = int(layer.shape[1])
-        b = int(inputs.shape[1])
-        pad = abs(a - b)
-        if layer.shape[1] > inputs.shape[1]:
-            tmp = tf.pad(inputs, [[0, 0], [0, pad], [0, pad], [0, 0]])
-            inputs = tf.concat([tmp, layer], 3)
-        elif layer.shape[1] < inputs.shape[1]:
-            tmp = tf.pad(layer, [[0, 0], [0, pad], [0, pad], [0, 0]])
-            inputs = tf.concat([inputs, tmp], 3)
+        if self.input_shape[1]:
+            a = int(layer.shape[1])
+            b = int(inputs.shape[1])
+            pad = abs(a - b)
+            if layer.shape[1] > inputs.shape[1]:
+                tmp = tf.pad(inputs, [[0, 0], [0, pad], [0, pad], [0, 0]])
+                output = tf.concat([tmp, layer], 3)
+            elif layer.shape[1] < inputs.shape[1]:
+                tmp = tf.pad(layer, [[0, 0], [0, pad], [0, pad], [0, 0]])
+                output = tf.concat([inputs, tmp], 3)
+            else:
+                output = tf.concat([inputs, layer], 3)
         else:
-            inputs = tf.concat([inputs, layer], 3)
+            a = tf.shape(layer)[1]
+            b = tf.shape(inputs)[1]
+            pad = tf.abs(tf.subtract(a, b))
+            cond = tf.greater(a, b)
 
-        return inputs
+            def f1():
+                return tf.concat([tf.pad(inputs, [[0, 0], [0, pad], [0, pad], [0, 0]]), layer], 3)
+
+            def f2():
+                return tf.concat([inputs, tf.pad(layer, [[0, 0], [0, pad], [0, pad], [0, 0]])], 3)
+
+            output = tf.cond(cond, f1, f2)
+        return output
 
     def evaluate(self, network, pre_block=[], is_bestNN=False, update_pre_weight=False):
         '''Method for evaluate the given network.
@@ -262,26 +273,30 @@ class Evaluator:
             self.log = self.log + str(block.graph) + str(block.cell_list) + '\n'
         self.log = self.log + str(network.graph) + str(network.cell_list) + '\n'
 
-        with tf.Session() as sess:
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        with tf.Session(config=config) as sess:
             data_x, data_y, block_input, train_flag = self._get_input(sess, pre_block, update_pre_weight)
 
             graph_full, cell_list = self._recode(network.graph, network.cell_list,
-                                                 NAS_CONFIG['nas_main']['repeat_search'])
-            # a pooling layer for last repeat block
+                                                 NAS_CONFIG['nas_main']['repeat_num'])
             graph_full = graph_full + [[]]
-            cell_list = cell_list + [Cell('pooling', 'max', 2)]
+            if NAS_CONFIG['nas_main']['link_node']:
+                # a pooling layer for last repeat block
+                cell_list = cell_list + [Cell('pooling', 'max', 2)]
+            else:
+                cell_list = cell_list + [Cell('id', 'max', 1)]
             logits = self._inference(block_input, graph_full, cell_list, train_flag)
 
-            logits = tf.nn.dropout(logits, keep_prob=1.0)
-            # TODO dense layer?
-            logits = self._makedense(logits, ('', [self.output_shape[-1]], ''))
-
-            precision, saver, log = self._eval(sess, data_x, data_y, logits, train_flag)
+            precision, log = self._eval(sess, logits, data_x, data_y, train_flag)
             self.log += log
 
+            saver = tf.train.Saver(tf.global_variables())
+
             if is_bestNN:  # save model
-                saver.save(sess, os.path.join(
-                    self.model_path, 'model' + str(network.id)))
+                if not os.path.exists(os.path.join(self.model_path)):
+                    os.makedirs(os.path.join(self.model_path))
+                saver.save(sess, os.path.join(self.model_path, 'model' + str(network.id)))
 
         NAS_LOG << ('eva', self.log)
         return precision
@@ -290,25 +305,26 @@ class Evaluator:
         '''Get input for _inference'''
         # if it got previous blocks
         if len(pre_block) > 0:
-            new_saver = tf.train.import_meta_graph(
-                os.path.join(self.model_path, 'model' + str(pre_block[-1].id) + '.meta'))
+            tmp = os.path.join(self.model_path, 'model' + str(pre_block[-1].id) + '.meta')
+            assert os.path.exists(tmp)
+            new_saver = tf.train.import_meta_graph(tmp)
             new_saver.restore(sess, os.path.join(
                 self.model_path, 'model' + str(pre_block[-1].id)))
             graph = tf.get_default_graph()
-            x = graph.get_tensor_by_name("input:0")
-            labels = graph.get_tensor_by_name("label:0")
+            data_x = graph.get_tensor_by_name("input:0")
+            data_y = graph.get_tensor_by_name("label:0")
             train_flag = graph.get_tensor_by_name("train_flag:0")
-            input = graph.get_tensor_by_name("last_layer" + str(self.block_num - 1) + ":0")
+            block_input = graph.get_tensor_by_name("last_layer" + str(self.block_num - 1) + ":0")
             # only when there's not so many network in the pool will we update the previous blocks' weight
             if not update_pre_weight:
-                input = tf.stop_gradient(input, name="stop_gradient")
+                block_input = tf.stop_gradient(block_input, name="stop_gradient")
         # if it's the first block
         else:
-            x = tf.placeholder(tf.float32, self.input_shape, name='input')
-            labels = tf.placeholder(tf.int32, self.output_shape, name="label")
+            data_x = tf.placeholder(np.array(self.train_data).dtype, self.input_shape, name='input')
+            data_y = tf.placeholder(np.array(self.train_label).dtype, self.output_shape, name="label")
             train_flag = tf.placeholder(tf.bool, name='train_flag')
-            input = tf.identity(x)
-        return x, labels, input, train_flag
+            block_input = tf.identity(data_x)
+        return data_x, data_y, block_input, train_flag
 
     def _recode(self, graph_full, cell_list, repeat_num):
         new_graph = [] + graph_full
@@ -335,17 +351,18 @@ class Evaluator:
             saver: Tensorflow Saver class
             log: string, log to be write and saved
         """
+        logits = tf.nn.dropout(logits, keep_prob=1.0)
+        logits = self._makedense(logits, ('', [self.output_shape[-1]], ''))
         global_step = tf.Variable(0, trainable=False, name='global_step' + str(self.block_num))
         accuracy = self._cal_accuracy(logits, data_y)
         loss = self._loss(logits, data_y)
         train_op = self._train_op(global_step, loss)
 
-        saver = tf.train.Saver(tf.global_variables())
         sess.run(tf.global_variables_initializer())
 
         log = ""
 
-        return target, saver, log
+        return target, log
 
     def _cal_accuracy(self, logits, labels):
         """

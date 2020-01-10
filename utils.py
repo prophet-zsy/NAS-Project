@@ -29,10 +29,10 @@ class DataSize:
     def _game_data_ctrl(self):
         if self.mode == "linear":
             self.round_count += 1
-            self.eva.set_data_size(self.round_count * self.add_data_per_rd)
+            self.eva._set_data_size(self.round_count * self.add_data_per_rd)
         elif self.mode == "scale":
             dsize = int(self.init_lr * (self.scale ** self.round_count))
-            self.eva.set_data_size(dsize)
+            self.eva._set_data_size(dsize)
             self.round_count += 1
         else:
             raise ValueError("signal error: mode, it must be one of linear, scale")
@@ -46,7 +46,7 @@ class DataSize:
         if stage == "game":
             self._game_data_ctrl()
         elif stage == "confirm":
-            self.eva.set_data_size(self.data_for_confirm_train)
+            self.eva._set_data_size(self.data_for_confirm_train)
         else:
             raise ValueError("signal error: stage, it must be one of game, confirm")
 
@@ -59,11 +59,11 @@ def _epoch_ctrl(eva=None, stage="game"):
     :return:
     """
     if stage == "game":
-        eva.set_epoch(NAS_CONFIG['eva']['search_epoch'])
+        eva._set_epoch(NAS_CONFIG['eva']['search_epoch'])
     elif stage == "confirm":
-        eva.set_epoch(NAS_CONFIG['eva']['confirm_epoch'])
+        eva._set_epoch(NAS_CONFIG['eva']['confirm_epoch'])
     elif stage == "retrain":
-        eva.set_epoch(NAS_CONFIG['eva']['retrain_epoch'])
+        eva._set_epoch(NAS_CONFIG['eva']['retrain_epoch'])
     else:
         raise ValueError("signal error: stage, it must be one of game, confirm, retrain")
 
@@ -165,6 +165,10 @@ class Logger(object):
                 output = self.__getattribute__(default_log)
             print(context)
         if output:
+            if "evaluator" == module:
+                with open(ifs.evalog_path, "a") as f:
+                    f.write(context+"\n")
+                return
             output.write(context)
             output.write('\n')
         return
@@ -190,6 +194,7 @@ class Logger(object):
         # print(module, func, temp.format(others))
         if func != "_save_net_info":
             print(temp.format(others))
+
         self._log_output(module, func, temp.format(others))
 
 

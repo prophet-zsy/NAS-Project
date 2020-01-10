@@ -1,0 +1,736 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>evaluator_classification &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for evaluator_classification</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="nn">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">base</span> <span class="kn">import</span> <span class="n">Cell</span><span class="p">,</span> <span class="n">NetworkItem</span>
+<span class="kn">from</span> <span class="nn">info_str</span> <span class="kn">import</span> <span class="n">NAS_CONFIG</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">NAS_LOG</span>
+
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+
+<div class="viewcode-block" id="DataSet"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.DataSet">[docs]</a><span class="k">class</span> <span class="nc">DataSet</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">num_class</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IMAGE_SIZE</span> <span class="o">=</span> <span class="n">image_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NUM_CLASSES</span> <span class="o">=</span> <span class="n">num_class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span> <span class="o">=</span> <span class="mi">40000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_EVAL</span> <span class="o">=</span> <span class="mi">10000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">=</span> <span class="s2">&quot;cifar-10&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_path</span> <span class="o">=</span> <span class="s1">&#39;/home/amax/Desktop&#39;</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="DataSet.inputs"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.DataSet.inputs">[docs]</a>    <span class="k">def</span> <span class="nf">inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;======Loading data======&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">==</span> <span class="s1">&#39;cifar-10&#39;</span><span class="p">:</span>
+            <span class="n">test_files</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;test_batch&#39;</span><span class="p">]</span>
+            <span class="n">train_files</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;data_batch_</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">train_files</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;train&#39;</span><span class="p">]</span>
+            <span class="n">test_files</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">]</span>
+        <span class="n">train_data</span><span class="p">,</span> <span class="n">train_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span><span class="n">train_files</span><span class="p">)</span>
+        <span class="n">train_data</span><span class="p">,</span> <span class="n">train_label</span><span class="p">,</span> <span class="n">valid_data</span><span class="p">,</span> <span class="n">valid_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_split</span><span class="p">(</span>
+            <span class="n">train_data</span><span class="p">,</span> <span class="n">train_label</span><span class="p">)</span>
+        <span class="n">test_data</span><span class="p">,</span> <span class="n">test_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load</span><span class="p">(</span><span class="n">test_files</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;======Data Process Done======&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">train_label</span><span class="p">,</span> <span class="n">valid_data</span><span class="p">,</span> <span class="n">valid_label</span><span class="p">,</span> <span class="n">test_data</span><span class="p">,</span> <span class="n">test_label</span></div>
+
+    <span class="k">def</span> <span class="nf">_load_one</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fo</span><span class="p">:</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fo</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;bytes&#39;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">==</span> <span class="s1">&#39;cifar-10&#39;</span> <span class="k">else</span> <span class="n">batch</span><span class="p">[</span><span class="sa">b</span><span class="s1">&#39;fine_labels&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span>
+
+    <span class="k">def</span> <span class="nf">_load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">files</span><span class="p">):</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="s1">&#39;cifar-10-batches-py&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">==</span> <span class="s1">&#39;cifar-10&#39;</span> <span class="k">else</span> <span class="s1">&#39;cifar-100-python&#39;</span>
+        <span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_one</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">batch_data</span><span class="p">,</span> <span class="n">batch_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_one</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">batch_data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">batch_label</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">label</span><span class="p">)</span>
+                           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_CLASSES</span><span class="p">)]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">label</span><span class="p">])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">IMAGE_SIZE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">IMAGE_SIZE</span><span class="p">])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">transpose</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="c1"># pre-process</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span>
+
+    <span class="k">def</span> <span class="nf">_split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="c1"># shuffle</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))]</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span><span class="p">],</span> <span class="n">label</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span><span class="p">],</span> \
+               <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_EVAL</span><span class="p">],</span> \
+               <span class="n">label</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_TRAIN</span> <span class="o">+</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">NUM_EXAMPLES_FOR_EVAL</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_train</span><span class="p">):</span>
+        <span class="n">x_train</span> <span class="o">=</span> <span class="n">x_train</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+
+        <span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                      <span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                      <span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                      <span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">x_train</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">x_train</span>
+
+<div class="viewcode-block" id="DataSet.process"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.DataSet.process">[docs]</a>    <span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_random_flip_leftright</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_random_crop</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">],</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cutout</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+
+    <span class="k">def</span> <span class="nf">_random_crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">crop_shape</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">oshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">padding</span><span class="p">:</span>
+            <span class="n">oshape</span> <span class="o">=</span> <span class="p">(</span><span class="n">oshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">padding</span><span class="p">,</span> <span class="n">oshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">padding</span><span class="p">)</span>
+        <span class="n">new_batch</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">npad</span> <span class="o">=</span> <span class="p">((</span><span class="n">padding</span><span class="p">,</span> <span class="n">padding</span><span class="p">),</span> <span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="n">padding</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)):</span>
+            <span class="n">new_batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">padding</span><span class="p">:</span>
+                <span class="n">new_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">pad_width</span><span class="o">=</span><span class="n">npad</span><span class="p">,</span>
+                                          <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="n">constant_values</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">nh</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">oshape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">crop_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">nw</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">oshape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">crop_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">new_batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_batch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">nh</span><span class="p">:</span><span class="n">nh</span> <span class="o">+</span> <span class="n">crop_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                           <span class="n">nw</span><span class="p">:</span><span class="n">nw</span> <span class="o">+</span> <span class="n">crop_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">new_batch</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_random_flip_leftright</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">getrandbits</span><span class="p">(</span><span class="mi">1</span><span class="p">)):</span>
+                <span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fliplr</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">batch</span>
+
+    <span class="k">def</span> <span class="nf">_cutout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
+            <span class="n">cut_size</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">IMAGE_SIZE</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">IMAGE_SIZE</span> <span class="o">-</span> <span class="n">cut_size</span><span class="p">)</span>
+            <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span><span class="n">s</span> <span class="o">+</span> <span class="n">cut_size</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span><span class="n">s</span> <span class="o">+</span> <span class="n">cut_size</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="Evaluator"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.Evaluator">[docs]</a><span class="k">class</span> <span class="nc">Evaluator</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">image_size</span> <span class="o">=</span> <span class="mi">32</span>
+        <span class="n">num_class</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_set</span> <span class="o">=</span> <span class="n">DataSet</span><span class="p">(</span><span class="n">image_size</span><span class="p">,</span> <span class="n">num_class</span><span class="p">)</span>
+        <span class="c1"># don&#39;t change the parameters below</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;TF_CPP_MIN_LOG_LEVEL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;3&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_num</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_path</span> <span class="o">=</span> <span class="s2">&quot;./model&quot;</span>
+
+        <span class="c1"># change the value of parameters below</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="mi">50</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_shape</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="n">image_size</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_shape</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">num_class</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_set</span><span class="o">.</span><span class="n">inputs</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">INITIAL_LEARNING_RATE</span> <span class="o">=</span> <span class="mf">0.025</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight_decay</span> <span class="o">=</span> <span class="mf">0.0003</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">momentum_rate</span> <span class="o">=</span> <span class="mf">0.9</span>
+
+<div class="viewcode-block" id="Evaluator.set_epoch"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.Evaluator.set_epoch">[docs]</a>    <span class="k">def</span> <span class="nf">set_epoch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="n">e</span>
+        <span class="k">return</span></div>
+
+    <span class="k">def</span> <span class="nf">_inference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">images</span><span class="p">,</span> <span class="n">graph_part</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Method for recovering the network model provided by graph_part and cellist.</span>
+<span class="sd">        Args:</span>
+<span class="sd">          images: Images returned from Dataset() or inputs().</span>
+<span class="sd">          graph_part: The topology structure of th network given by adjacency table</span>
+<span class="sd">          cellist:</span>
+<span class="sd">        Returns:</span>
+<span class="sd">          Logits.&#39;&#39;&#39;</span>
+        <span class="n">topo_order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_toposort</span><span class="p">(</span><span class="n">graph_part</span><span class="p">)</span>
+        <span class="n">nodelen</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">graph_part</span><span class="p">)</span>
+        <span class="c1"># input list for every cell in network</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">images</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nodelen</span><span class="p">)]</span>
+        <span class="c1"># bool list for whether this cell has already got input or not</span>
+        <span class="n">getinput</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nodelen</span><span class="p">)]</span>
+        <span class="n">getinput</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">topo_order</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_layer</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="n">node</span><span class="p">],</span> <span class="n">cell_list</span><span class="p">[</span><span class="n">node</span><span class="p">],</span> <span class="n">node</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">)</span>
+
+            <span class="c1"># update inputs information of the cells below this cell</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">graph_part</span><span class="p">[</span><span class="n">node</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">getinput</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>  <span class="c1"># if this cell already got inputs from other cells precedes it</span>
+                    <span class="n">inputs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pad</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">layer</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">inputs</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">layer</span>
+                    <span class="n">getinput</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># give last layer a name</span>
+        <span class="n">last_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;last_layer&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">last_layer</span>
+
+    <span class="k">def</span> <span class="nf">_toposort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+        <span class="n">node_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">in_degrees</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">u</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">node_len</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">node_len</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">u</span><span class="p">]:</span>
+                <span class="n">in_degrees</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">queue</span> <span class="o">=</span> <span class="p">[</span><span class="n">u</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">node_len</span><span class="p">)</span> <span class="k">if</span> <span class="n">in_degrees</span><span class="p">[</span><span class="n">u</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="n">queue</span><span class="p">:</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">u</span><span class="p">]:</span>
+                <span class="n">in_degrees</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">in_degrees</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">queue</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_make_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Method for constructing and calculating cell in tensorflow</span>
+<span class="sd">        Args:</span>
+<span class="sd">                inputs: the input tensor of this operation</span>
+<span class="sd">                cell: Class Cell(), hyper parameters for building this layer</span>
+<span class="sd">                node: int, the index of this operation</span>
+<span class="sd">                train_flag: boolean, indicating whether this is a training process or not</span>
+<span class="sd">        Returns:</span>
+<span class="sd">                layer: tensor.&#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;conv&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_makeconv</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">cell</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;pooling&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_makepool</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">cell</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">cell</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;id&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">cell</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;sep_conv&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_makesep_conv</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">)</span>
+        <span class="c1"># TODO add any other new operations here</span>
+        <span class="c1">#  use the form as shown above</span>
+        <span class="c1">#  &#39;&#39;&#39;elif cell.type == &#39;operation_name&#39;:</span>
+        <span class="c1">#         layer = self._name_your_function_here(inputs, cell, node)&#39;&#39;&#39;</span>
+        <span class="c1">#  The &quot;_name_your_function_here&quot; is a function take (inputs, cell, node) or any other needed parameter as</span>
+        <span class="c1">#  input, and output the corresponding tensor calculated use tensorflow, see self._makeconv as an example.</span>
+        <span class="c1">#  The &quot;inputs&quot; is the input tensor, and &quot;cell&quot; is the hyper parameters for building this layer, given by</span>
+        <span class="c1">#  class Cell(). The &quot;node&quot; is the index of this layer, mainly for the nomination of the output tensor.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Wrong cell type!&quot;</span>
+
+        <span class="k">return</span> <span class="n">layer</span>
+
+    <span class="k">def</span> <span class="nf">_makeconv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hplist</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generates a convolutional layer according to information in hplist</span>
+<span class="sd">        Args:</span>
+<span class="sd">            x: inputing data.</span>
+<span class="sd">            hplist: hyperparameters for building this layer</span>
+<span class="sd">            node: int, the index of this operation</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            conv_layer: the output tensor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;block&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;conv&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">node</span><span class="p">))</span> <span class="k">as</span> <span class="n">scope</span><span class="p">:</span>
+            <span class="n">inputdim</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;weights&#39;</span><span class="p">,</span>
+                                        <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">inputdim</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">filter_size</span><span class="p">])</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activation_layer</span><span class="p">(</span><span class="n">hplist</span><span class="o">.</span><span class="n">activation</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;SAME&#39;</span><span class="p">)</span>
+            <span class="n">biases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;biases&#39;</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">filter_size</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_norm</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">bias_add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">biases</span><span class="p">),</span> <span class="n">train_flag</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">def</span> <span class="nf">_makesep_conv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">hplist</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;block&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;conv&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">node</span><span class="p">))</span> <span class="k">as</span> <span class="n">scope</span><span class="p">:</span>
+            <span class="n">inputdim</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">dfilter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;weights&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">inputdim</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="n">pfilter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;pointwise_filter&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">inputdim</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">filter_size</span><span class="p">])</span>
+            <span class="n">conv</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">separable_conv2d</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">dfilter</span><span class="p">,</span> <span class="n">pfilter</span><span class="p">,</span> <span class="n">strides</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;SAME&#39;</span><span class="p">)</span>
+            <span class="n">biases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;biases&#39;</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">filter_size</span><span class="p">)</span>
+            <span class="n">bn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_norm</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">bias_add</span><span class="p">(</span><span class="n">conv</span><span class="p">,</span> <span class="n">biases</span><span class="p">),</span> <span class="n">train_flag</span><span class="p">)</span>
+            <span class="n">conv_layer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activation_layer</span><span class="p">(</span><span class="n">hplist</span><span class="o">.</span><span class="n">activation</span><span class="p">,</span> <span class="n">bn</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">conv_layer</span>
+
+    <span class="k">def</span> <span class="nf">_batch_norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">batch_norm</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">decay</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+                                            <span class="n">updates_collections</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_training</span><span class="o">=</span><span class="n">train_flag</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;weights&quot;</span><span class="p">:</span>
+            <span class="n">ini</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">initializers</span><span class="o">.</span><span class="n">he_normal</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ini</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">constant_initializer</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">initializer</span><span class="o">=</span><span class="n">ini</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_activation_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scope</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;relu&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;relu6&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu6</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;tanh&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;sigmoid&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;leakyrelu&#39;</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">leaky_relu</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">scope</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">layer</span>
+
+    <span class="k">def</span> <span class="nf">_makepool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">hplist</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generates a pooling layer according to information in hplist</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs: inputing data.</span>
+<span class="sd">            hplist: hyperparameters for building this layer</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">hplist</span><span class="o">.</span><span class="n">pooling_type</span> <span class="o">==</span> <span class="s1">&#39;avg&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">ksize</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">strides</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;SAME&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">hplist</span><span class="o">.</span><span class="n">pooling_type</span> <span class="o">==</span> <span class="s1">&#39;max&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">max_pool</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">ksize</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">strides</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">hplist</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;SAME&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">hplist</span><span class="o">.</span><span class="n">pooling_type</span> <span class="o">==</span> <span class="s1">&#39;global&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">keep_dims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_makedense</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">hplist</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generates dense layers according to information in hplist</span>
+<span class="sd">        Args:</span>
+<span class="sd">                   inputs: inputing data.</span>
+<span class="sd">                   hplist: hyperparameters for building layers</span>
+<span class="sd">                   node: number of this cell</span>
+<span class="sd">        Returns:</span>
+<span class="sd">                   tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">neural_num</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hplist</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s1">&#39;block&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;dense&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="k">as</span> <span class="n">scope</span><span class="p">:</span>
+                <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;weights&#39;</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">[</span><span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">neural_num</span><span class="p">])</span>
+                <span class="n">biases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_variable</span><span class="p">(</span><span class="s1">&#39;biases&#39;</span><span class="p">,</span> <span class="p">[</span><span class="n">neural_num</span><span class="p">])</span>
+                <span class="n">mul</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span> <span class="o">+</span> <span class="n">biases</span>
+                <span class="k">if</span> <span class="n">neural_num</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">local3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activation_layer</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">mul</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">local3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_activation_layer</span><span class="p">(</span><span class="n">hplist</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">mul</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="n">local3</span>
+        <span class="k">return</span> <span class="n">inputs</span>
+
+    <span class="k">def</span> <span class="nf">_pad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">layer</span><span class="p">):</span>
+        <span class="c1"># padding</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">layer</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">inputs</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">pad</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">greater</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">pad</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">pad</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]),</span> <span class="n">layer</span><span class="p">],</span> <span class="mi">3</span><span class="p">),</span>
+                          <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">inputs</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">pad</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">pad</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])],</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+<div class="viewcode-block" id="Evaluator.evaluate"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.Evaluator.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">pre_block</span><span class="o">=</span><span class="p">[],</span> <span class="n">is_bestNN</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">update_pre_weight</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Method for evaluate the given network.</span>
+<span class="sd">            </span>
+<span class="sd">        :param network: NetworkItem()</span>
+<span class="sd">        :param pre_block: The pre-block structure, every block has two parts &#39;graph_part&#39; and &#39;cell_list&#39; of this block.</span>
+<span class="sd">        :param is_bestNN: Symbol for indicating whether the evaluating network is the best network of this round.</span>
+<span class="sd">        :param update_pre_weight: Symbol for indicating whether to update previous blocks&#39; weight.</span>
+<span class="sd">        :return: accuracy, float.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_num</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">reset_default_graph</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pre_block</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">pre_block</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">cell_list</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">cell_list</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+            <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">block_input</span><span class="p">,</span> <span class="n">train_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_input</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">pre_block</span><span class="p">,</span> <span class="n">update_pre_weight</span><span class="p">)</span>
+
+            <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recode</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">network</span><span class="o">.</span><span class="n">cell_list</span><span class="p">,</span>
+                                                 <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;repeat_num&#39;</span><span class="p">])</span>
+            <span class="c1"># a pooling layer for last repeat block</span>
+            <span class="n">graph_full</span> <span class="o">=</span> <span class="n">graph_full</span> <span class="o">+</span> <span class="p">[[]]</span>
+            <span class="n">cell_list</span> <span class="o">=</span> <span class="n">cell_list</span> <span class="o">+</span> <span class="p">[</span><span class="n">Cell</span><span class="p">(</span><span class="s1">&#39;pooling&#39;</span><span class="p">,</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+            <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inference</span><span class="p">(</span><span class="n">block_input</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">)</span>
+
+            <span class="n">logits</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">keep_prob</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+            <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_makedense</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+
+            <span class="n">precision</span><span class="p">,</span> <span class="n">log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">+=</span> <span class="n">log</span>
+
+            <span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables</span><span class="p">())</span>
+
+            <span class="k">if</span> <span class="n">is_bestNN</span><span class="p">:</span>  <span class="c1"># save model</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_path</span><span class="p">)):</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_path</span><span class="p">))</span>
+                <span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_path</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">id</span><span class="p">)))</span>
+
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;eva&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">precision</span></div>
+
+<div class="viewcode-block" id="Evaluator.retrain"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.Evaluator.retrain">[docs]</a>    <span class="k">def</span> <span class="nf">retrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pre_block</span><span class="p">):</span>
+        <span class="n">tf</span><span class="o">.</span><span class="n">reset_default_graph</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_num</span> <span class="o">=</span> <span class="mi">50000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pre_block</span><span class="p">)</span>
+
+        <span class="n">retrain_log</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">+</span> <span class="s2">&quot;retrain&quot;</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="n">data_x</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">block_input</span><span class="p">,</span> <span class="n">train_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_input</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">pre_block</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">block_num</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">cell_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">block</span><span class="o">.</span><span class="n">cell_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;conv&#39;</span><span class="p">:</span>
+                    <span class="n">cell_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cell</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">cell</span><span class="o">.</span><span class="n">filter_size</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">cell</span><span class="o">.</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">cell</span><span class="o">.</span><span class="n">activation</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cell_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+            <span class="c1"># repeat search</span>
+            <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recode</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">block</span><span class="o">.</span><span class="n">cell_list</span><span class="p">,</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;repeat_num&#39;</span><span class="p">])</span>
+            <span class="c1"># add pooling layer only in last repeat block</span>
+            <span class="n">cell_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cell</span><span class="p">(</span><span class="s1">&#39;pooling&#39;</span><span class="p">,</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="n">graph_full</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+            <span class="n">retrain_log</span> <span class="o">=</span> <span class="n">retrain_log</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">graph_full</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cell_list</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="n">block_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inference</span><span class="p">(</span><span class="n">block_input</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">)</span>
+
+        <span class="n">logits</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">block_input</span><span class="p">,</span> <span class="n">keep_prob</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="c1"># softmax</span>
+        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_makedense</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">256</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="s1">&#39;relu&#39;</span><span class="p">))</span>
+
+        <span class="n">sess</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
+        <span class="n">precision</span><span class="p">,</span> <span class="n">log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eval</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">,</span> <span class="n">retrain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">retrain_log</span> <span class="o">+=</span> <span class="n">log</span>
+
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;eva&#39;</span><span class="p">,</span> <span class="n">retrain_log</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">precision</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sess</span><span class="p">,</span> <span class="n">pre_block</span><span class="p">,</span> <span class="n">update_pre_weight</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;Get input for _inference&#39;&#39;&#39;</span>
+        <span class="c1"># if it got previous blocks</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pre_block</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_path</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pre_block</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.meta&#39;</span><span class="p">))</span>
+            <span class="n">new_saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">import_meta_graph</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_path</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pre_block</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.meta&#39;</span><span class="p">))</span>
+            <span class="n">new_saver</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model_path</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pre_block</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">)))</span>
+            <span class="n">graph</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_default_graph</span><span class="p">()</span>
+            <span class="n">data_x</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_tensor_by_name</span><span class="p">(</span><span class="s2">&quot;input:0&quot;</span><span class="p">)</span>
+            <span class="n">data_y</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_tensor_by_name</span><span class="p">(</span><span class="s2">&quot;label:0&quot;</span><span class="p">)</span>
+            <span class="n">train_flag</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_tensor_by_name</span><span class="p">(</span><span class="s2">&quot;train_flag:0&quot;</span><span class="p">)</span>
+            <span class="n">block_input</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_tensor_by_name</span><span class="p">(</span><span class="s2">&quot;last_layer&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;:0&quot;</span><span class="p">)</span>
+            <span class="c1"># only when there&#39;s not so many network in the pool will we update the previous blocks&#39; weight</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">update_pre_weight</span><span class="p">:</span>
+                <span class="n">block_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">stop_gradient</span><span class="p">(</span><span class="n">block_input</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;stop_gradient&quot;</span><span class="p">)</span>
+        <span class="c1"># if it&#39;s the first block</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data_x</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_shape</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;input&#39;</span><span class="p">)</span>
+            <span class="n">data_y</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_shape</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;label&quot;</span><span class="p">)</span>
+            <span class="n">train_flag</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;train_flag&#39;</span><span class="p">)</span>
+            <span class="n">block_input</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">identity</span><span class="p">(</span><span class="n">data_x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">block_input</span><span class="p">,</span> <span class="n">train_flag</span>
+
+    <span class="k">def</span> <span class="nf">_recode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">,</span> <span class="n">repeat_num</span><span class="p">):</span>
+        <span class="n">new_graph</span> <span class="o">=</span> <span class="p">[]</span> <span class="o">+</span> <span class="n">graph_full</span>
+        <span class="n">new_cell_list</span> <span class="o">=</span> <span class="p">[]</span> <span class="o">+</span> <span class="n">cell_list</span>
+        <span class="n">add</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">repeat_num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">new_cell_list</span> <span class="o">+=</span> <span class="n">cell_list</span>
+            <span class="n">add</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">graph_full</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">sub_list</span> <span class="ow">in</span> <span class="n">graph_full</span><span class="p">:</span>
+                <span class="n">new_graph</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">x</span> <span class="o">+</span> <span class="n">add</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">sub_list</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">new_graph</span><span class="p">,</span> <span class="n">new_cell_list</span>
+
+    <span class="k">def</span> <span class="nf">_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sess</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">,</span> <span class="n">retrain</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># TODO change here to run training step and evaluation step</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The actual training process, including the definination of loss and train optimizer</span>
+<span class="sd">        Args:</span>
+<span class="sd">            sess: tensorflow session</span>
+<span class="sd">            logits: output tensor of the model, 2-D tensor of shape [self.batch_size, self.NUM_CLASS]</span>
+<span class="sd">            data_x: input image</span>
+<span class="sd">            data_y: input label, 2-D tensor of shape [self.batch_size, self.NUM_CLASS]</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            targets: float, the optimization target, could be the accuracy or the combination of both time and accuracy, etc</span>
+<span class="sd">            saver: Tensorflow Saver class</span>
+<span class="sd">            log: string, log to be write and saved</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logits</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">keep_prob</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_makedense</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">output_shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]],</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+        <span class="n">global_step</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;global_step&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span><span class="p">))</span>
+        <span class="n">accuracy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cal_accuracy</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">data_y</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loss</span><span class="p">(</span><span class="n">data_y</span><span class="p">,</span> <span class="n">logits</span><span class="p">)</span>
+        <span class="n">train_op</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_train_op</span><span class="p">(</span><span class="n">global_step</span><span class="p">,</span> <span class="n">loss</span><span class="p">)</span>
+
+        <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="n">retrain</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valid_data</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_label</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valid_label</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">max_steps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_label</span><span class="p">))</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+            <span class="n">test_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="p">)</span>
+            <span class="n">test_label</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">test_label</span><span class="p">)</span>
+            <span class="n">num_iter</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_label</span><span class="p">)</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">max_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_num</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+            <span class="n">test_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valid_data</span><span class="p">)</span>
+            <span class="n">test_label</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valid_label</span><span class="p">)</span>
+            <span class="n">num_iter</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">valid_label</span><span class="p">)</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+
+        <span class="n">log</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">cost_time</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch</span><span class="p">):</span>
+            <span class="c1"># print(&quot;epoch&quot;, ep, &quot;:&quot;)</span>
+            <span class="c1"># train step</span>
+            <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_steps</span><span class="p">):</span>
+                <span class="n">batch_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">[</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">:(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">]</span>
+                <span class="n">batch_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_label</span><span class="p">[</span><span class="n">step</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">:(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">]</span>
+                <span class="n">batch_x</span> <span class="o">=</span> <span class="n">DataSet</span><span class="p">()</span><span class="o">.</span><span class="n">process</span><span class="p">(</span><span class="n">batch_x</span><span class="p">)</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">loss_value</span><span class="p">,</span> <span class="n">acc</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">train_op</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">],</span>
+                                              <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">data_x</span><span class="p">:</span> <span class="n">batch_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">:</span> <span class="n">batch_y</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">loss_value</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">log</span>
+                <span class="c1"># sys.stdout.write(&quot;\r&gt;&gt; train %d/%d loss %.4f acc %.4f&quot; % (step, max_steps, loss_value, acc))</span>
+            <span class="c1"># sys.stdout.write(&quot;\n&quot;)</span>
+
+            <span class="c1"># evaluation step</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_iter</span><span class="p">):</span>
+                <span class="n">batch_x</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="n">step</span> <span class="o">*</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">:(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">]</span>
+                <span class="n">batch_y</span> <span class="o">=</span> <span class="n">test_label</span><span class="p">[</span><span class="n">step</span> <span class="o">*</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">:(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">]</span>
+                <span class="n">l</span><span class="p">,</span> <span class="n">acc_</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">loss</span><span class="p">,</span> <span class="n">accuracy</span><span class="p">],</span>
+                                   <span class="n">feed_dict</span><span class="o">=</span><span class="p">{</span><span class="n">data_x</span><span class="p">:</span> <span class="n">batch_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">:</span> <span class="n">batch_y</span><span class="p">,</span> <span class="n">train_flag</span><span class="p">:</span> <span class="kc">False</span><span class="p">})</span>
+                <span class="n">precision</span><span class="p">[</span><span class="n">ep</span><span class="p">]</span> <span class="o">+=</span> <span class="n">acc_</span> <span class="o">/</span> <span class="n">num_iter</span>
+                <span class="c1"># sys.stdout.write(&quot;\r&gt;&gt; valid %d/%d loss %.4f acc %.4f&quot; % (step, num_iter, l, acc_))</span>
+            <span class="c1"># sys.stdout.write(&quot;\n&quot;)</span>
+
+            <span class="c1"># early stop</span>
+            <span class="k">if</span> <span class="n">ep</span> <span class="o">&gt;</span> <span class="mi">5</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">retrain</span><span class="p">:</span>
+                <span class="k">if</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">precision</span><span class="p">[</span><span class="n">ep</span><span class="p">]</span> <span class="o">-</span> <span class="n">precision</span><span class="p">[</span><span class="n">ep</span> <span class="o">-</span> <span class="mi">5</span><span class="p">]</span> <span class="o">-</span> <span class="n">precision</span><span class="p">[</span><span class="n">ep</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.001</span> <span class="o">/</span> <span class="n">DataSet</span><span class="p">()</span><span class="o">.</span><span class="n">NUM_CLASSES</span><span class="p">:</span>
+                    <span class="n">precision</span> <span class="o">=</span> <span class="n">precision</span><span class="p">[:</span><span class="n">ep</span><span class="p">]</span>
+                    <span class="n">log</span> <span class="o">+=</span> <span class="s1">&#39;early stop at </span><span class="si">%d</span><span class="s1"> epoch</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">ep</span>
+                    <span class="k">break</span>
+
+            <span class="n">cost_time</span> <span class="o">+=</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">))</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span>
+            <span class="n">log</span> <span class="o">+=</span> <span class="s1">&#39;epoch </span><span class="si">%d</span><span class="s1">: precision = </span><span class="si">%.3f</span><span class="s1">, cost time </span><span class="si">%.3f</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ep</span><span class="p">,</span> <span class="n">precision</span><span class="p">[</span><span class="n">ep</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">))</span>
+            <span class="c1"># print(&#39;precision = %.3f, cost time %.3f&#39; %</span>
+            <span class="c1">#       (precision[ep], float(time.time() - start_time)))</span>
+
+        <span class="c1"># target = self._cal_multi_target(precision[-1], cost_time)</span>
+        <span class="k">return</span> <span class="n">precision</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">log</span>
+
+    <span class="k">def</span> <span class="nf">_cal_accuracy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        calculate the target of this task</span>
+<span class="sd">            Args:</span>
+<span class="sd">                logits: Logits from softmax.</span>
+<span class="sd">                labels: Labels from distorted_inputs or inputs(). 2-D tensor of shape [self.batch_size, self.NUM_CLASS]</span>
+<span class="sd">            Returns:</span>
+<span class="sd">                Target tensor of type float.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">correct_prediction</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">accuracy</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">correct_prediction</span><span class="p">,</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">accuracy</span>
+
+    <span class="k">def</span> <span class="nf">_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">logits</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">          Args:</span>
+<span class="sd">            logits: Logits from softmax.</span>
+<span class="sd">            labels: Labels from distorted_inputs or inputs(). 1-D tensor of shape [self.batch_size]</span>
+<span class="sd">          Returns:</span>
+<span class="sd">            Loss tensor of type float.</span>
+<span class="sd">          &quot;&quot;&quot;</span>
+        <span class="n">cross_entropy</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span>
+            <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softmax_cross_entropy_with_logits</span><span class="p">(</span><span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span> <span class="n">logits</span><span class="o">=</span><span class="n">logits</span><span class="p">))</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">add_n</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">l2_loss</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="n">tf</span><span class="o">.</span><span class="n">trainable_variables</span><span class="p">()])</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">cross_entropy</span> <span class="o">+</span> <span class="n">l2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_decay</span>
+        <span class="k">return</span> <span class="n">loss</span>
+
+    <span class="k">def</span> <span class="nf">_train_op</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">loss</span><span class="p">):</span>
+        <span class="n">num_batches_per_epoch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_num</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="n">decay_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_batches_per_epoch</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span><span class="p">)</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">cosine_decay</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">INITIAL_LEARNING_RATE</span><span class="p">,</span> <span class="n">global_step</span><span class="p">,</span> <span class="n">decay_steps</span><span class="p">,</span> <span class="mf">0.0001</span><span class="p">)</span>
+
+        <span class="c1"># Build a Graph that trains the model with one batch of examples and</span>
+        <span class="c1"># updates the model parameters.</span>
+        <span class="n">opt</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">MomentumOptimizer</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">momentum_rate</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Momentum&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_num</span><span class="p">),</span>
+                                         <span class="n">use_nesterov</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">update_ops</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">UPDATE_OPS</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">control_dependencies</span><span class="p">(</span><span class="n">update_ops</span><span class="p">):</span>
+            <span class="n">train_op</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">global_step</span><span class="o">=</span><span class="n">global_step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">train_op</span>
+
+    <span class="k">def</span> <span class="nf">_stats_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_default_graph</span><span class="p">()</span>
+        <span class="n">flops</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">profiler</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">profiler</span><span class="o">.</span><span class="n">ProfileOptionBuilder</span><span class="o">.</span><span class="n">float_operation</span><span class="p">())</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">profiler</span><span class="o">.</span><span class="n">profile</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">profiler</span><span class="o">.</span><span class="n">ProfileOptionBuilder</span><span class="o">.</span><span class="n">trainable_variables_parameter</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">flops</span><span class="o">.</span><span class="n">total_float_ops</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">total_parameters</span>
+
+    <span class="k">def</span> <span class="nf">_cal_multi_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">precision</span><span class="p">,</span> <span class="n">time</span><span class="p">):</span>
+        <span class="n">flops</span><span class="p">,</span> <span class="n">model_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stats_graph</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">precision</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">time</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">flops</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">model_size</span>
+
+<div class="viewcode-block" id="Evaluator.set_data_size"><a class="viewcode-back" href="../evaluator_classification.html#evaluator_classification.Evaluator.set_data_size">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">num</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_label</span><span class="p">))</span> <span class="ow">or</span> <span class="n">num</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_label</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Warning! Data size has been changed to&#39;</span><span class="p">,</span> <span class="n">num</span><span class="p">,</span> <span class="s1">&#39;, all data is loaded.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_num</span> <span class="o">=</span> <span class="n">num</span>
+        <span class="c1"># print(&#39;************A NEW ROUND************&#39;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_num</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+        <span class="k">return</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;CUDA_VISIBLE_DEVICES&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+    <span class="nb">eval</span> <span class="o">=</span> <span class="n">Evaluator</span><span class="p">()</span>
+    <span class="nb">eval</span><span class="o">.</span><span class="n">set_data_size</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+    <span class="nb">eval</span><span class="o">.</span><span class="n">set_epoch</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+    <span class="c1"># graph_full = [[1], [2], [3], []]</span>
+    <span class="c1"># cell_list = [Cell(&#39;conv&#39;, 64, 5, &#39;relu&#39;), Cell(&#39;pooling&#39;, &#39;max&#39;, 3), Cell(&#39;conv&#39;, 64, 5, &#39;relu&#39;),</span>
+    <span class="c1">#              Cell(&#39;pooling&#39;, &#39;max&#39;, 3)]</span>
+    <span class="c1"># lenet = NetworkItem(0, graph_full, cell_list, &quot;&quot;)</span>
+    <span class="c1"># e = eval.evaluate(lenet, [], is_bestNN=True)</span>
+    <span class="c1"># Network.pre_block.append(lenet)</span>
+
+    <span class="n">graph_full</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">]]</span>
+    <span class="n">cell_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">Cell</span><span class="p">(</span><span class="s1">&#39;conv&#39;</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;relu&#39;</span><span class="p">),</span> <span class="n">Cell</span><span class="p">(</span><span class="s1">&#39;conv&#39;</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;relu&#39;</span><span class="p">),</span> <span class="n">Cell</span><span class="p">(</span><span class="s1">&#39;conv&#39;</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;relu&#39;</span><span class="p">),</span>
+                 <span class="n">Cell</span><span class="p">(</span><span class="s1">&#39;conv&#39;</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;relu&#39;</span><span class="p">)]</span>
+    <span class="n">network1</span> <span class="o">=</span> <span class="n">NetworkItem</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">network2</span> <span class="o">=</span> <span class="n">NetworkItem</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="nb">eval</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">network1</span><span class="p">,</span> <span class="n">is_bestNN</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="nb">eval</span><span class="o">.</span><span class="n">set_data_size</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="nb">eval</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">network2</span><span class="p">,</span> <span class="p">[</span><span class="n">network1</span><span class="p">],</span> <span class="n">is_bestNN</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="nb">eval</span><span class="o">.</span><span class="n">set_epoch</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">eval</span><span class="o">.</span><span class="n">retrain</span><span class="p">([</span><span class="n">network1</span><span class="p">,</span> <span class="n">network2</span><span class="p">]))</span>
+    <span class="c1"># eval.add_data(5000)</span>
+    <span class="c1"># print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [</span>
+    <span class="c1">#       4, 5, 6, 8], [5, 7], [6, 7, 9, 10], [7, 9], [8], [9, 10], [10]]))</span>
+    <span class="c1"># cellist=[(&#39;conv&#39;, 128, 1, &#39;relu&#39;), (&#39;conv&#39;, 32, 1, &#39;relu&#39;), (&#39;conv&#39;, 256, 1, &#39;relu&#39;), (&#39;pooling&#39;, &#39;max&#39;, 2), (&#39;pooling&#39;, &#39;global&#39;, 3), (&#39;conv&#39;, 32, 1, &#39;relu&#39;)]</span>
+    <span class="c1"># cellist=[(&#39;pooling&#39;, &#39;global&#39;, 2), (&#39;pooling&#39;, &#39;max&#39;, 3), (&#39;conv&#39;, 21, 32, &#39;leakyrelu&#39;), (&#39;conv&#39;, 16, 32, &#39;leakyrelu&#39;), (&#39;pooling&#39;, &#39;max&#39;, 3), (&#39;conv&#39;, 16, 32, &#39;leakyrelu&#39;)]</span>
+    <span class="c1"># graph_part = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], []]</span>
+    <span class="c1"># cell_list = [(&#39;conv&#39;, 64, 3, &#39;relu&#39;), (&#39;conv&#39;, 64, 3, &#39;relu&#39;), (&#39;pooling&#39;, &#39;max&#39;, 2), (&#39;conv&#39;, 128, 3, &#39;relu&#39;),</span>
+    <span class="c1">#              (&#39;conv&#39;, 128, 3, &#39;relu&#39;), (&#39;pooling&#39;, &#39;max&#39;, 2), (&#39;conv&#39;, 256, 3, &#39;relu&#39;),</span>
+    <span class="c1">#              (&#39;conv&#39;, 256, 3, &#39;relu&#39;), (&#39;conv&#39;, 256, 3, &#39;relu&#39;), (&#39;pooling&#39;, &#39;max&#39;, 2),</span>
+    <span class="c1">#              (&#39;conv&#39;, 512, 3, &#39;relu&#39;), (&#39;conv&#39;, 512, 3, &#39;relu&#39;), (&#39;conv&#39;, 512, 3, &#39;relu&#39;),</span>
+    <span class="c1">#              (&#39;pooling&#39;, &#39;max&#39;, 2), (&#39;conv&#39;, 512, 3, &#39;relu&#39;), (&#39;conv&#39;, 512, 3, &#39;relu&#39;),</span>
+    <span class="c1">#              (&#39;conv&#39;, 512, 3, &#39;relu&#39;), (&#39;dense&#39;, [4096, 4096, 1000], &#39;relu&#39;)]</span>
+    <span class="c1"># pre_block = [network]</span>
+    <span class="c1"># Network.pre_block.append(network1)</span>
+    <span class="c1"># network2 = NetworkItem(1, graph_full, cell_list, &quot;&quot;)</span>
+    <span class="c1"># e = eval.evaluate(network2, is_bestNN=True)</span>
+    <span class="c1"># Network.pre_block.append(network2)</span>
+    <span class="c1"># network3 = NetworkItem(2, graph_full, cell_list, &quot;&quot;)</span>
+    <span class="c1"># e = eval.evaluate(network3, is_bestNN=True)</span>
+    <span class="c1"># e=eval.train(network.graph_full,cellist)</span>
+    <span class="c1"># print(e)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

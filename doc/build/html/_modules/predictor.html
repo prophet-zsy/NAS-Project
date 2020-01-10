@@ -1,0 +1,577 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>predictor &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for predictor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">info_str</span> <span class="kn">import</span> <span class="n">_cur_ver_dir</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">enumerater</span> <span class="kn">import</span> <span class="n">Enumerater</span>
+<span class="kn">from</span> <span class="nn">predict_op.label_encoding</span> <span class="kn">import</span> <span class="n">decoder</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">getClassNum</span>
+<span class="kn">from</span> <span class="nn">keras.utils.np_utils</span> <span class="kn">import</span> <span class="n">to_categorical</span>
+<span class="kn">from</span> <span class="nn">keras.models</span> <span class="kn">import</span> <span class="n">model_from_json</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="n">MAX_NETWORK_LENGTH</span> <span class="o">=</span> <span class="mi">71</span>
+<span class="c1">#model_json_path = &#39;./predict_op/model.json&#39;</span>
+<span class="c1">#model_weights_path = &#39;./predict_op/model.json.h5&#39;</span>
+
+<span class="n">net_data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_cur_ver_dir</span><span class="p">,</span> <span class="s1">&#39;predict_op/data&#39;</span><span class="p">,</span> <span class="s1">&#39;net.npy&#39;</span><span class="p">)</span>
+<span class="n">label_data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_cur_ver_dir</span><span class="p">,</span> <span class="s1">&#39;predict_op/data&#39;</span><span class="p">,</span> <span class="s1">&#39;label.npy&#39;</span><span class="p">)</span>
+
+<span class="n">model_json_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_cur_ver_dir</span><span class="p">,</span> <span class="s1">&#39;predict_op&#39;</span><span class="p">,</span> <span class="s1">&#39;model.json&#39;</span><span class="p">)</span>
+<span class="n">model_weights_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_cur_ver_dir</span><span class="p">,</span> <span class="s1">&#39;predict_op&#39;</span><span class="p">,</span> <span class="s1">&#39;model.json.h5&#39;</span><span class="p">)</span>
+
+<span class="c1"># TODO Predictor.train -&gt; Predictor.train_model (defined in interface.md)</span>
+<span class="c1"># TODO DO NOT overuse @staticmethod. It can be your private function in predictor.py.</span>
+<span class="c1"># TODO Wrtie Predictor.predict &amp; Predictor.train_model discriptions.</span>
+<span class="c1"># TODO Let each functions be less than 30 line and 80 characters per line.</span>
+
+<div class="viewcode-block" id="Feature"><a class="viewcode-back" href="../predictor.html#predictor.Feature">[docs]</a><span class="k">class</span> <span class="nc">Feature</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>
+
+<div class="viewcode-block" id="Feature.feature_links"><a class="viewcode-back" href="../predictor.html#predictor.Feature.feature_links">[docs]</a>    <span class="k">def</span> <span class="nf">feature_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># 从邻接矩阵中提取所有的支链，每一条支链有五个特征，编号，起点，终点，长度，节点编号</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
+        <span class="n">link_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">endpoint_link_num_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">node_link_num_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_endpoint</span><span class="p">()</span>
+
+        <span class="n">link_id</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">endpoint</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">link</span> <span class="o">=</span> <span class="p">[</span><span class="n">link_id</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[]]</span>
+                        <span class="n">link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_link</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">node_link_num_set</span><span class="p">)</span>
+                        <span class="n">link_id</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">link_set</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">endpoint</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">i_links_num_set</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">i_links_num_set</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="n">link_set</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span> <span class="ow">or</span> <span class="n">link_set</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span><span class="p">:</span>
+                        <span class="n">i_links_num_set</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+                <span class="n">endpoint_link_num_set</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i_links_num_set</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">link_set</span><span class="p">,</span> <span class="n">endpoint_link_num_set</span><span class="p">,</span> <span class="n">node_link_num_set</span></div>
+
+<div class="viewcode-block" id="Feature.feature_nodes"><a class="viewcode-back" href="../predictor.html#predictor.Feature.feature_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">feature_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># 对每一个节点提取特征</span>
+        <span class="n">link_set</span><span class="p">,</span> <span class="n">endpointLinkNumSet</span><span class="p">,</span> <span class="n">nodeLinkNumSet</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_links</span><span class="p">()</span>
+
+        <span class="n">node_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">feature_num</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="n">node_feature</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">node_num</span><span class="p">,</span> <span class="n">feature_num</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_num</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)</span>
+
+        <span class="n">max_length</span><span class="p">,</span> <span class="n">max_link_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_max_link</span><span class="p">(</span><span class="n">link_set</span><span class="p">)</span>
+        <span class="n">min_length</span><span class="p">,</span> <span class="n">min_link_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_min_link</span><span class="p">(</span><span class="n">link_set</span><span class="p">)</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_length</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_link_index</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_length</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_link_index</span>
+
+        <span class="n">mean</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)</span> <span class="o">/</span> <span class="n">node_num</span>
+        <span class="n">link_len</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)):</span>
+            <span class="n">link_len</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">])</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">link_len</span><span class="p">)</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">6</span><span class="p">]</span> <span class="o">=</span> <span class="n">mean</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">7</span><span class="p">]</span> <span class="o">=</span> <span class="n">var</span>
+
+        <span class="c1"># 全局特征，端点个数</span>
+        <span class="n">endpoint_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">endpointLinkNumSet</span><span class="p">)</span>
+        <span class="n">node_feature</span><span class="p">[:,</span> <span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="n">endpoint_num</span>
+
+        <span class="n">global_num</span> <span class="o">=</span> <span class="mi">9</span>
+
+        <span class="c1"># 局部特征</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">node_num</span><span class="p">):</span>
+
+            <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_endpoint</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">endpointLinkNumSet</span><span class="p">)</span>
+            <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+
+            <span class="k">if</span> <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_link_num</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">endpointLinkNumSet</span><span class="p">)</span>
+                <span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_endpoint_link_set</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">endpointLinkNumSet</span><span class="p">,</span> <span class="n">link_set</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mean_link</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_var_link</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">max_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_max_link</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">min_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_min_link</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_length</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">6</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_length</span>
+
+            <span class="k">else</span><span class="p">:</span>
+
+                <span class="n">link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_node_link</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">nodeLinkNumSet</span><span class="p">,</span> <span class="n">link_set</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">7</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relative_Loc</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">link</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">9</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">10</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+                <span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_node_links</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">nodeLinkNumSet</span><span class="p">,</span> <span class="n">link_set</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">11</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mean_link</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+                <span class="n">node_feature</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">global_num</span> <span class="o">+</span> <span class="mi">12</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_var_link</span><span class="p">(</span><span class="n">links</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">node_feature</span></div>
+
+    <span class="k">def</span> <span class="nf">_find_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">),</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">endpoint</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)):</span>
+            <span class="n">out_link_num</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">in_link_num</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">out_link_num</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">in_link_num</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">out_link_num</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">in_link_num</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">out_link_num</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">endpoint</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">in_link_num</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">endpoint</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">endpoint</span>
+
+    <span class="k">def</span> <span class="nf">_find_endpoint_link_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">endpoint_link_num_set</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 寻找端点的支链集</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">endpoint_link_num_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">endpoint_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">endpoint_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+                    <span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">link_set</span><span class="p">[</span><span class="n">endpoint_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">e</span><span class="p">]])</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">links</span>
+
+    <span class="k">def</span> <span class="nf">_find_node_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">node_link_num_set</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 寻找与节点所在支链有相同端点的支链集</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">link_num</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">node_link_num_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">node_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                <span class="n">link_num</span> <span class="o">=</span> <span class="n">node_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">break</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">link_set</span><span class="p">[</span><span class="n">link_num</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="ow">and</span> <span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">link_set</span><span class="p">[</span><span class="n">link_num</span><span class="p">][</span><span class="mi">2</span><span class="p">]:</span>
+                <span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">links</span>
+
+    <span class="k">def</span> <span class="nf">_find_node_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">node_link_num_set</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 寻找节点所在的支链</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">node_link_num_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">node_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                <span class="n">link_num</span> <span class="o">=</span> <span class="n">link_set</span><span class="p">[</span><span class="n">node_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="k">return</span> <span class="n">link_num</span>
+
+    <span class="k">def</span> <span class="nf">_is_endpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_num</span><span class="p">,</span> <span class="n">endpoint_link_num_set</span><span class="p">):</span>
+        <span class="c1"># 判断是否为端点</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">endpoint_link_num_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">endpoint_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">node_num</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">_link_num</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">endpoint_link_num_set</span><span class="p">):</span>
+        <span class="c1"># 支链的个数</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">endpoint_link_num_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">endpoint_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">node_id</span><span class="p">:</span>
+                <span class="n">e</span> <span class="o">=</span> <span class="n">endpoint_link_num_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">_mean_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 支链长度的期望</span>
+        <span class="n">links_len</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">link_set</span><span class="p">:</span>
+            <span class="n">links_len</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">links_len</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_var_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 支链的方差</span>
+        <span class="n">links_len</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">link_set</span><span class="p">:</span>
+            <span class="n">links_len</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">links_len</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_relative_Loc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">link</span><span class="p">):</span>
+        <span class="c1"># 节点在支链中的相对位置</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">link</span><span class="p">[</span><span class="mi">4</span><span class="p">])):</span>
+            <span class="k">if</span> <span class="n">link</span><span class="p">[</span><span class="mi">4</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">_find_max_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 寻找最长支链</span>
+        <span class="n">max_length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">max_length</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="n">max_length</span> <span class="o">=</span> <span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">index</span><span class="p">,</span> <span class="n">max_length</span>
+
+    <span class="k">def</span> <span class="nf">_find_min_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link_set</span><span class="p">):</span>
+        <span class="c1"># 寻找最短支链</span>
+        <span class="n">min_length</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">link_set</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">min_length</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="n">min_length</span> <span class="o">=</span> <span class="n">link_set</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">index</span><span class="p">,</span> <span class="n">min_length</span>
+
+    <span class="k">def</span> <span class="nf">_find_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">G</span><span class="p">,</span> <span class="n">node_link_num_set</span><span class="p">):</span>
+        <span class="c1"># 递归搜索链上的所有节点</span>
+        <span class="k">if</span> <span class="n">endpoint</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">link</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nb">id</span>
+            <span class="k">return</span> <span class="n">link</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">link</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">link</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+            <span class="n">node_link_num_set</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">id</span><span class="p">,</span> <span class="n">link</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">G</span><span class="p">[</span><span class="nb">id</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_link</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">G</span><span class="p">,</span> <span class="n">node_link_num_set</span><span class="p">)</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">link</span></div>
+
+
+<div class="viewcode-block" id="Predictor"><a class="viewcode-back" href="../predictor.html#predictor.Predictor">[docs]</a><span class="k">class</span> <span class="nc">Predictor</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">model_json_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">model_json</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model_from_json</span><span class="p">(</span><span class="n">model_json</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_weights</span><span class="p">(</span><span class="n">model_weights_path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_list2mat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">G</span><span class="p">):</span>
+        <span class="c1"># 将领接表转换成邻接矩阵</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">)):</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="n">G</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">graph</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">graph</span>
+
+    <span class="k">def</span> <span class="nf">_graph_concat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graphs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">graphs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">graphs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">graphs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">new_graph_length</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">graphs</span><span class="p">:</span>
+                <span class="n">new_graph_length</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+            <span class="n">new_graph</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">new_graph_length</span><span class="p">,</span> <span class="n">new_graph_length</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">x_index</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># the staring connection position of next graph</span>
+            <span class="n">y_index</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">graphs</span><span class="p">:</span>
+                <span class="n">new_graph</span><span class="p">[</span><span class="n">x_index</span><span class="p">:</span><span class="n">x_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">),</span> <span class="n">y_index</span><span class="p">:</span><span class="n">y_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span> <span class="o">=</span> <span class="n">g</span>
+                <span class="k">if</span> <span class="n">y_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">new_graph_length</span><span class="p">:</span>
+                    <span class="n">new_graph</span><span class="p">[</span><span class="n">x_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">y_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">x_index</span> <span class="o">=</span> <span class="n">x_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+                <span class="n">y_index</span> <span class="o">=</span> <span class="n">y_index</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">new_graph</span>
+
+    <span class="k">def</span> <span class="nf">_get_new_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">links</span><span class="p">,</span> <span class="n">graph_size</span><span class="p">):</span>
+        <span class="c1"># 获得节点在新的编码方式下的顺序</span>
+        <span class="n">new_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">graph_size</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">graph_size</span><span class="p">):</span>
+            <span class="n">new_order</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_order</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">l</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)):</span>
+                        <span class="n">new_order</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">new_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">new_order</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="k">return</span> <span class="n">new_order</span>
+
+    <span class="k">def</span> <span class="nf">_get_new_mat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_order</span><span class="p">,</span> <span class="n">mat</span><span class="p">):</span>
+        <span class="c1"># 获得在新的编码方式下网络结构的邻接矩阵</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mat</span><span class="p">)</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">size</span><span class="p">):</span>
+            <span class="n">e</span> <span class="o">=</span> <span class="n">mat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">pre</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">new_order</span> <span class="o">==</span> <span class="n">i</span><span class="p">))</span>
+                    <span class="n">after</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">new_order</span> <span class="o">==</span> <span class="n">k</span><span class="p">))</span>
+                    <span class="n">graph</span><span class="p">[</span><span class="n">pre</span><span class="p">][</span><span class="n">after</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">graph</span>
+
+    <span class="k">def</span> <span class="nf">_padding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_feature</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="c1"># 对输入数据做填充，保证输入数据的一致性</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_feature</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">length</span><span class="p">:</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">length</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_feature</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_feature</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="o">-</span><span class="n">add</span>
+            <span class="n">node_feature</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_feature</span><span class="p">,</span> <span class="n">add</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">node_feature</span>
+
+    <span class="k">def</span> <span class="nf">_trans</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graphs</span><span class="p">):</span>
+        <span class="c1"># 对输入的邻接表重新编码并转换成矩阵的形式提取特征</span>
+        <span class="n">graphs_mat</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">graphs_orders</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">graphs</span><span class="p">:</span>
+            <span class="n">g_mat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_list2mat</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+            <span class="n">links</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">Feature</span><span class="p">(</span><span class="n">g_mat</span><span class="p">)</span><span class="o">.</span><span class="n">feature_links</span><span class="p">()</span>
+            <span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_new_order</span><span class="p">(</span><span class="n">links</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">g_mat</span><span class="p">))</span>
+            <span class="n">graph_mat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_new_mat</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+            <span class="n">graphs_mat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">graph_mat</span><span class="p">)</span>
+            <span class="n">graphs_orders</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">order</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">graphs_mat</span><span class="p">,</span> <span class="n">graphs_orders</span>
+
+
+    <span class="k">def</span> <span class="nf">_class_id_2_parameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">class_list</span><span class="p">):</span>
+        <span class="c1"># 将最后输出的类别转换成需要预测的操作详细参数</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">decoder</span><span class="p">(</span><span class="n">class_list</span><span class="p">)</span>
+        <span class="n">parameters_cp</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)):</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">parameters_cp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">parameters</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)]</span>
+
+    <span class="k">def</span> <span class="nf">_save_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">json_path</span><span class="p">,</span> <span class="n">weights_path</span><span class="p">):</span>
+        <span class="n">model_json</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">model_json</span><span class="p">)</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">save_weights</span><span class="p">(</span><span class="n">weights_path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_my_param_style</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">):</span>
+        <span class="n">filter_size</span> <span class="o">=</span> <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">48</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">1024</span><span class="p">]</span>
+        <span class="n">pool_size</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">]</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cell_list</span><span class="p">:</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;conv&#39;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">f_size</span> <span class="ow">in</span> <span class="n">filter_size</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">f_size</span><span class="p">:</span>
+                        <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">f_size</span><span class="p">),</span> <span class="s1">&#39;relu&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;max&#39;</span> <span class="ow">or</span> <span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;avg&#39;</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">p_size</span> <span class="ow">in</span> <span class="n">pool_size</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">p_size</span><span class="p">:</span>
+                            <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;pool &#39;</span> <span class="o">+</span> <span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">p_size</span><span class="p">)]]</span>
+
+                <span class="k">elif</span> <span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;global&#39;</span><span class="p">:</span>
+                    <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;pool avg&#39;</span><span class="p">,</span> <span class="s1">&#39;global&#39;</span><span class="p">]]</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">labels</span>
+
+    <span class="k">def</span> <span class="nf">_read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">net_data_path</span><span class="p">,</span> <span class="n">label_data_path</span><span class="p">):</span>
+        <span class="n">network_feature</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">net_data_path</span><span class="p">)</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">label_data_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">network_feature</span><span class="p">,</span> <span class="n">label</span>
+
+    <span class="k">def</span> <span class="nf">_save_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">net</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">net_data_path</span><span class="p">,</span> <span class="n">net</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">label_data_path</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="c1"># 根据输入特征预测操作</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">inputs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="c1"># model = load_model(model_json_path, model_weights_path)</span>
+        <span class="n">predict_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">predict_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">predict_y</span><span class="p">,</span> <span class="p">(</span><span class="n">predict_y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">predict_y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">predict_y</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="c1"># 模块接口</span>
+<div class="viewcode-block" id="Predictor.predictor"><a class="viewcode-back" href="../predictor.html#predictor.Predictor.predictor">[docs]</a>    <span class="k">def</span> <span class="nf">predictor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pre_block</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Method for predicting block&#39;s operation</span>
+<span class="sd">        </span>
+<span class="sd">        :param pre_block: Previous block Networkitem_list</span>
+<span class="sd">        :param graph_full: Current block Networkitem</span>
+<span class="sd">        :return: Operation of each node in the current block,including size and filters</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">graph_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">pre_block</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">pre_block</span><span class="p">:</span>
+                <span class="n">graph_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+        <span class="n">graph_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">graph_full</span><span class="p">)</span>
+        <span class="n">graphs_mat</span><span class="p">,</span> <span class="n">graphs_orders</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trans</span><span class="p">(</span><span class="n">graph_list</span><span class="p">)</span>
+        <span class="n">new_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph_concat</span><span class="p">(</span><span class="n">graphs_mat</span><span class="p">)</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">Feature</span><span class="p">(</span><span class="n">new_graph</span><span class="p">)</span><span class="o">.</span><span class="n">feature_nodes</span><span class="p">()</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">MAX_NETWORK_LENGTH</span><span class="p">)</span>
+        <span class="n">class_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">ops</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_class_id_2_parameter</span><span class="p">(</span><span class="n">graphs_orders</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                                    <span class="n">class_list</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">new_graph</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">graph_full</span><span class="p">):</span><span class="nb">len</span><span class="p">(</span><span class="n">new_graph</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">ops</span></div>
+
+<div class="viewcode-block" id="Predictor.train_model"><a class="viewcode-back" href="../predictor.html#predictor.Predictor.train_model">[docs]</a>    <span class="k">def</span> <span class="nf">train_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_full</span><span class="p">,</span> <span class="n">cell_list</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Retrain the predictor model with networks that</span>
+<span class="sd">        get high accuracy on the validation set</span>
+<span class="sd">        </span>
+<span class="sd">        :param graph_full: a Network Topology</span>
+<span class="sd">        :param cell_list: Cell list</span>
+<span class="sd">        :returns: None.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">x_train</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">y_train</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">net</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_data</span><span class="p">(</span><span class="n">net_data_path</span><span class="p">,</span> <span class="n">label_data_path</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">net</span><span class="p">:</span>
+            <span class="n">x_train</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">y_train</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="n">graphs_mat</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trans</span><span class="p">(</span><span class="n">graph_full</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">graph</span> <span class="ow">in</span> <span class="n">graphs_mat</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">Feature</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span><span class="o">.</span><span class="n">feature_nodes</span><span class="p">()</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">MAX_NETWORK_LENGTH</span><span class="p">)</span>
+            <span class="n">x_train</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_train</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cell_list</span><span class="p">:</span>
+            <span class="n">cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_my_param_style</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">encoder</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">to_categorical</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">getClassNum</span><span class="p">())</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_padding</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">MAX_NETWORK_LENGTH</span><span class="p">)</span>
+            <span class="n">y_train</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">y_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_train</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_model</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                         <span class="n">json_path</span><span class="o">=</span><span class="s1">&#39;./predict_op/outdated_model.json&#39;</span><span class="p">,</span>
+                         <span class="n">weights_path</span><span class="o">=</span><span class="s1">&#39;./predict_op/outdated_model.json.h5&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="s1">&#39;categorical_crossentropy&#39;</span><span class="p">,</span>
+                           <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;rmsprop&#39;</span><span class="p">,</span>
+                           <span class="n">metrics</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;accuracy&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_model</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                         <span class="n">json_path</span><span class="o">=</span><span class="n">model_json_path</span><span class="p">,</span>
+                         <span class="n">weights_path</span><span class="o">=</span><span class="n">model_weights_path</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_data</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span></div></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c1"># graph = [[[1], [2], [3], [4], [5], []]]</span>
+    <span class="c1"># cell_list = [[(&#39;conv&#39;, 256, 3, &#39;relu&#39;), (&#39;conv&#39;, 192, 3, &#39;relu&#39;), (&#39;conv&#39;, 512, 1, &#39;relu&#39;), (&#39;pooling&#39;, &#39;max&#39;, 4)</span>
+    <span class="c1">#                  , (&#39;conv&#39;, 128, 1, &#39;relu&#39;), (&#39;conv&#39;, 512, 5, &#39;relu&#39;)]]</span>
+    <span class="c1"># pred = Predictor()</span>
+    <span class="c1"># Blocks = []</span>
+    <span class="c1"># pred.train([], [])</span>
+
+    <span class="n">enu</span> <span class="o">=</span> <span class="n">Enumerater</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">network_pool</span> <span class="o">=</span> <span class="n">enu</span><span class="o">.</span><span class="n">enumerate</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">network_pool</span><span class="p">))</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">pred</span> <span class="o">=</span> <span class="n">Predictor</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">network_pool</span><span class="p">)):</span>
+        <span class="n">gra</span> <span class="o">=</span> <span class="n">network_pool</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">graph_part</span>
+
+        <span class="c1">#Blocks = [network_pool[ind - 2].graph_part, network_pool[ind - 1].graph_part]</span>
+        <span class="n">Blocks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cell_list</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="n">predictor</span><span class="p">(</span><span class="n">Blocks</span><span class="p">,</span> <span class="n">gra</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;iterator:&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">gra</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">cell_list</span><span class="p">)</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>evaluator_classification module &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-evaluator_classification">
+<span id="evaluator-classification-module"></span><h1>evaluator_classification module<a class="headerlink" href="#module-evaluator_classification" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="evaluator_classification.DataSet">
+<em class="property">class </em><code class="sig-prename descclassname">evaluator_classification.</code><code class="sig-name descname">DataSet</code><span class="sig-paren">(</span><em class="sig-param">image_size=32</em>, <em class="sig-param">num_class=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#DataSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.DataSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="evaluator_classification.DataSet.inputs">
+<code class="sig-name descname">inputs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#DataSet.inputs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.DataSet.inputs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="evaluator_classification.DataSet.process">
+<code class="sig-name descname">process</code><span class="sig-paren">(</span><em class="sig-param">x</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#DataSet.process"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.DataSet.process" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="evaluator_classification.Evaluator">
+<em class="property">class </em><code class="sig-prename descclassname">evaluator_classification.</code><code class="sig-name descname">Evaluator</code><a class="reference internal" href="_modules/evaluator_classification.html#Evaluator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.Evaluator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="evaluator_classification.Evaluator.evaluate">
+<code class="sig-name descname">evaluate</code><span class="sig-paren">(</span><em class="sig-param">network</em>, <em class="sig-param">pre_block=[]</em>, <em class="sig-param">is_bestNN=False</em>, <em class="sig-param">update_pre_weight=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#Evaluator.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.Evaluator.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for evaluate the given network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>network</strong> – NetworkItem()</p></li>
+<li><p><strong>pre_block</strong> – The pre-block structure, every block has two parts ‘graph_part’ and ‘cell_list’ of this block.</p></li>
+<li><p><strong>is_bestNN</strong> – Symbol for indicating whether the evaluating network is the best network of this round.</p></li>
+<li><p><strong>update_pre_weight</strong> – Symbol for indicating whether to update previous blocks’ weight.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>accuracy, float.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="evaluator_classification.Evaluator.retrain">
+<code class="sig-name descname">retrain</code><span class="sig-paren">(</span><em class="sig-param">pre_block</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#Evaluator.retrain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.Evaluator.retrain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="evaluator_classification.Evaluator.set_data_size">
+<code class="sig-name descname">set_data_size</code><span class="sig-paren">(</span><em class="sig-param">num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#Evaluator.set_data_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.Evaluator.set_data_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="evaluator_classification.Evaluator.set_epoch">
+<code class="sig-name descname">set_epoch</code><span class="sig-paren">(</span><em class="sig-param">e</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/evaluator_classification.html#Evaluator.set_epoch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#evaluator_classification.Evaluator.set_epoch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/evaluator_classification.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

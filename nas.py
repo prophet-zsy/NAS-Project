@@ -454,7 +454,7 @@ def _init_npool_sampler(netpool, block_num):
     return
 
 
-def algo(block_num, eva, com, ds, npool_tem, process_pool):
+def _algo(block_num, eva, com, ds, npool_tem, process_pool):
     """evaluate all the networks asynchronously inside one round and synchronously between rounds
 
     :param block_num:
@@ -484,23 +484,6 @@ def algo(block_num, eva, com, ds, npool_tem, process_pool):
     return network_item
 
 
-def _subp_retrain(eva, pre_blk, gpuq):
-    ngpu = gpuq.get()
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(ngpu)
-    if MAIN_CONFIG['eva_debug']:
-        score = random.uniform(0, 0.1)
-    else:
-        score = eva.retrain(pre_blk)
-    gpuq.put(ngpu)
-    return score
-
-
-def _retrain(eva, com, process_pool):
-    _epoch_ctrl(eva, stage="retrain")
-    score = process_pool.apply(_subp_retrain, (eva, Network.pre_block, com.idle_gpuq))
-    return score
-
-
 class Nas:
     def __init__(self, pool):
         NAS_LOG << "init_ing"
@@ -517,16 +500,13 @@ class Nas:
         for i in range(MAIN_CONFIG["block_num"]):
             NAS_LOG << ('search_blk', i + 1, MAIN_CONFIG["block_num"])
             start_block = time.time()
-            network_item = algo(i, self.eva, self.com, self.ds, network_pool_tem, self.pool)
+            network_item = _algo(i, self.eva, self.com, self.ds, network_pool_tem, self.pool)
             Network.pre_block.append(network_item)
             NAS_LOG << ('search_blk_end', time.time() - start_block)
         NAS_LOG << ('nas_end', time.time() - start_search)
         for block in Network.pre_block:
             NAS_LOG << ('pre_block', str(block.graph), str(block.cell_list))
-        start_retrain = time.time()
-        retrain_score = _retrain(self.eva, self.com, self.pool)
-        NAS_LOG << ('retrain_end', retrain_score, time.time() - start_retrain)
-        return Network.pre_block, retrain_score
+        return Network.pre_block
 
 
 if __name__ == '__main__':

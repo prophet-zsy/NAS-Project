@@ -28,7 +28,7 @@ class Sampler:
         self._pattern = NAS_CONFIG['nas_main']['pattern']  #  Parameter setting based on search method
         self._crosslayer_dis = NAS_CONFIG['spl']['skip_max_dist'] + 1  # dis control
         self._cross_node_number = NAS_CONFIG['spl']['skip_max_num']
-        self._graph_part_invisible_node = self.graph_part_add_invisible_node()
+        self._graph_part_invisible_node = self._graph_part_add_invisible_node()
         self._tmp_flag = 0
         self._graph_part_invisible_node_flag = [0 for i in range(len(self._graph_part_invisible_node))]
         self._find_main_chain(self._graph_part_invisible_node)
@@ -84,18 +84,17 @@ class Sampler:
         _setting_tmp = collections.OrderedDict()
         _setting_tmp = copy.deepcopy(NAS_CONFIG['spl']['space'])
 
+        if NAS_CONFIG['spl']['pool_switch'] == 0 and 'pooling' in _setting_tmp:
+            del _setting_tmp['pooling']
+
         for key in _setting_tmp:
             for op in _setting_tmp[key]:
                 if type(_setting_tmp[key][op][0]) is list:
                     _setting_tmp[key][op] = _setting_tmp[key][op][block_id]
 
-        #TODO del(pjs)  del pooling in config
-        if self._pattern == "Block":
-            del _setting_tmp['pooling']
-
         return _setting_tmp
 
-    def graph_part_add_invisible_node(self):
+    def _graph_part_add_invisible_node(self):
         graph_part_tmp = []
         for i in self._graph_part:
             if not i:
@@ -116,11 +115,11 @@ class Sampler:
                 q.put([i, f[1]+1])
 
         self._graph_part_invisible_node_flag[0] = 1
-        self.dfs(0, 0, ma)
+        self._dfs(0, 0, ma)
 
         return
 
-    def dfs(self, node_id, cnt, ma):
+    def _dfs(self, node_id, cnt, ma):
         if cnt == ma:
             self._tmp_flag = 1
         if self._tmp_flag == 1:
@@ -128,7 +127,7 @@ class Sampler:
         for i in self._graph_part_invisible_node[node_id]:
             if self._graph_part_invisible_node_flag[i] == 0 and self._tmp_flag == 0:
                 self._graph_part_invisible_node_flag[i] = 1
-                self.dfs(i, cnt+1, ma)
+                self._dfs(i, cnt+1, ma)
                 if self._tmp_flag == 0:
                     self._graph_part_invisible_node_flag[i] = 0
 

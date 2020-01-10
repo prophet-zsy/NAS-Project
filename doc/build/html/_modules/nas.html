@@ -1,0 +1,632 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>nas &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for nas</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Queue</span><span class="p">,</span> <span class="n">Pool</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Pool</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">base</span> <span class="kn">import</span> <span class="n">Network</span><span class="p">,</span> <span class="n">NetworkItem</span>
+<span class="kn">from</span> <span class="nn">enumerater</span> <span class="kn">import</span> <span class="n">Enumerater</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">Communication</span><span class="p">,</span> <span class="n">list_swap</span><span class="p">,</span> <span class="n">DataSize</span><span class="p">,</span> <span class="n">_epoch_ctrl</span>
+<span class="kn">from</span> <span class="nn">evaluator_classification</span> <span class="kn">import</span> <span class="n">Evaluator</span>
+<span class="kn">from</span> <span class="nn">sampler</span> <span class="kn">import</span> <span class="n">Sampler</span>
+
+<span class="kn">from</span> <span class="nn">info_str</span> <span class="kn">import</span> <span class="n">NAS_CONFIG</span>
+<span class="kn">import</span> <span class="nn">info_str</span> <span class="k">as</span> <span class="nn">ifs</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">NAS_LOG</span>
+
+<span class="n">MAIN_CONFIG</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">]</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;TF_CPP_MIN_LOG_LEVEL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;3&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_subproc_eva</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">eva</span><span class="p">,</span> <span class="n">gpuq</span><span class="p">):</span>
+    <span class="n">ngpu</span> <span class="o">=</span> <span class="n">gpuq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">item</span><span class="p">,</span> <span class="n">pre_blk</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">pl_len</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="n">bt_nm</span><span class="p">,</span> <span class="n">ft_sign</span><span class="p">,</span> <span class="n">block_winner</span> <span class="o">=</span> <span class="n">params</span>
+    <span class="n">mistake</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># return score and pos</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva_debug&#39;</span><span class="p">]:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="n">eva</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">pre_blk</span><span class="p">,</span> <span class="n">is_bestNN</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                 <span class="n">update_pre_weight</span><span class="o">=</span><span class="n">ft_sign</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">pre_blk_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">blk</span> <span class="ow">in</span> <span class="n">pre_blk</span><span class="p">:</span>
+                <span class="n">pre_blk_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">blk</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">blk</span><span class="o">.</span><span class="n">cell_list</span><span class="p">])</span>
+            <span class="n">error_info</span> <span class="o">=</span> <span class="s2">&quot;Eva Error </span><span class="si">{}</span><span class="s2"> graph</span><span class="si">{}</span><span class="s2"> cell</span><span class="si">{}</span><span class="s2"> pre</span><span class="si">{}</span><span class="s2"> rd</span><span class="si">{}</span><span class="s2"> nnid</span><span class="si">{}</span><span class="s2"> splid</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                         <span class="n">e</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">cell_list</span><span class="p">,</span> <span class="n">pre_blk_list</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">error_info</span><span class="p">)</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+            <span class="n">error_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;error_log.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+            <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="n">error_f</span><span class="p">)</span>
+            <span class="n">mistake</span> <span class="o">=</span> <span class="n">error_info</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+    <span class="n">gpuq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="n">time_cost</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+    <span class="k">if</span> <span class="n">mistake</span><span class="p">:</span>
+        <span class="n">time_cost</span> <span class="o">=</span> <span class="n">mistake</span>
+    <span class="c1"># NAS_LOG &lt;&lt; (&#39;eva_ing&#39;, len(Network.pre_block)+1, rd, nn_id,</span>
+    <span class="c1">#             pl_len, spl_id, bt_nm, score, time_cost, os.getpid())</span>
+    <span class="k">return</span> <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span>
+
+
+<span class="k">def</span> <span class="nf">_save_net_info</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="n">net_info_temp</span> <span class="o">=</span> <span class="s2">&quot;elim_net_info&quot;</span>
+    <span class="n">sche_info_temp</span> <span class="o">=</span> <span class="s2">&quot;scheme_info&quot;</span>
+    <span class="n">blk_num</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">net_lft</span><span class="p">,</span> <span class="n">net_id</span><span class="p">,</span> <span class="n">sche_num</span> <span class="o">=</span> <span class="n">args</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">net_info_temp</span><span class="p">,</span> <span class="n">blk_num</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">net_lft</span><span class="p">,</span> <span class="n">net_id</span><span class="p">,</span> <span class="n">sche_num</span><span class="p">,</span> <span class="n">net</span><span class="o">.</span><span class="n">graph_template</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">scheme</span> <span class="ow">in</span> <span class="n">net</span><span class="o">.</span><span class="n">item_list</span><span class="p">:</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">sche_info_temp</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">graph</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">cell_list</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">code</span><span class="p">),</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">scheme</span><span class="o">.</span><span class="n">score</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_do_task</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">cmnct</span><span class="p">,</span> <span class="n">eva</span><span class="p">):</span>
+    <span class="c1"># pool = Pool(MAIN_CONFIG[&#39;num_gpu&#39;])</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">task</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">task_params</span> <span class="o">=</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">item</span><span class="p">,</span> <span class="n">pre_block</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">pl_len</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="n">bt_nm</span><span class="p">,</span> <span class="n">ft_sign</span><span class="p">,</span> <span class="n">blk_wnr</span> <span class="o">=</span> <span class="n">task_params</span>
+                <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;eva_pre&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">rd</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span>
+                            <span class="n">pl_len</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="n">bt_nm</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;subp_eva_debug&#39;</span><span class="p">]:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">_subproc_eva</span><span class="p">(</span><span class="n">task_params</span><span class="p">,</span> <span class="n">eva</span><span class="p">,</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">blk_wnr</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span>
+                        <span class="n">_subproc_eva</span><span class="p">,</span>
+                        <span class="p">(</span><span class="n">task_params</span><span class="p">,</span> <span class="n">eva</span><span class="p">,</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">),</span> <span class="n">callback</span><span class="o">=</span><span class="n">cmnct</span><span class="o">.</span><span class="n">wake_up_train_winner</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span>
+                        <span class="n">_subproc_eva</span><span class="p">,</span>
+                        <span class="p">(</span><span class="n">task_params</span><span class="p">,</span> <span class="n">eva</span><span class="p">,</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">))</span>
+            <span class="n">cmnct</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="n">num</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">blk_wnr</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="n">num</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">blk_wnr</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                <span class="n">r_</span> <span class="o">=</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span> <span class="o">=</span> <span class="n">r_</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;eva_result&#39;</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">)</span>
+            <span class="k">break</span>
+    <span class="c1"># pool.close()</span>
+    <span class="c1"># pool.join()</span>
+
+
+<span class="k">def</span> <span class="nf">_arrange_result</span><span class="p">(</span><span class="n">cmnct</span><span class="p">,</span> <span class="n">net_pl</span><span class="p">):</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+        <span class="n">r_</span> <span class="o">=</span> <span class="n">cmnct</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;subp_eva_debug&#39;</span><span class="p">]:</span>
+            <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span> <span class="o">=</span> <span class="n">r_</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span> <span class="o">=</span> <span class="n">r_</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;eva_result&#39;</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">)</span>
+        <span class="c1"># mark down the score</span>
+        <span class="n">net_pl</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="n">spl_id</span><span class="p">]</span><span class="o">.</span><span class="n">score</span> <span class="o">=</span> <span class="n">score</span>
+
+
+<span class="k">def</span> <span class="nf">_init_ops_dup_chk</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">task_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;init ops with duplicate check</span>
+
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cells</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">graphs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">spl_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">use_pred</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">while</span> <span class="n">spl_index</span> <span class="o">&lt;</span> <span class="n">task_num</span><span class="p">:</span>
+        <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">cnt</span> <span class="o">&gt;</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;no_dim_ini&#39;</span><span class="p">,</span> <span class="n">spl_index</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;sample error&quot;</span><span class="p">)</span>
+        <span class="n">cell</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span> <span class="o">=</span> <span class="n">network</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">use_pred</span><span class="p">:</span>
+            <span class="n">graph</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">table</span> <span class="o">=</span> <span class="n">_pred_ops</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
+            <span class="n">use_pred</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tables</span><span class="p">:</span>
+            <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+            <span class="n">cells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+            <span class="n">graphs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+            <span class="n">spl_index</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">cells</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">tables</span>
+
+
+<span class="k">def</span> <span class="nf">_spl_dup_chk</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">task_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;sample with duplicate check</span>
+
+<span class="sd">    :param network:</span>
+<span class="sd">    :param task_num:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cells</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">graphs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">spl_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">spl_index</span> <span class="o">&lt;</span> <span class="n">task_num</span><span class="p">:</span>
+        <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">cnt</span> <span class="o">&gt;</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;no_dim_spl&#39;</span><span class="p">,</span> <span class="n">spl_index</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;sample error&quot;</span><span class="p">)</span>
+        <span class="n">cell</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span> <span class="o">=</span> <span class="n">network</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tables</span><span class="p">:</span>
+            <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+            <span class="n">cells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+            <span class="n">graphs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+            <span class="n">spl_index</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">cells</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">tables</span>
+
+
+<span class="k">def</span> <span class="nf">_gpu_batch_update_model</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param nn:</span>
+<span class="sd">    :param batch_num:equals to num of gpu</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">spl_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">batch_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">update_opt_model</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="n">spl_id</span><span class="p">]</span><span class="o">.</span><span class="n">code</span><span class="p">,</span> <span class="o">-</span><span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="n">spl_id</span><span class="p">]</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_gpu_batch_init</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param nn:</span>
+<span class="sd">    :param batch_num:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cells</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">tables</span> <span class="o">=</span> <span class="n">_init_ops_dup_chk</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">)</span>
+    <span class="c1"># cells, graphs, tables = _spl_dup_chk(nn, batch_num)</span>
+    <span class="k">for</span> <span class="n">cell</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">spl_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cells</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">batch_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NetworkItem</span><span class="p">(</span><span class="n">spl_id</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">table</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_gpu_batch_spl</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param nn:</span>
+<span class="sd">    :param batch_num:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cells</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">tables</span> <span class="o">=</span> <span class="n">_spl_dup_chk</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">)</span>
+    <span class="n">item_start_id</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">cell</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">item_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cells</span><span class="p">,</span> <span class="n">graphs</span><span class="p">,</span> <span class="n">tables</span><span class="p">,</span>
+                                           <span class="nb">range</span><span class="p">(</span><span class="n">item_start_id</span><span class="p">,</span> <span class="n">batch_num</span> <span class="o">+</span> <span class="n">item_start_id</span><span class="p">)):</span>
+        <span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NetworkItem</span><span class="p">(</span><span class="n">item_id</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">table</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_pred_ops</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param nn:</span>
+<span class="sd">    :param pred:</span>
+<span class="sd">    :param spl_id:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pre_block</span> <span class="o">=</span> <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">pre_block</span> <span class="o">=</span> <span class="p">[</span><span class="n">elem</span><span class="o">.</span><span class="n">graph</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">pre_block</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">pre_block</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">block</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">block</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>  <span class="c1"># add the virtual node</span>
+    <span class="n">pred_ops</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="n">predictor</span><span class="p">(</span><span class="n">pre_block</span><span class="p">,</span> <span class="n">graph</span><span class="p">)</span>
+    <span class="n">pred_ops</span> <span class="o">=</span> <span class="n">pred_ops</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># remove the ops of virtual node</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">ops2table</span><span class="p">(</span><span class="n">pred_ops</span><span class="p">,</span> <span class="n">table</span><span class="p">)</span>
+    <span class="n">cell</span><span class="p">,</span> <span class="n">graph</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">graph</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">table</span>
+
+
+<span class="k">def</span> <span class="nf">_gpu_batch_task_inqueue</span><span class="p">(</span><span class="n">para</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param para:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nn</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">pool_len</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">,</span> <span class="n">finetune_sign</span><span class="p">,</span> <span class="n">block_winner</span> <span class="o">=</span> <span class="n">para</span>
+    <span class="n">Length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">spl_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">batch_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="n">spl_id</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">block_winner</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># print(&quot;train winner:&quot;,len(nn.item_list),spl_id)</span>
+            <span class="n">spl_id</span> <span class="o">=</span> <span class="n">Length</span> <span class="o">-</span> <span class="n">spl_id</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">task_param</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">item</span><span class="p">,</span> <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">pool_len</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">,</span> <span class="n">finetune_sign</span><span class="p">,</span> <span class="n">block_winner</span>
+        <span class="p">]</span>
+        <span class="n">com</span><span class="o">.</span><span class="n">task</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">task_param</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_assign_task</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">],</span> <span class="n">block_winner</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">pool_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">)</span>
+    <span class="n">finetune_sign</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Global&quot;</span> <span class="k">else</span> \
+        <span class="p">(</span><span class="n">pool_len</span> <span class="o">&lt;</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;finetune_threshold&#39;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">nn</span><span class="p">,</span> <span class="n">nn_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">pool_len</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="nb">round</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">_gpu_batch_update_model</span><span class="p">(</span><span class="n">nn</span><span class="p">)</span>
+            <span class="n">_gpu_batch_spl</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">batch_num</span><span class="p">)</span>
+        <span class="n">para</span> <span class="o">=</span> <span class="n">nn</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">pool_len</span><span class="p">,</span> \
+               <span class="n">batch_num</span><span class="p">,</span> <span class="n">finetune_sign</span><span class="p">,</span> <span class="n">block_winner</span>
+        <span class="n">_gpu_batch_task_inqueue</span><span class="p">(</span><span class="n">para</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_game</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">net_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">):</span>
+    <span class="n">_assign_task</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="nb">round</span><span class="p">)</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">control</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="s2">&quot;game&quot;</span><span class="p">)</span>
+    <span class="n">_epoch_ctrl</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;game&quot;</span><span class="p">)</span>
+    <span class="n">_do_task</span><span class="p">(</span><span class="n">process_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">eva</span><span class="p">)</span>
+    <span class="n">_arrange_result</span><span class="p">(</span><span class="n">com</span><span class="p">,</span> <span class="n">net_pool</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_eliminate</span><span class="p">(</span><span class="n">net_pool</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">round</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Eliminates the worst 50% networks in net_pool depending on scores.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;eliminate_policy&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;best&quot;</span><span class="p">:</span>
+        <span class="n">policy</span> <span class="o">=</span> <span class="nb">max</span>
+    <span class="k">elif</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;eliminate_policy&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;over_average&quot;</span><span class="p">:</span>
+        <span class="n">policy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">policy</span><span class="p">([</span><span class="n">x</span><span class="o">.</span><span class="n">score</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]:]])</span>
+              <span class="k">for</span> <span class="n">nn_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">))]</span>
+    <span class="n">scores_cpy</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">scores_cpy</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="n">original_num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+    <span class="n">mid_index</span> <span class="o">=</span> <span class="n">original_num</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">mid_val</span> <span class="o">=</span> <span class="n">scores_cpy</span><span class="p">[</span><span class="n">mid_index</span><span class="p">]</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">mid_val</span><span class="p">:</span>
+            <span class="n">list_swap</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">list_swap</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">net</span> <span class="o">=</span> <span class="n">net_pool</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">scores</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s2">&quot;elim_net&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">),</span>
+                        <span class="n">net</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">item_list</span><span class="p">))</span>
+            <span class="n">_save_net_info</span><span class="p">(</span><span class="n">net</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                           <span class="nb">round</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">),</span> <span class="n">net</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net</span><span class="o">.</span><span class="n">item_list</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;eliinfo_tem&#39;</span><span class="p">,</span> <span class="n">original_num</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_subp_confirm_train</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">network_item</span><span class="p">,</span> <span class="n">pre_blk</span><span class="p">,</span> <span class="n">gpuq</span><span class="p">):</span>
+    <span class="n">ngpu</span> <span class="o">=</span> <span class="n">gpuq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="n">_epoch_ctrl</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;confirm&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva_debug&#39;</span><span class="p">]:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">eva</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">network_item</span><span class="p">,</span> <span class="n">pre_blk</span><span class="p">,</span> <span class="n">is_bestNN</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">update_pre_weight</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">gpuq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">score</span>
+
+
+<span class="k">def</span> <span class="nf">_confirm_train</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">best_nn</span><span class="p">,</span> <span class="n">best_index</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">process_pl</span><span class="p">):</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="s2">&quot;confirm_train&quot;</span>
+    <span class="n">start_confirm</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">best_nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="n">best_index</span><span class="p">]</span>
+    <span class="n">network_item</span> <span class="o">=</span> <span class="n">NetworkItem</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">best_nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">tmp</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">tmp</span><span class="o">.</span><span class="n">cell_list</span><span class="p">,</span> <span class="n">tmp</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">control</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="s2">&quot;confirm&quot;</span><span class="p">)</span>
+    <span class="n">_epoch_ctrl</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;confirm&quot;</span><span class="p">)</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="n">process_pl</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_subp_confirm_train</span><span class="p">,</span> <span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">network_item</span><span class="p">,</span> <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">,</span> <span class="n">com</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">))</span>
+    <span class="n">network_item</span><span class="o">.</span><span class="n">score</span> <span class="o">=</span> <span class="n">score</span>
+    <span class="n">best_nn</span><span class="o">.</span><span class="n">item_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">network_item</span><span class="p">)</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s2">&quot;confirm_train_fin&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_confirm</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">network_item</span>
+
+
+<span class="k">def</span> <span class="nf">_rm_other_model</span><span class="p">(</span><span class="n">network_item</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva_debug&#39;</span><span class="p">]:</span>
+        <span class="k">return</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva&#39;</span><span class="p">][</span><span class="s1">&#39;model_path&#39;</span><span class="p">])</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s2">&quot;model_save&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">network_item</span><span class="o">.</span><span class="n">id</span><span class="p">))</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">model</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span>
+              <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;model&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">network_item</span><span class="o">.</span><span class="n">id</span><span class="p">),</span> <span class="n">model</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">models</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva&#39;</span><span class="p">][</span><span class="s1">&#39;model_path&#39;</span><span class="p">],</span> <span class="n">model</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_global_train</span><span class="p">(</span><span class="n">net_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">pro_pl</span><span class="p">,</span> <span class="n">eva_winner</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]</span> <span class="o">//</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]:</span>
+            <span class="n">task_num</span> <span class="o">=</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">i</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">task_num</span> <span class="o">=</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">task_num</span><span class="p">:</span>
+            <span class="nb">round</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">_assign_task</span><span class="p">(</span><span class="n">net_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">task_num</span><span class="p">)</span>
+            <span class="n">_do_task</span><span class="p">(</span><span class="n">pro_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">eva_winner</span><span class="p">)</span>
+            <span class="n">_arrange_result</span><span class="p">(</span><span class="n">com</span><span class="p">,</span> <span class="n">net_pl</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_train_winner</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">net_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">pro_pl</span><span class="p">,</span> <span class="nb">round</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        net_pool: list of NetworkUnit, and its length equals to 1</span>
+<span class="sd">        round: the round number of game</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        best_nn: object of Class NetworkUnit</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="s2">&quot;config_ops_ing&quot;</span>
+    <span class="n">start_train_winner</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">ds</span><span class="o">.</span><span class="n">control</span><span class="p">(</span><span class="n">stage</span><span class="o">=</span><span class="s2">&quot;game&quot;</span><span class="p">)</span>
+    <span class="n">_epoch_ctrl</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;game&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Block&quot;</span><span class="p">:</span>
+        <span class="n">_assign_task</span><span class="p">(</span><span class="n">net_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">batch_num</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">],</span> <span class="n">block_winner</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">com</span><span class="o">.</span><span class="n">net_pool</span> <span class="o">=</span> <span class="n">net_pl</span><span class="p">;</span>
+        <span class="n">com</span><span class="o">.</span><span class="n">round</span> <span class="o">=</span> <span class="nb">round</span>
+        <span class="n">com</span><span class="o">.</span><span class="n">tw_count</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]</span>
+        <span class="n">_do_task</span><span class="p">(</span><span class="n">pro_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">eva</span><span class="p">)</span>
+        <span class="c1"># _arrange_result(com, net_pl)</span>
+    <span class="k">elif</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Global&quot;</span><span class="p">:</span>
+        <span class="n">_global_train</span><span class="p">(</span><span class="n">net_pl</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">pro_pl</span><span class="p">,</span> <span class="n">eva</span><span class="p">)</span>
+    <span class="n">best_nn</span> <span class="o">=</span> <span class="n">net_pl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">_save_net_info</span><span class="p">(</span><span class="n">best_nn</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                   <span class="nb">round</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pl</span><span class="p">),</span> <span class="n">best_nn</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">best_nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">))</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">score</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">best_nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]:]]</span>
+    <span class="n">best_index</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">scores</span><span class="p">))</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Block&quot;</span><span class="p">:</span>
+        <span class="n">network_item</span> <span class="o">=</span> <span class="n">_confirm_train</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">best_nn</span><span class="p">,</span> <span class="n">best_index</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">pro_pl</span><span class="p">)</span>
+        <span class="n">_rm_other_model</span><span class="p">(</span><span class="n">network_item</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">network_item</span> <span class="o">=</span> <span class="n">best_nn</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="n">best_index</span><span class="p">]</span>
+
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s2">&quot;train_winner_tem&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_train_winner</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">network_item</span>
+
+
+<span class="c1"># Debug function</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="n">_OPS_PNAME</span> <span class="o">=</span> <span class="s1">&#39;pcache</span><span class="se">\\</span><span class="s1">ops_</span><span class="si">%d</span><span class="s1">-</span><span class="si">%d</span><span class="s1">-</span><span class="si">%d</span><span class="s1">.pickle&#39;</span> <span class="o">%</span> <span class="p">(</span>
+    <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s2">&quot;enum&quot;</span><span class="p">][</span><span class="s2">&quot;depth&quot;</span><span class="p">],</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s2">&quot;enum&quot;</span><span class="p">][</span><span class="s2">&quot;width&quot;</span><span class="p">],</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s2">&quot;enum&quot;</span><span class="p">][</span><span class="s2">&quot;max_depth&quot;</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_get_ops_copy</span><span class="p">():</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">_OPS_PNAME</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pool</span>
+
+
+<span class="k">def</span> <span class="nf">_save_ops_copy</span><span class="p">(</span><span class="n">pool</span><span class="p">):</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">_OPS_PNAME</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span>
+
+
+<span class="k">def</span> <span class="nf">_subproc_init_ops</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">task_num</span><span class="p">,</span> <span class="n">gpuq</span><span class="p">):</span>
+    <span class="n">ngpu</span> <span class="o">=</span> <span class="n">gpuq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">keras</span>
+    <span class="n">keras</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">clear_session</span><span class="p">()</span>
+    <span class="kn">from</span> <span class="nn">predictor</span> <span class="kn">import</span> <span class="n">Predictor</span>
+    <span class="n">pred</span> <span class="o">=</span> <span class="n">Predictor</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">nn</span> <span class="ow">in</span> <span class="n">net_pool</span><span class="p">:</span>
+        <span class="n">_gpu_batch_init</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">task_num</span><span class="p">)</span>
+    <span class="n">gpuq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">net_pool</span>
+
+
+<span class="k">def</span> <span class="nf">_init_ops</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Generates ops and skipping for every Network,</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        net_pool (list of NetworkUnit)</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        net_pool (list of NetworkUnit)</span>
+<span class="sd">        scores (list of score, and its length equals to that of net_pool)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># for debug</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;ops_debug&#39;</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_get_ops_copy</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nas: _get_ops_copy failed&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;subp_pred_debug&#39;</span><span class="p">]:</span>
+        <span class="n">net_pool</span> <span class="o">=</span> <span class="n">_subproc_init_ops</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">],</span> <span class="n">com</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">net_pool</span> <span class="o">=</span> <span class="n">process_pool</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_subproc_init_ops</span><span class="p">,</span>
+                                      <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">],</span> <span class="n">com</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">))</span>
+    <span class="c1"># for debug</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;ops_debug&#39;</span><span class="p">]:</span>
+        <span class="n">_save_ops_copy</span><span class="p">(</span><span class="n">net_pool</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">net_pool</span>
+
+
+<span class="k">def</span> <span class="nf">_init_npool_sampler</span><span class="p">(</span><span class="n">netpool</span><span class="p">,</span> <span class="n">block_num</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">nw</span> <span class="ow">in</span> <span class="n">netpool</span><span class="p">:</span>
+        <span class="n">nw</span><span class="o">.</span><span class="n">spl</span> <span class="o">=</span> <span class="n">Sampler</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">graph_template</span><span class="p">,</span> <span class="n">block_num</span><span class="p">)</span>
+    <span class="k">return</span>
+
+
+<div class="viewcode-block" id="algo"><a class="viewcode-back" href="../nas.html#nas.algo">[docs]</a><span class="k">def</span> <span class="nf">algo</span><span class="p">(</span><span class="n">block_num</span><span class="p">,</span> <span class="n">eva</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">npool_tem</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;evaluate all the networks asynchronously inside one round and synchronously between rounds</span>
+
+<span class="sd">    :param block_num:</span>
+<span class="sd">    :param eva:</span>
+<span class="sd">    :param com:</span>
+<span class="sd">    :param npool_tem:</span>
+<span class="sd">    :param process_pool:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">net_pool</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">npool_tem</span><span class="p">)</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;start_game&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">))</span>
+    <span class="n">_init_npool_sampler</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">block_num</span><span class="p">)</span>
+
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;config_ing&#39;</span>
+    <span class="n">net_pool</span> <span class="o">=</span> <span class="n">_init_ops</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">)</span>
+    <span class="nb">round</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">start_game</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_pool</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">start_round</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="nb">round</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">_game</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">net_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="nb">round</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">)</span>
+        <span class="n">_eliminate</span><span class="p">(</span><span class="n">net_pool</span><span class="p">,</span> <span class="nb">round</span><span class="p">)</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;round_over&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_round</span><span class="p">)</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;get_winner&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_game</span><span class="p">)</span>
+    <span class="n">network_item</span> <span class="o">=</span> <span class="n">_train_winner</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">net_pool</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">,</span> <span class="nb">round</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">network_item</span></div>
+
+
+<span class="k">def</span> <span class="nf">_subp_retrain</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">pre_blk</span><span class="p">,</span> <span class="n">gpuq</span><span class="p">):</span>
+    <span class="n">ngpu</span> <span class="o">=</span> <span class="n">gpuq</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva_debug&#39;</span><span class="p">]:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">eva</span><span class="o">.</span><span class="n">retrain</span><span class="p">(</span><span class="n">pre_blk</span><span class="p">)</span>
+    <span class="n">gpuq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">ngpu</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">score</span>
+
+
+<span class="k">def</span> <span class="nf">_retrain</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">process_pool</span><span class="p">):</span>
+    <span class="n">_epoch_ctrl</span><span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;retrain&quot;</span><span class="p">)</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="n">process_pool</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_subp_retrain</span><span class="p">,</span> <span class="p">(</span><span class="n">eva</span><span class="p">,</span> <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">,</span> <span class="n">com</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">score</span>
+
+
+<div class="viewcode-block" id="Nas"><a class="viewcode-back" href="../nas.html#nas.Nas">[docs]</a><span class="k">class</span> <span class="nc">Nas</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool</span><span class="p">):</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="s2">&quot;init_ing&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enu</span> <span class="o">=</span> <span class="n">Enumerater</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eva</span> <span class="o">=</span> <span class="n">Evaluator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">com</span> <span class="o">=</span> <span class="n">Communication</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ds</span> <span class="o">=</span> <span class="n">DataSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eva</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="n">pool</span>
+
+<div class="viewcode-block" id="Nas.run"><a class="viewcode-back" href="../nas.html#nas.Nas.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;enuming&#39;</span>
+        <span class="n">network_pool_tem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">enumerate</span><span class="p">()</span>
+        <span class="n">start_search</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s2">&quot;block_num&quot;</span><span class="p">]):</span>
+            <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;search_blk&#39;</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s2">&quot;block_num&quot;</span><span class="p">])</span>
+            <span class="n">start_block</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">network_item</span> <span class="o">=</span> <span class="n">algo</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eva</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds</span><span class="p">,</span> <span class="n">network_pool_tem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="p">)</span>
+            <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">network_item</span><span class="p">)</span>
+            <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;search_blk_end&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_block</span><span class="p">)</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;nas_end&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_search</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">:</span>
+            <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;pre_block&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">graph</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">block</span><span class="o">.</span><span class="n">cell_list</span><span class="p">))</span>
+        <span class="n">start_retrain</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">retrain_score</span> <span class="o">=</span> <span class="n">_retrain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eva</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="p">)</span>
+        <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;retrain_end&#39;</span><span class="p">,</span> <span class="n">retrain_score</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_retrain</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Network</span><span class="o">.</span><span class="n">pre_block</span><span class="p">,</span> <span class="n">retrain_score</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">pool</span> <span class="o">=</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">MAIN_CONFIG</span><span class="p">[</span><span class="s2">&quot;num_gpu&quot;</span><span class="p">])</span>
+    <span class="n">nas</span> <span class="o">=</span> <span class="n">Nas</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span>
+    <span class="n">nas</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

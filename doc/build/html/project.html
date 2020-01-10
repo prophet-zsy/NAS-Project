@@ -1,0 +1,115 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh_CN">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>工程概述 &#8212; NAS-Project  文档</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/translations.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="搜索" href="search.html" />
+    <link rel="next" title="NAS-project教程" href="Tutorial.html" />
+    <link rel="prev" title="用户说明文档" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="id1">
+<h1>工程概述<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h1>
+<p>NAS (Neural Architecture Search) 算法，一种用于自动搜索比人工设计表现更优异的神经网络的自动机器学习算法。</p>
+<p>本项网络结构搜索技术将网络结构视为一个有向无环图（DAG），图中的每一条边表示数据流向，每一个节点表示对数据的操作。在搜索过程中，将搜索分为两部分，第一部分是对DAG图的拓扑结构进行搜索，第二部分是在拓扑结构上对每个节点的操作配置进行优化。并采用竞争的方式将二者进行结合，得到最终的网络结构。</p>
+<p>对于拓扑结构的搜索，我们采用枚举的方式得到所有可能的拓扑结构，此时拓扑结构上仅有数据流向，并没有对每个节点赋予操作配置；我们对每个拓扑结构上的操作配置视为一个黑盒优化问题，利用非梯度优化算法进行求解。所以在搜索之前我们需要对拓扑结构空间（网络的深度和宽度）和操作配置空间（每个节点上的候选操作）进行设置。在通过竞赛确定最优网络结构时，需要利用一个评估子程序对每个网络结构进行评估，所以对于具体任务需要定制评估标准和评估程序。</p>
+<p>对于整体网络结构搜索，我们采用基于block的搜索模式进行，即对于较深的网络，我们先搜索第一个block，在确定第一个block之后再搜索第二个block，依次类推，完成整个网络结构的搜索。当只设置有一个block的时候就退化为直接对整体网络结构进行搜索。下图示意了基于block的网络搜索过程，并给出了在每个部分中的控制参数。</p>
+<img alt="_images/0001.jpg" src="_images/0001.jpg" />
+<p>工程主要分为五个部份：</p>
+<ul class="simple">
+<li>Enumerater: 穷举网络结构，产生多个候选网络。</li>
+<li>Predictor: 根据人类的先验知识，初始化合适的网络节点配置。</li>
+<li>Evaluator: 评估网络表现结果，用来判断网络结构的优劣。</li>
+<li>Sampler, Optimizer: 节点配置采样和优化，提升网络的表现。</li>
+</ul>
+<p>工程总控的总体搜索过程：</p>
+<ul class="simple">
+<li>初始化候选网络池 (Enumerater, Predictor)</li>
+<li>评估网络结构的表现 (Evaluator)</li>
+<li>根据评估结果，进行淘汰竞赛，从网络池中删去劣等的网络结构</li>
+<li>对于存活的网络，采样和优化网络节点配置 (Sampler, Optimizer)</li>
+<li>反复竞赛之后，最终将挑选出优胜的网络</li>
+<li>以优胜的网络为前置网络模块，接在下一轮竞赛的网络结构前面。</li>
+<li>NAS算法得到以优胜的网络组成链状网络模块，作为最佳网络结构返回</li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="上一章">用户说明文档</a></li>
+      <li>Next: <a href="Tutorial.html" title="下一章">NAS-project教程</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/project.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="转向" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, NJU.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/project.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

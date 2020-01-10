@@ -83,7 +83,7 @@ MF_TEMP = {
             'eva_ing': eva_ing,
             'eva_error': eva_error
         },
-        'algo': {
+        '_algo': {
             'start_game': start_game_tem,
             'config_ing': config_ing,
             'round_over': round_over,

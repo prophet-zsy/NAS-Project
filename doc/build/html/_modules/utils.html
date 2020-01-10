@@ -1,0 +1,300 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>utils &#8212; NAS-Project  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">queue</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">from</span> <span class="nn">base</span> <span class="kn">import</span> <span class="n">Network</span><span class="p">,</span> <span class="n">NetworkItem</span><span class="p">,</span> <span class="n">Cell</span>
+<span class="kn">from</span> <span class="nn">info_str</span> <span class="kn">import</span> <span class="n">NAS_CONFIG</span>
+<span class="kn">import</span> <span class="nn">info_str</span> <span class="k">as</span> <span class="nn">ifs</span>
+
+
+<div class="viewcode-block" id="list_swap"><a class="viewcode-back" href="../utils.html#utils.list_swap">[docs]</a><span class="k">def</span> <span class="nf">list_swap</span><span class="p">(</span><span class="n">ls</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+    <span class="n">cpy</span> <span class="o">=</span> <span class="n">ls</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="n">ls</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ls</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+    <span class="n">ls</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">cpy</span></div>
+
+
+<div class="viewcode-block" id="DataSize"><a class="viewcode-back" href="../utils.html#utils.DataSize">[docs]</a><span class="k">class</span> <span class="nc">DataSize</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eva</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eva</span> <span class="o">=</span> <span class="n">eva</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">round_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;add_data_mode&#39;</span><span class="p">]</span>
+        <span class="c1">#  data size control for game</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_data_per_rd</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;add_data_per_round&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_lr</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;init_data_size&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;data_increase_scale&#39;</span><span class="p">]</span>
+        <span class="c1">#  data size control for confirm train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_for_confirm_train</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;add_data_for_confirm_train&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_game_data_ctrl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;linear&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">round_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eva</span><span class="o">.</span><span class="n">set_data_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">round_count</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_data_per_rd</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;scale&quot;</span><span class="p">:</span>
+            <span class="n">dsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">init_lr</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_count</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eva</span><span class="o">.</span><span class="n">set_data_size</span><span class="p">(</span><span class="n">dsize</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">round_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;signal error: mode, it must be one of linear, scale&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DataSize.control"><a class="viewcode-back" href="../utils.html#utils.DataSize.control">[docs]</a>    <span class="k">def</span> <span class="nf">control</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;game&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Increase the dataset&#39;s size in different way</span>
+
+<span class="sd">        :param stage: must be one of &quot;game&quot;, &quot;confirm&quot;</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">stage</span> <span class="o">==</span> <span class="s2">&quot;game&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_game_data_ctrl</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">stage</span> <span class="o">==</span> <span class="s2">&quot;confirm&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">eva</span><span class="o">.</span><span class="n">set_data_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_for_confirm_train</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;signal error: stage, it must be one of game, confirm&quot;</span><span class="p">)</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_epoch_ctrl</span><span class="p">(</span><span class="n">eva</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;game&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    :param eva:</span>
+<span class="sd">    :param stage: must be one of &quot;game&quot;, &quot;confirm&quot;, &quot;retrain&quot;</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">stage</span> <span class="o">==</span> <span class="s2">&quot;game&quot;</span><span class="p">:</span>
+        <span class="n">eva</span><span class="o">.</span><span class="n">set_epoch</span><span class="p">(</span><span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva&#39;</span><span class="p">][</span><span class="s1">&#39;search_epoch&#39;</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="n">stage</span> <span class="o">==</span> <span class="s2">&quot;confirm&quot;</span><span class="p">:</span>
+        <span class="n">eva</span><span class="o">.</span><span class="n">set_epoch</span><span class="p">(</span><span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva&#39;</span><span class="p">][</span><span class="s1">&#39;confirm_epoch&#39;</span><span class="p">])</span>
+    <span class="k">elif</span> <span class="n">stage</span> <span class="o">==</span> <span class="s2">&quot;retrain&quot;</span><span class="p">:</span>
+        <span class="n">eva</span><span class="o">.</span><span class="n">set_epoch</span><span class="p">(</span><span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;eva&#39;</span><span class="p">][</span><span class="s1">&#39;retrain_epoch&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;signal error: stage, it must be one of game, confirm, retrain&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Communication"><a class="viewcode-back" href="../utils.html#utils.Communication">[docs]</a><span class="k">class</span> <span class="nc">Communication</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idle_gpuq</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Manager</span><span class="p">()</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">round</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tw_count</span> <span class="o">=</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">gpu</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;num_gpu&#39;</span><span class="p">]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">idle_gpuq</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">gpu</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Communication.wake_up_train_winner"><a class="viewcode-back" href="../utils.html#utils.Communication.wake_up_train_winner">[docs]</a>    <span class="k">def</span> <span class="nf">wake_up_train_winner</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">res</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;train_winner wake up&quot;</span><span class="p">)</span>
+        <span class="n">score</span><span class="p">,</span> <span class="n">time_cost</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span> <span class="o">=</span> <span class="n">res</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;nn_id spl_id item_list_length&quot;</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="n">spl_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="n">spl_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">score</span> <span class="o">=</span> <span class="n">score</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">update_opt_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="n">spl_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">code</span><span class="p">,</span>
+                                                      <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="n">spl_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>
+        <span class="n">item_id</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">cnt</span> <span class="o">&lt;</span> <span class="mi">500</span><span class="p">:</span>
+            <span class="n">cell</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">spl</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">table</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tables</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;sample success&quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="n">cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tw_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NetworkItem</span><span class="p">(</span><span class="n">item_id</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">table</span><span class="p">))</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">task_param</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">item</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">net_pool</span><span class="p">[</span><span class="n">nn_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pre_block</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">round</span><span class="p">,</span> <span class="n">nn_id</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">item_id</span><span class="p">,</span>
+                <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;spl_network_round&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">round</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">NAS_CONFIG</span><span class="p">[</span><span class="s1">&#39;nas_main&#39;</span><span class="p">][</span><span class="s1">&#39;num_opt_best&#39;</span><span class="p">],</span>
+                <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span>
+            <span class="p">]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;train winner new task put&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">task</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">task_param</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tw_count</span> <span class="o">-=</span> <span class="mi">1</span></div></div>
+
+
+<div class="viewcode-block" id="Logger"><a class="viewcode-back" href="../utils.html#utils.Logger">[docs]</a><span class="k">class</span> <span class="nc">Logger</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_eva_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">ifs</span><span class="o">.</span><span class="n">evalog_path</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sub_proc_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">ifs</span><span class="o">.</span><span class="n">subproc_log_path</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_network_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">ifs</span><span class="o">.</span><span class="n">network_info_path</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nas_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">ifs</span><span class="o">.</span><span class="n">naslog_path</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_map</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># module x func -&gt; log</span>
+            <span class="s1">&#39;nas&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;_subproc_eva&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sub_proc_log</span><span class="p">,</span>
+                <span class="s1">&#39;_save_net_info&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_network_log</span><span class="p">,</span>
+                <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nas_log</span>
+            <span class="p">},</span>
+            <span class="s1">&#39;evaluator&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eva_log</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_eva_log</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sub_proc_log</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_network_log</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nas_log</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_where_called</span><span class="p">():</span>
+        <span class="n">last_stack</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">extract_stack</span><span class="p">()[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+        <span class="c1"># absolute path -&gt; last file name</span>
+        <span class="n">where_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">last_stack</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">where_func</span> <span class="o">=</span> <span class="n">last_stack</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="c1"># get rid of &#39;.py&#39;</span>
+        <span class="n">where_module</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">where_file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">where_module</span><span class="p">,</span> <span class="n">where_func</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_action</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">args</span><span class="p">,</span> <span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;empty or wrong log args&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">_log_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">func</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_map</span><span class="p">[</span><span class="n">module</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">func</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_map</span><span class="p">[</span><span class="n">module</span><span class="p">][</span><span class="n">func</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># if can&#39;t find func&#39;s log, search module default log</span>
+            <span class="c1"># and print context.</span>
+            <span class="n">default_log</span> <span class="o">=</span> <span class="s1">&#39;_</span><span class="si">%s</span><span class="s1">_log&#39;</span> <span class="o">%</span> <span class="n">module</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_log</span><span class="p">):</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="n">default_log</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">output</span><span class="p">:</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">def</span> <span class="fm">__lshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wrtie log or print system information.</span>
+<span class="sd">        The specified log templeate is defined in info_str.py</span>
+<span class="sd">        Args:</span>
+<span class="sd">            args (string or tuple, non-empty)</span>
+<span class="sd">                When it&#39;s tuple, its value is string.</span>
+<span class="sd">                The first value must be action.</span>
+<span class="sd">        Return: </span>
+<span class="sd">            None</span>
+<span class="sd">        Example:</span>
+<span class="sd">            NAS_LOG = Logger() # &#39;Nas.run&#39; func in nas.py </span>
+<span class="sd">            NAS_LOG &lt;&lt; &#39;enuming&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">module</span><span class="p">,</span> <span class="n">func</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">.</span><span class="n">_get_where_called</span><span class="p">()</span>
+        <span class="n">act</span><span class="p">,</span> <span class="n">others</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">.</span><span class="n">_get_action</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="n">ifs</span><span class="o">.</span><span class="n">MF_TEMP</span><span class="p">[</span><span class="n">module</span><span class="p">][</span><span class="n">func</span><span class="p">][</span><span class="n">act</span><span class="p">]</span>
+        <span class="c1"># print(module, func, temp, others)</span>
+        <span class="c1"># print(module, func, temp.format(others))</span>
+        <span class="k">if</span> <span class="n">func</span> <span class="o">!=</span> <span class="s2">&quot;_save_net_info&quot;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">others</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_output</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">temp</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">others</span><span class="p">))</span></div>
+
+
+<span class="n">NAS_LOG</span> <span class="o">=</span> <span class="n">Logger</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="s1">&#39;I am bread&#39;</span><span class="p">,</span> <span class="s1">&#39;hello world!&#39;</span><span class="p">)</span>
+    <span class="n">NAS_LOG</span> <span class="o">&lt;&lt;</span> <span class="s1">&#39;enuming&#39;</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">NAS-Project</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Bread.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
