@@ -6,180 +6,128 @@ from base import Cell, NetworkItem
 from info_str import NAS_CONFIG
 from utils import NAS_LOG
 
-from tqdm import tqdm
-from glob import glob
-import cv2
+import pickle
 import random
 import sys
-
-DATA_AUG_TIMES = 3
+import time
+import copy
 
 
 class DataSet:
-    # TODO for dataset changing please rewrite this class's "inputs" function and "process" function
 
-    def __init__(self):
-        self.data_path = "/home/amax/PycharmProjects/ViDeNN/Spartial-CNN/data/"
+    def __init__(self, image_size=32, num_class=10):
+        self.IMAGE_SIZE = image_size
+        self.NUM_CLASSES = num_class
+        self.NUM_EXAMPLES_FOR_TRAIN = 40000
+        self.NUM_EXAMPLES_FOR_EVAL = 10000
+        self.task = "cifar-10"
+        self.data_path = '/home/amax/Desktop'
         return
 
-    def add_noise(self):
-        imgs_path = glob(self.data_path + "pristine_images/*.bmp")
-        num_of_samples = len(imgs_path)
-        imgs_path_train = imgs_path[:int(num_of_samples * 0.7)]
-        imgs_path_test = imgs_path[int(num_of_samples * 0.7):]
-
-        sigma_train = np.linspace(0, 50, int(num_of_samples * 0.7) + 1)
-        for i in tqdm(range(int(num_of_samples * 0.7)), desc="[*] Creating original-noisy train set..."):
-            img_path = imgs_path_train[i]
-            img_file = os.path.basename(img_path).split('.bmp')[0]
-            sigma = sigma_train[i]
-            img_original = cv2.imread(img_path)
-            img_noisy = self.gaussian_noise(sigma, img_original)
-
-            cv2.imwrite(self.data_path + "train/noisy/" + img_file + ".png", img_noisy)
-            cv2.imwrite(self.data_path + "train/original/" + img_file + ".png", img_original)
-
-        for i in tqdm(range(int(num_of_samples * 0.3)), desc="[*] Creating original-noisy test set..."):
-            img_path = imgs_path_test[i]
-            img_file = os.path.basename(img_path).split('.bmp')[0]
-            sigma = np.random.randint(0, 50)
-
-            img_original = cv2.imread(img_path)
-            img_noisy = self.gaussian_noise(sigma, img_original)
-
-            cv2.imwrite(self.data_path + "test/noisy/" + img_file + ".png", img_noisy)
-            cv2.imwrite(self.data_path + "test/original/" + img_file + ".png", img_original)
-
-    def gaussian_noise(self, sigma, image):
-        gaussian = np.random.normal(0, sigma, image.shape)
-        noisy_image = image + gaussian
-        noisy_image = np.clip(noisy_image, 0, 255)
-        noisy_image = noisy_image.astype(np.uint8)
-        return noisy_image
-
-    def inputs(self, pat_size=50, stride=100, batch_size=64):
-        '''
-        Method for load data
-                Returns:
-                  train_data, train_label, valid_data, valid_label, test_data, test_label
-        '''
-        noisy_eval_files = glob(self.data_path + 'test/noisy/*.png')
-        noisy_eval_files = sorted(noisy_eval_files)
-        test_data = np.array([cv2.imread(img) for img in noisy_eval_files])
-
-        eval_files = glob(self.data_path + 'test/original/*.png')
-        eval_files = sorted(eval_files)
-        test_label = np.array([cv2.imread(img) for img in eval_files])
-        if os.path.exists(self.data_path + "train/img_noisy_pats.npy"):
-            train_data = np.load(self.data_path + "train/img_noisy_pats.npy")
-            train_label = np.load(self.data_path + "train/img_clean_pats.npy")
-            train_data = train_data.astype(np.float32)
-            train_label = train_label.astype(np.float32)
-            return train_data, train_label, test_data, test_label
-        if not os.path.exists(self.data_path + "train/noisy/") or not os.listdir(self.data_path + "train/noisy/"):
-            self.add_noise()
-
-        global DATA_AUG_TIMES
-        count = 0
-        filepaths = glob(
-            self.data_path + "train/original/" + '/*.png')  # takes all the paths of the png files in the train folder
-        filepaths.sort(key=lambda x: int(os.path.basename(x)[:-4]))  # order the file list
-        filepaths_noisy = glob(self.data_path + "train/noisy/" + '/*.png')
-        filepaths_noisy.sort(key=lambda x: int(os.path.basename(x)[:-4]))
-        print("[*] Number of training samples: %d" % len(filepaths))
-        scales = [1, 0.8]
-
-        # calculate the number of patches
-        for i in range(len(filepaths)):
-            img = cv2.imread(filepaths[i])
-            for s in range(len(scales)):
-                newsize = (int(img.shape[0] * scales[s]), int(img.shape[1] * scales[s]))
-                img_s = cv2.resize(img, newsize, interpolation=cv2.INTER_CUBIC)
-                im_h = img_s.shape[0]
-                im_w = img_s.shape[1]
-                for x in range(0, (im_h - pat_size), stride):
-                    for y in range(0, (im_w - pat_size), stride):
-                        count += 1
-
-        origin_patch_num = count * DATA_AUG_TIMES
-
-        if origin_patch_num % batch_size != 0:
-            numPatches = (origin_patch_num // batch_size + 1) * batch_size  # round
+    def inputs(self):
+        print("======Loading data======")
+        if self.task == 'cifar-10':
+            test_files = ['test_batch']
+            train_files = ['data_batch_%d' % d for d in range(1, 6)]
         else:
-            numPatches = origin_patch_num
-        print("[*] Number of patches = %d, batch size = %d, total batches = %d" % \
-              (numPatches, batch_size, numPatches / batch_size))
+            train_files = ['train']
+            test_files = ['test']
+        train_data, train_label = self._load(train_files)
+        train_data, train_label, valid_data, valid_label = self._split(
+            train_data, train_label)
+        test_data, test_label = self._load(test_files)
+        print("======Data Process Done======")
+        return train_data, train_label, valid_data, valid_label, test_data, test_label
 
-        # data matrix 4-D
-        train_label = np.zeros((numPatches, pat_size, pat_size, 3), dtype="uint8")  # clean patches
-        train_data = np.zeros((numPatches, pat_size, pat_size, 3), dtype="uint8")  # noisy patches
+    def _load_one(self, file):
+        with open(file, 'rb') as fo:
+            batch = pickle.load(fo, encoding='bytes')
+        data = batch[b'data']
+        label = batch[b'labels'] if self.task == 'cifar-10' else batch[b'fine_labels']
+        return data, label
 
-        count = 0
-        # generate patches
-        for i in range(len(filepaths)):
-            img = cv2.imread(filepaths[i])
-            img_noisy = cv2.imread(filepaths_noisy[i])
-            for s in range(len(scales)):
-                newsize = (int(img.shape[0] * scales[s]), int(img.shape[1] * scales[s]))
-                img_s = cv2.resize(img, newsize, interpolation=cv2.INTER_CUBIC)
-                img_s_noisy = cv2.resize(img_noisy, newsize, interpolation=cv2.INTER_CUBIC)
-                img_s = np.reshape(np.array(img_s, dtype="uint8"),
-                                   (img_s.shape[0], img_s.shape[1], 3))  # extend one dimension
-                img_s_noisy = np.reshape(np.array(img_s_noisy, dtype="uint8"),
-                                         (img_s_noisy.shape[0], img_s_noisy.shape[1], 3))  # extend one dimension
+    def _load(self, files):
+        file_name = 'cifar-10-batches-py' if self.task == 'cifar-10' else 'cifar-100-python'
+        data_dir = os.path.join(self.data_path, file_name)
+        data, label = self._load_one(os.path.join(data_dir, files[0]))
+        for f in files[1:]:
+            batch_data, batch_label = self._load_one(os.path.join(data_dir, f))
+            data = np.append(data, batch_data, axis=0)
+            label = np.append(label, batch_label, axis=0)
+        label = np.array([[float(i == label)
+                           for i in range(self.NUM_CLASSES)] for label in label])
+        data = data.reshape([-1, 3, self.IMAGE_SIZE, self.IMAGE_SIZE])
+        data = data.transpose([0, 2, 3, 1])
+        # pre-process
+        data = self._normalize(data)
 
-                for j in range(DATA_AUG_TIMES):
-                    im_h = img_s.shape[0]
-                    im_w = img_s.shape[1]
-                    for x in range(0, im_h - pat_size, stride):
-                        for y in range(0, im_w - pat_size, stride):
-                            a = random.randint(0, 7)
-                            train_label[count, :, :, :] = self.process(
-                                img_s[x:x + pat_size, y:y + pat_size, :], a)
-                            train_data[count, :, :, :] = self.process(
-                                img_s_noisy[x:x + pat_size, y:y + pat_size, :], a)
-                            count += 1
-        # pad the batch
-        if count < numPatches:
-            to_pad = numPatches - count
-            train_label[-to_pad:, :, :, :] = train_label[:to_pad, :, :, :]
-            train_data[-to_pad:, :, :, :] = train_data[:to_pad, :, :, :]
+        return data, label
 
-        train_data = train_data.astype(np.float32)
-        return train_data.astype(np.float32), train_label.astype(np.float32), test_data, test_label
+    def _split(self, data, label):
+        # shuffle
+        index = [i for i in range(len(data))]
+        random.shuffle(index)
+        data = data[index]
+        label = label[index]
+        return data[:self.NUM_EXAMPLES_FOR_TRAIN], label[:self.NUM_EXAMPLES_FOR_TRAIN], \
+               data[self.NUM_EXAMPLES_FOR_TRAIN:self.NUM_EXAMPLES_FOR_TRAIN + self.NUM_EXAMPLES_FOR_EVAL], \
+               label[self.NUM_EXAMPLES_FOR_TRAIN:self.NUM_EXAMPLES_FOR_TRAIN +
+                                                 self.NUM_EXAMPLES_FOR_EVAL]
 
-    def process(self, image, mode):
-        if mode == 0:
-            # original
-            return image
-        elif mode == 1:
-            # flip up and down
-            return np.flipud(image)
-        elif mode == 2:
-            # rotate counterwise 90 degree
-            return np.rot90(image)
-        elif mode == 3:
-            # rotate 90 degree and flip up and down
-            image = np.rot90(image)
-            return np.flipud(image)
-        elif mode == 4:
-            # rotate 180 degree
-            return np.rot90(image, k=2)
-        elif mode == 5:
-            # rotate 180 degree and flip
-            image = np.rot90(image, k=2)
-            return np.flipud(image)
-        elif mode == 6:
-            # rotate 270 degree
-            return np.rot90(image, k=3)
-        elif mode == 7:
-            # rotate 270 degree and flip
-            image = np.rot90(image, k=3)
-            return np.flipud(image)
+    def _normalize(self, x_train):
+        x_train = x_train.astype('float32')
+
+        x_train[:, :, :, 0] = (
+                                      x_train[:, :, :, 0] - np.mean(x_train[:, :, :, 0])) / np.std(x_train[:, :, :, 0])
+        x_train[:, :, :, 1] = (
+                                      x_train[:, :, :, 1] - np.mean(x_train[:, :, :, 1])) / np.std(x_train[:, :, :, 1])
+        x_train[:, :, :, 2] = (
+                                      x_train[:, :, :, 2] - np.mean(x_train[:, :, :, 2])) / np.std(x_train[:, :, :, 2])
+
+        return x_train
+
+    def process(self, x):
+        x = self._random_flip_leftright(x)
+        x = self._random_crop(x, [32, 32], 4)
+        x = self._cutout(x)
+        return x
+
+    def _random_crop(self, batch, crop_shape, padding=None):
+        oshape = np.shape(batch[0])
+        if padding:
+            oshape = (oshape[0] + 2 * padding, oshape[1] + 2 * padding)
+        new_batch = []
+        npad = ((padding, padding), (padding, padding), (0, 0))
+        for i in range(len(batch)):
+            new_batch.append(batch[i])
+            if padding:
+                new_batch[i] = np.lib.pad(batch[i], pad_width=npad,
+                                          mode='constant', constant_values=0)
+            nh = random.randint(0, oshape[0] - crop_shape[0])
+            nw = random.randint(0, oshape[1] - crop_shape[1])
+            new_batch[i] = new_batch[i][nh:nh + crop_shape[0],
+                           nw:nw + crop_shape[1]]
+        return np.array(new_batch)
+
+    def _random_flip_leftright(self, batch):
+        for i in range(len(batch)):
+            if bool(random.getrandbits(1)):
+                batch[i] = np.fliplr(batch[i])
+        return batch
+
+    def _cutout(self, x):
+        for i in range(len(x)):
+            cut_size = random.randint(0, self.IMAGE_SIZE // 2)
+            s = random.randint(0, self.IMAGE_SIZE - cut_size)
+            x[i, s:s + cut_size, s:s + cut_size, :] = 0
+        return x
 
 
 class Evaluator:
     def __init__(self):
+        image_size = 32
+        num_class = 10
+        self.data_set = DataSet(image_size, num_class)
         # don't change the parameters below
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
         self.block_num = 0
@@ -187,13 +135,14 @@ class Evaluator:
         self.model_path = "./model"
 
         # change the value of parameters below
-        self.input_shape = [None, None, None, 3]
-        self.output_shape = [None, None, None, 3]
-        self.batch_size = 64
-        self.train_data, self.train_label, self.test_data, self.test_label = DataSet().inputs()
+        self.batch_size = 50
+        self.input_shape = [self.batch_size, image_size, image_size, 3]
+        self.output_shape = [self.batch_size, num_class]
+        self.train_data, self.train_label, self.valid_data, self.valid_label, self.test_data, self.test_label = self.data_set.inputs()
 
         self.INITIAL_LEARNING_RATE = 0.025
-        return
+        self.weight_decay = 0.0003
+        self.momentum_rate = 0.9
 
     def _set_epoch(self, e):
         self.epoch = e
@@ -209,18 +158,23 @@ class Evaluator:
           Logits.'''
         topo_order = self._toposort(graph_part)
         nodelen = len(graph_part)
+        # input list for every cell in network
         inputs = [images for _ in range(nodelen)]
+        # bool list for whether this cell has already got input or not
         getinput = [False for _ in range(nodelen)]
         getinput[0] = True
 
         for node in topo_order:
             layer = self._make_layer(inputs[node], cell_list[node], node, train_flag)
+
+            # update inputs information of the cells below this cell
             for j in graph_part[node]:
-                if getinput[j]:
+                if getinput[j]:  # if this cell already got inputs from other cells precedes it
                     inputs[j] = self._pad(inputs[j], layer)
                 else:
                     inputs[j] = layer
                     getinput[j] = True
+
         # give last layer a name
         last_layer = tf.identity(layer, name="last_layer" + str(self.block_num))
         return last_layer
@@ -255,8 +209,6 @@ class Evaluator:
             layer = self._makeconv(inputs, cell, node, train_flag)
         elif cell.type == 'pooling':
             layer = self._makepool(inputs, cell)
-        elif cell.type == 'id':
-            layer = tf.identity(inputs)
         elif cell.type == 'sep_conv':
             layer = self._makesep_conv(inputs, cell, node, train_flag)
         # TODO add any other new operations here
@@ -303,29 +255,6 @@ class Evaluator:
             biases = self._get_variable('biases', hplist.filter_size)
             x = self._batch_norm(tf.nn.bias_add(x, biases), train_flag)
         return x
-
-    # def _makeconv(self, x, hplist, node, train_flag):
-    #     """Generates a convolutional layer according to information in hplist
-    #     Args:
-    #         x: inputing data.
-    #         hplist: hyperparameters for building this layer
-    #         node: int, the index of this operation
-    #     Returns:
-    #         conv_layer: the output tensor
-    #     """
-    #     with tf.variable_scope('block' + str(self.block_num) + 'conv' + str(node)) as scope:
-    #         inputdim = x.shape[3]
-    #         kernel = self._get_variable('weights',
-    #                                     shape=[hplist.kernel_size, hplist.kernel_size, inputdim, hplist.filter_size])
-    #
-    #         x = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
-    #
-    #         if hplist.filter_size == 128:
-    #             biases = self._get_variable('biases', hplist.filter_size)
-    #             x = self._activation_layer(hplist.activation, tf.nn.bias_add(x, biases), scope)
-    #         else:
-    #             x = self._batch_norm(self._activation_layer(hplist.activation, x, scope), train_flag)
-    #     return x
 
     def _makesep_conv(self, inputs, hplist, node, train_flag):
         with tf.variable_scope('block' + str(self.block_num) + 'conv' + str(node)) as scope:
@@ -464,10 +393,10 @@ class Evaluator:
                 # a pooling layer for last repeat block
                 cell_list = cell_list + [Cell('pooling', 'max', 2)]
             else:
-                cell_list = cell_list + [Cell('id', '', 1)]
+                cell_list = cell_list + [Cell('id', 'max', 1)]
             logits = self._inference(block_input, graph_full, cell_list, train_flag)
 
-            precision, log = self.eval(sess, logits, data_x, data_y, train_flag)
+            precision, log = self._eval(sess, logits, data_x, data_y, train_flag)
             self.log += log
 
             saver = tf.train.Saver(tf.global_variables())
@@ -479,6 +408,38 @@ class Evaluator:
 
         NAS_LOG << ('eva', self.log)
         return precision
+
+    def retrain(self, pre_block):
+        tf.reset_default_graph()
+        self.train_num = 50000
+        self.block_num = len(pre_block) * NAS_CONFIG['nas_main']['repeat_num']
+
+        retrain_log = "-" * 20 + "retrain" + "-" * 20 + '\n'
+
+        data_x, labels, block_input, train_flag = self._get_input('', [])
+        for block in pre_block:
+            self.block_num += 1
+            cell_list = []
+            for cell in block.cell_list:
+                if cell.type == 'conv':
+                    cell_list.append(Cell(cell.type, cell.filter_size * 2, cell.kernel_size, cell.activation))
+                else:
+                    cell_list.append(cell)
+            # repeat search
+            graph_full, cell_list = self._recode(block.graph, block.cell_list, NAS_CONFIG['nas_main']['repeat_num'])
+            # add pooling layer only in last repeat block
+            cell_list.append(Cell('pooling', 'max', 2))
+            graph_full.append([])
+            retrain_log = retrain_log + str(graph_full) + str(cell_list) + '\n'
+            block_input = self._inference(block_input, graph_full, cell_list, train_flag)
+
+        sess = tf.Session()
+        precision, log = self._eval(sess, block_input, data_x, labels, train_flag, retrain=True)
+        sess.close()
+        retrain_log += log
+
+        NAS_LOG << ('eva', retrain_log)
+        return float(precision)
 
     def _get_input(self, sess, pre_block, update_pre_weight=False):
         '''Get input for _inference'''
@@ -499,8 +460,8 @@ class Evaluator:
                 block_input = tf.stop_gradient(block_input, name="stop_gradient")
         # if it's the first block
         else:
-            data_x = tf.placeholder(np.array(self.train_data).dtype, self.input_shape, name='input')
-            data_y = tf.placeholder(np.array(self.train_label).dtype, self.output_shape, name="label")
+            data_x = tf.placeholder(tf.float32, self.input_shape, name='input')
+            data_y = tf.placeholder(tf.int32, self.output_shape, name="label")
             train_flag = tf.placeholder(tf.bool, name='train_flag')
             block_input = tf.identity(data_x)
         return data_x, data_y, block_input, train_flag
@@ -516,7 +477,7 @@ class Evaluator:
                 new_graph.append([x + add for x in sub_list])
         return new_graph, new_cell_list
 
-    def eval(self, sess, logits, data_x, data_y, train_flag):
+    def _eval(self, sess, logits, data_x, data_y, train_flag, retrain=False):
         # TODO change here to run training step and evaluation step
         """
         The actual training process, including the definination of loss and train optimizer
@@ -530,46 +491,77 @@ class Evaluator:
             saver: Tensorflow Saver class
             log: string, log to be write and saved
         """
-        # TODO shuffle
-        # logits = tf.nn.dropout(logits2, keep_prob=1.0)
-        noise = tf.layers.conv2d(logits, 3, 3, padding='same', name="l", use_bias=False)
-        pred = data_x - noise
+        logits = tf.nn.dropout(logits, keep_prob=1.0)
+        if retrain:
+            logits = self._makedense(logits, ('', [256, self.output_shape[-1]], 'relu'))
+        else:
+            logits = self._makedense(logits, ('', [self.output_shape[-1]], ''))
         global_step = tf.Variable(0, trainable=False, name='global_step' + str(self.block_num))
-        accuracy = self._cal_accuracy(pred, data_y)
-        loss = self._loss(pred, data_y)
+        accuracy = self._cal_accuracy(logits, data_y)
+        loss = self._loss(data_y, logits)
         train_op = self._train_op(global_step, loss)
 
         sess.run(tf.global_variables_initializer())
 
-        log = ""
-        psnr_sum = 0
-        max_steps = self.train_num // self.batch_size
-        for _ in range(self.epoch):
+        if retrain:
+            self.train_data = np.concatenate(
+                (np.array(self.train_data), np.array(self.valid_data)), axis=0).tolist()
+            self.train_label = np.concatenate(
+                (np.array(self.train_label), np.array(self.valid_label)), axis=0).tolist()
+            max_steps = len(list(self.train_label)) // self.batch_size
+            test_data = copy.deepcopy(self.test_data)
+            test_label = copy.deepcopy(self.test_label)
+            num_iter = len(test_label) // self.batch_size
+        else:
+            max_steps = self.train_num // self.batch_size
+            test_data = copy.deepcopy(self.valid_data)
+            test_label = copy.deepcopy(self.valid_label)
+            num_iter = len(self.valid_label) // self.batch_size
+
+        log = ''
+        cost_time = 0
+        precision = np.zeros([self.epoch])
+        for ep in range(self.epoch):
+            # print("epoch", ep, ":")
+            # train step
+            start_time = time.time()
             for step in range(max_steps):
-                batch_x = self.train_data[step * self.batch_size:(step + 1) * self.batch_size].astype(
-                    np.float32) / 255.0
-                batch_y = self.train_label[step * self.batch_size:(step + 1) * self.batch_size].astype(
-                    np.float32) / 255.0
-                _, loss_value, acc, ans_show = sess.run([train_op, loss, accuracy, pred],
-                                                        feed_dict={data_x: batch_x, data_y: batch_y, train_flag: True})
+                batch_x = self.train_data[step * self.batch_size:(step + 1) * self.batch_size]
+                batch_y = self.train_label[step * self.batch_size:(step + 1) * self.batch_size]
+                batch_x = DataSet().process(batch_x)
+                _, loss_value, acc = sess.run([train_op, loss, accuracy],
+                                              feed_dict={data_x: batch_x, data_y: batch_y, train_flag: True})
                 if np.isnan(loss_value):
                     return -1, log
-                sys.stdout.write("\r>> train %d/%d loss %.4f acc %.4f" % (step, max_steps, loss_value, acc))
-            sys.stdout.write("\n")
+                # sys.stdout.write("\r>> train %d/%d loss %.4f acc %.4f" % (step, max_steps, loss_value, acc))
+            # sys.stdout.write("\n")
 
             # evaluation step
-            for i in range(20):
-                batch_x = self.test_data[i].astype(np.float32) / 255.0
-                batch_x = batch_x[np.newaxis, ...]
-                batch_y = self.test_label[i].astype(np.float32) / 255.0
-                batch_y = batch_y[np.newaxis, ...]
-                l, psnr = sess.run([loss, accuracy],
+            for step in range(num_iter):
+                batch_x = test_data[step *
+                                    self.batch_size:(step + 1) * self.batch_size]
+                batch_y = test_label[step *
+                                     self.batch_size:(step + 1) * self.batch_size]
+                l, acc_ = sess.run([loss, accuracy],
                                    feed_dict={data_x: batch_x, data_y: batch_y, train_flag: False})
-                psnr_sum += psnr / len(self.test_label)
-                print("test %d/%d loss %.4f acc %.4f" % (i, len(self.test_label), l, psnr))
+                precision[ep] += acc_ / num_iter
+                # sys.stdout.write("\r>> valid %d/%d loss %.4f acc %.4f" % (step, num_iter, l, acc_))
+            # sys.stdout.write("\n")
 
-        target = self._cal_multi_target(psnr_sum)
-        return target, log
+            # early stop
+            if ep > 5 and not retrain:
+                if 2 * precision[ep] - precision[ep - 5] - precision[ep - 1] < 0.001 / DataSet().NUM_CLASSES:
+                    precision = precision[:ep]
+                    log += 'early stop at %d epoch\n' % ep
+                    break
+
+            cost_time += (float(time.time() - start_time)) / self.epoch
+            log += 'epoch %d: precision = %.3f, cost time %.3f\n' % (ep, precision[ep], float(time.time() - start_time))
+            # print('precision = %.3f, cost time %.3f' %
+            #       (precision[ep], float(time.time() - start_time)))
+
+        # target = self._cal_multi_target(precision[-1], cost_time)
+        return precision[-1], log
 
     def _cal_accuracy(self, logits, labels):
         """
@@ -580,65 +572,103 @@ class Evaluator:
             Returns:
                 Target tensor of type float.
         """
-        # TODO change here for the way of calculating target
-        mse = tf.losses.mean_squared_error(labels=labels * 255.0, predictions=logits * 255.0)
-        accuracy = 10.0 * (tf.log(255.0 ** 2 / mse) / tf.log(10.0))
+        correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         return accuracy
 
-    def _loss(self, logits, labels):
+    def _loss(self, labels, logits):
         """
           Args:
             logits: Logits from softmax.
-            labels: Labels from distorted_inputs or inputs(). 2-D tensor of shape [self.batch_size, self.NUM_CLASS]
+            labels: Labels from distorted_inputs or inputs(). 1-D tensor of shape [self.batch_size]
           Returns:
             Loss tensor of type float.
           """
-        # TODO change here for the way of calculating loss
-        loss = (1.0 / self.batch_size) * tf.nn.l2_loss(logits - labels)
+        cross_entropy = tf.reduce_mean(
+            tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=logits))
+        l2 = tf.add_n([tf.nn.l2_loss(var) for var in tf.trainable_variables()])
+        loss = cross_entropy + l2 * self.weight_decay
         return loss
 
     def _train_op(self, global_step, loss):
-        # TODO change here for learning rate and optimizer
+        num_batches_per_epoch = self.train_num / self.batch_size
+        decay_steps = int(num_batches_per_epoch * self.epoch)
+        lr = tf.train.cosine_decay(self.INITIAL_LEARNING_RATE, global_step, decay_steps, 0.0001)
+
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
-        opt = tf.train.AdamOptimizer(0.001, name='Momentum' + str(self.block_num))
+        opt = tf.train.MomentumOptimizer(lr, self.momentum_rate, name='Momentum' + str(self.block_num),
+                                         use_nesterov=True)
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            train_op = opt.minimize(loss)
+            train_op = opt.minimize(loss, global_step=global_step)
         return train_op
 
-    def _cal_multi_target(self, precision):
-        # TODO change here for target calculating
-        target = precision
-        return target
+    def _stats_graph(self):
+        graph = tf.get_default_graph()
+        flops = tf.profiler.profile(graph, options=tf.profiler.ProfileOptionBuilder.float_operation())
+        params = tf.profiler.profile(graph, options=tf.profiler.ProfileOptionBuilder.trainable_variables_parameter())
+        return flops.total_float_ops, params.total_parameters
+
+    def _cal_multi_target(self, precision, time):
+        flops, model_size = self._stats_graph()
+        return precision + 1 / time + 1 / flops + 1 / model_size
 
     def _set_data_size(self, num):
         if num > len(list(self.train_label)) or num < 0:
             num = len(list(self.train_label))
             print('Warning! Data size has been changed to', num, ', all data is loaded.')
         self.train_num = num
+        # print('************A NEW ROUND************')
+        self.max_steps = self.train_num // self.batch_size
         return
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
-    eval._set_data_size(-1)
-    eval._set_epoch(50)
-
-    graph_full = [[1]]
-    cell_list = [Cell('conv', 128, 3, 'relu')]
-    for i in range(2, 19):
-        graph_full.append([i])
-        cell_list.append(Cell('conv', 64, 3, 'relu'))
-    graph_full.append([])
-    cell_list.append(Cell('conv', 64, 3, 'relu'))
+    eval.set_data_size(1000)
+    eval.set_epoch(10)
+    # graph_full = [[1], [2], [3], []]
+    # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
+    #              Cell('pooling', 'max', 3)]
+    # lenet = NetworkItem(0, graph_full, cell_list, "")
+    # e = eval.evaluate(lenet, [], is_bestNN=True)
+    # Network.pre_block.append(lenet)
 
     # graph_full = [[1, 3], [2, 3], [3], [4]]
-    # cell_list = [Cell('conv', 128, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
+    # cell_list = [Cell('conv', 24, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
     #              Cell('conv', 32, 3, 'relu')]
+    graph_full = [[1, 3], [2, 4], [4], [2]]
+    cell_list = [Cell('sep_conv', 32, 5, 'relu6'), Cell('sep_conv', 32, 3, 'relu6'), Cell('pooling', 'avg', 3),
+                 Cell('pooling', 'avg', 8)]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     network2 = NetworkItem(1, graph_full, cell_list, "")
     e = eval.evaluate(network1, is_bestNN=True)
-    eval._set_data_size(500)
-    e = eval.evaluate(network2, [network1], is_bestNN=True)
+    print(e)
+    # eval.set_data_size(10000)
+    # e = eval.evaluate(network2, [network1], is_bestNN=True)
+    # print(e)
+    eval.set_epoch(1)
+    print(eval.retrain([network1, network2]))
+    # eval.add_data(5000)
+    # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
+    #       4, 5, 6, 8], [5, 7], [6, 7, 9, 10], [7, 9], [8], [9, 10], [10]]))
+    # cellist=[('conv', 128, 1, 'relu'), ('conv', 32, 1, 'relu'), ('conv', 256, 1, 'relu'), ('pooling', 'max', 2), ('pooling', 'global', 3), ('conv', 32, 1, 'relu')]
+    # cellist=[('pooling', 'global', 2), ('pooling', 'max', 3), ('conv', 21, 32, 'leakyrelu'), ('conv', 16, 32, 'leakyrelu'), ('pooling', 'max', 3), ('conv', 16, 32, 'leakyrelu')]
+    # graph_part = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], []]
+    # cell_list = [('conv', 64, 3, 'relu'), ('conv', 64, 3, 'relu'), ('pooling', 'max', 2), ('conv', 128, 3, 'relu'),
+    #              ('conv', 128, 3, 'relu'), ('pooling', 'max', 2), ('conv', 256, 3, 'relu'),
+    #              ('conv', 256, 3, 'relu'), ('conv', 256, 3, 'relu'), ('pooling', 'max', 2),
+    #              ('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'),
+    #              ('pooling', 'max', 2), ('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'),
+    #              ('conv', 512, 3, 'relu'), ('dense', [4096, 4096, 1000], 'relu')]
+    # pre_block = [network]
+    # Network.pre_block.append(network1)
+    # network2 = NetworkItem(1, graph_full, cell_list, "")
+    # e = eval.evaluate(network2, is_bestNN=True)
+    # Network.pre_block.append(network2)
+    # network3 = NetworkItem(2, graph_full, cell_list, "")
+    # e = eval.evaluate(network3, is_bestNN=True)
+    # e=eval.train(network.graph_full,cellist)
+    # print(e)

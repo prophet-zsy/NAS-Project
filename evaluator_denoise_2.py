@@ -19,7 +19,7 @@ class DataSet:
     # TODO for dataset changing please rewrite this class's "inputs" function and "process" function
 
     def __init__(self):
-        self.data_path = "/home/amax/PycharmProjects/ViDeNN/Spartial-CNN/data/"
+        self.data_path = '/home/amax/data/'
         return
 
     def add_noise(self):
@@ -63,6 +63,8 @@ class DataSet:
                 Returns:
                   train_data, train_label, valid_data, valid_label, test_data, test_label
         '''
+        if not os.path.exists(self.data_path + "train/noisy/") or not os.listdir(self.data_path + "train/noisy/"):
+            self.add_noise()
         noisy_eval_files = glob(self.data_path + 'test/noisy/*.png')
         noisy_eval_files = sorted(noisy_eval_files)
         test_data = np.array([cv2.imread(img) for img in noisy_eval_files])
@@ -76,8 +78,6 @@ class DataSet:
             train_data = train_data.astype(np.float32)
             train_label = train_label.astype(np.float32)
             return train_data, train_label, test_data, test_label
-        if not os.path.exists(self.data_path + "train/noisy/") or not os.listdir(self.data_path + "train/noisy/"):
-            self.add_noise()
 
         global DATA_AUG_TIMES
         count = 0
@@ -190,10 +190,14 @@ class Evaluator:
         self.input_shape = [None, None, None, 3]
         self.output_shape = [None, None, None, 3]
         self.batch_size = 64
-        self.train_data, self.train_label, self.test_data, self.test_label = DataSet().inputs()
 
-        self.INITIAL_LEARNING_RATE = 0.025
+        self.initial_learning_rate = 0.025
         return
+
+    def _load_data(self):
+        self.train_data, self.train_label, self.test_data, self.test_label\
+            = DataSet().inputs()
+        # self._apply_ds_on_data()
 
     def _set_epoch(self, e):
         self.epoch = e
@@ -407,31 +411,11 @@ class Evaluator:
 
     def _pad(self, inputs, layer):
         # padding
-        if self.input_shape[1]:
-            a = int(layer.shape[1])
-            b = int(inputs.shape[1])
-            pad = abs(a - b)
-            if layer.shape[1] > inputs.shape[1]:
-                tmp = tf.pad(inputs, [[0, 0], [0, pad], [0, pad], [0, 0]])
-                output = tf.concat([tmp, layer], 3)
-            elif layer.shape[1] < inputs.shape[1]:
-                tmp = tf.pad(layer, [[0, 0], [0, pad], [0, pad], [0, 0]])
-                output = tf.concat([inputs, tmp], 3)
-            else:
-                output = tf.concat([inputs, layer], 3)
-        else:
-            a = tf.shape(layer)[1]
-            b = tf.shape(inputs)[1]
-            pad = tf.abs(tf.subtract(a, b))
-            cond = tf.greater(a, b)
-
-            def f1():
-                return tf.concat([tf.pad(inputs, [[0, 0], [0, pad], [0, pad], [0, 0]]), layer], 3)
-
-            def f2():
-                return tf.concat([inputs, tf.pad(layer, [[0, 0], [0, pad], [0, pad], [0, 0]])], 3)
-
-            output = tf.cond(cond, f1, f2)
+        a = tf.shape(layer)[1]
+        b = tf.shape(inputs)[1]
+        pad = tf.abs(tf.subtract(a, b))
+        output = tf.where(tf.greater(a, b), tf.concat([tf.pad(inputs, [[0, 0], [0, pad], [0, pad], [0, 0]]), layer], 3),
+                          tf.concat([inputs, tf.pad(layer, [[0, 0], [0, pad], [0, pad], [0, 0]])], 3))
         return output
 
     def evaluate(self, network, pre_block=[], is_bestNN=False, update_pre_weight=False):
@@ -464,29 +448,27 @@ class Evaluator:
                 # a pooling layer for last repeat block
                 cell_list = cell_list + [Cell('pooling', 'max', 2)]
             else:
-                cell_list = cell_list + [Cell('id', '', 1)]
+                cell_list = cell_list + [Cell('id', 'max', 1)]
             logits = self._inference(block_input, graph_full, cell_list, train_flag)
 
-            precision, log = self.eval(sess, logits, data_x, data_y, train_flag)
+            precision, log = self._eval(sess, logits, data_x, data_y, train_flag)
             self.log += log
 
             saver = tf.train.Saver(tf.global_variables())
 
             if is_bestNN:  # save model
-                if not os.path.exists(os.path.join(self.model_path)):
-                    os.makedirs(os.path.join(self.model_path))
-                saver.save(sess, os.path.join(self.model_path, 'model' + str(network.id)))
+                saver.save(sess, os.path.join(
+                    self.model_path, 'model' + str(network.id)))
 
-        NAS_LOG << ('eva', self.log)
+        NAS_LOG << ('eva_eva', self.log)
         return precision
 
     def _get_input(self, sess, pre_block, update_pre_weight=False):
         '''Get input for _inference'''
         # if it got previous blocks
         if len(pre_block) > 0:
-            tmp = os.path.join(self.model_path, 'model' + str(pre_block[-1].id) + '.meta')
-            assert os.path.exists(tmp)
-            new_saver = tf.train.import_meta_graph(tmp)
+            new_saver = tf.train.import_meta_graph(
+                os.path.join(self.model_path, 'model' + str(pre_block[-1].id) + '.meta'))
             new_saver.restore(sess, os.path.join(
                 self.model_path, 'model' + str(pre_block[-1].id)))
             graph = tf.get_default_graph()
@@ -516,7 +498,7 @@ class Evaluator:
                 new_graph.append([x + add for x in sub_list])
         return new_graph, new_cell_list
 
-    def eval(self, sess, logits, data_x, data_y, train_flag):
+    def _eval(self, sess, logits, data_x, data_y, train_flag):
         # TODO change here to run training step and evaluation step
         """
         The actual training process, including the definination of loss and train optimizer
@@ -554,7 +536,8 @@ class Evaluator:
                                                         feed_dict={data_x: batch_x, data_y: batch_y, train_flag: True})
                 if np.isnan(loss_value):
                     return -1, log
-                sys.stdout.write("\r>> train %d/%d loss %.4f acc %.4f" % (step, max_steps, loss_value, acc))
+                if step % 10 == 0:
+                    sys.stdout.write("\r>> train %d/%d loss %.4f acc %.4f" % (step, max_steps, loss_value, acc))
             sys.stdout.write("\n")
 
             # evaluation step
@@ -613,18 +596,23 @@ class Evaluator:
         return target
 
     def _set_data_size(self, num):
-        if num > len(list(self.train_label)) or num < 0:
-            num = len(list(self.train_label))
-            print('Warning! Data size has been changed to', num, ', all data is loaded.')
-        self.train_num = num
+        self.data_size = num
+        self._apply_ds_on_data()
+
+    def _apply_ds_on_data(self):
+        if self.data_size > len(list(self.train_label)) or self.data_size < 0:
+            self.data_size = len(list(self.train_label))
+            print('Warning! Data size has been changed to', self.data_size, ', all data is loaded.')
+        self.train_num = self.data_size
         return
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
-    eval._set_data_size(-1)
-    eval._set_epoch(50)
+    eval._load_data()
+    eval._set_data_size(5000)
+    eval._set_epoch(5)
 
     graph_full = [[1]]
     cell_list = [Cell('conv', 128, 3, 'relu')]
