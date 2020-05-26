@@ -2,33 +2,36 @@
   "nas_main": {
     "pattern": "Block",
     "num_gpu": 2,
-    "block_num": 2,
-    "num_opt_best":2,
+    "block_num": 4,
+    "num_opt_best":10,
     "finetune_threshold": 5,
-    "spl_network_round": 2,
+    "spl_network_round": 3,
     "eliminate_policy": "best",
     "add_data_mode": "linear",
-    "add_data_per_round": 100,
-    "init_data_size": 1600,
+    "add_data_per_round": 1000,
+    "init_data_size": 1000,
     "data_increase_scale": 1.5,
-    "add_data_for_confirm_train": 100,
-    "repeat_num": 1,
+    "add_data_for_confirm_train": -1,
+    "add_data_for_retrain": -1,
+    "repeat_num": 2,
     "subp_eva_debug": 0,
     "subp_pred_debug": 0,
-    "eva_debug": 0,
-    "ops_debug": 0,
-    "link_node": true
+    "pred_mask": 0,
+    "eva_mask": 0,
+    "link_node": true,
+    "retrain_switch": 1
   },
   "enum":{
-    "depth": 3,
-    "width": 1,
-    "max_depth": 2,
+    "depth": 4,
+    "width": 3,
+    "max_depth": 3,
     "enum_debug": 0
   },
   "eva": {
-    "search_epoch": 3,
-    "confirm_epoch": 4,
-    "retrain_epoch": 5
+    "task_name": "cifar-100",
+    "search_epoch": 10,
+    "confirm_epoch": 20,
+    "retrain_epoch": 120
   },
   "opt": {
       "sample_size": 3,
@@ -94,6 +97,5 @@
         ]
       }
     }
-
   }
 }

@@ -15,11 +15,13 @@ class Network(object):
         self.spl = None
 
 class NetworkItem(object):
-    def __init__(self, _id=0, graph=[], cell_list=[], code=[]):
+    def __init__(self, _id=0, graph=[], cell_list=[], code=[], use_pred=False):
         self.id = _id
         self.graph = graph
         self.cell_list = cell_list
         self.code = code
+        self.use_pred = use_pred
+        self.task_info = None
         self.score = 0
 
 class Cell(tuple):

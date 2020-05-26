@@ -65,7 +65,6 @@ class Sampler:
             2. graph_full (2d int list, as NetworkItem.graph_full)
             3. table (1d int list, depending on dimension)
         """
-
         table = self.opt.sample()
         cell, graph = self.convert(table)
         return cell, graph, table

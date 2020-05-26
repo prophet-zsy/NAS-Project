@@ -1,17 +1,36 @@
-import queue
-import sys
-import os
-import traceback
-import multiprocessing
+import os, sys, queue, time, random, re, json
+import datetime, traceback, pickle
+import multiprocessing, copy
 from base import Network, NetworkItem, Cell
-from info_str import NAS_CONFIG
-import info_str as ifs
+from info_str import NAS_CONFIG, MF_TEMP
 
 
-def list_swap(ls, i, j):
-    cpy = ls[i]
-    ls[i] = ls[j]
-    ls[j] = cpy
+def _dump_stage(stage_info):
+    _cur_dir = os.getcwd()
+    stage_path = os.path.join(_cur_dir, "memory", "stage_info.pickle")
+    with open(stage_path, "w") as f:
+        json.dump(stage_info, f, indent=2)
+
+
+class TimeCnt:
+	def __init__(self):
+		self.time_stamp = None
+
+	def start(self):
+		self.time_stamp = datetime.datetime.now()
+		start_time = self.time_stamp.strftime('%d %H:%M:%S')
+		return start_time
+
+	def stop(self):
+		cost_time = (datetime.datetime.now() - self.time_stamp)
+		# format the costtime
+		total_seconds = int(cost_time.total_seconds())
+		hours = total_seconds//3600
+		seconds_inHour = total_seconds%3600
+		minutes = seconds_inHour//60
+		seconds = seconds_inHour%60
+		cost_time = '{}:{}:{}'.format(hours, minutes, seconds)
+		return cost_time
 
 
 class DataSize:
@@ -23,19 +42,20 @@ class DataSize:
         self.add_data_per_rd = NAS_CONFIG['nas_main']['add_data_per_round']
         self.init_lr = NAS_CONFIG['nas_main']['init_data_size']
         self.scale = NAS_CONFIG['nas_main']['data_increase_scale']
-        #  data size control for confirm train
-        self.data_for_confirm_train = NAS_CONFIG['nas_main']['add_data_for_confirm_train']
 
-    def _game_data_ctrl(self):
+        self.data_for_confirm_train = NAS_CONFIG['nas_main']['add_data_for_confirm_train']
+        self.data_for_retrain = NAS_CONFIG['nas_main']['add_data_for_retrain']
+
+    def _cnt_game_data(self):
         if self.mode == "linear":
             self.round_count += 1
-            self.eva._set_data_size(self.round_count * self.add_data_per_rd)
+            cur_data_size = self.round_count * self.add_data_per_rd
         elif self.mode == "scale":
-            dsize = int(self.init_lr * (self.scale ** self.round_count))
-            self.eva._set_data_size(dsize)
+            cur_data_size = int(self.init_lr * (self.scale ** self.round_count))
             self.round_count += 1
         else:
             raise ValueError("signal error: mode, it must be one of linear, scale")
+        return cur_data_size
 
     def control(self, stage="game"):
         """Increase the dataset's size in different way
@@ -44,11 +64,16 @@ class DataSize:
         :return:
         """
         if stage == "game":
-            self._game_data_ctrl()
+            cur_data_size = self._cnt_game_data()
         elif stage == "confirm":
-            self.eva._set_data_size(self.data_for_confirm_train)
+            cur_data_size = self.data_for_confirm_train
+        elif stage == "retrain":
+            cur_data_size = self.data_for_retrain
         else:
             raise ValueError("signal error: stage, it must be one of game, confirm")
+        if self.eva:
+            cur_data_size = self.eva._set_data_size(cur_data_size)
+        return cur_data_size
 
 
 def _epoch_ctrl(eva=None, stage="game"):
@@ -59,87 +84,154 @@ def _epoch_ctrl(eva=None, stage="game"):
     :return:
     """
     if stage == "game":
-        eva._set_epoch(NAS_CONFIG['eva']['search_epoch'])
+        cur_epoch = NAS_CONFIG['eva']['search_epoch']
     elif stage == "confirm":
-        eva._set_epoch(NAS_CONFIG['eva']['confirm_epoch'])
+        cur_epoch = NAS_CONFIG['eva']['confirm_epoch']
     elif stage == "retrain":
-        eva._set_epoch(NAS_CONFIG['eva']['retrain_epoch'])
+        cur_epoch = NAS_CONFIG['eva']['retrain_epoch']
     else:
         raise ValueError("signal error: stage, it must be one of game, confirm, retrain")
+    if eva:  # for eva_mask
+        eva._set_epoch(cur_epoch)
+    return cur_epoch
 
 
-class Communication:
+class EvaScheduleItem:
+    def __init__(self, nn_id, alig_id, graph_template, item, pre_blk,\
+        ft_sign, bestNN, rd, nn_left, spl_batch_num, epoch, data_size):
+        # task content (assign in initial)
+        self.nn_id = nn_id
+        self.alig_id = alig_id
+        self.graph_template = graph_template
+        self.network_item = item  # is None when retrain
+        self.pre_block = pre_blk
+        self.ft_sign = ft_sign
+        self.is_bestNN = bestNN
+        self.round = rd
+        self.nn_left = nn_left
+        self.spl_batch_num = spl_batch_num
+
+        self.epoch = epoch
+        self.data_size = data_size
+
+        # task info
+        self.task_id = -1  # assign in TaskScheduler().exec_task_async
+        self.pid = -1  # assgin in task_func
+        self.start_time = None # assign in task_func
+        self.cost_time = 0 # assign in task_func
+        self.gpu_info = -1  # ScheduleItem give gpu to it
+
+        # result
+        self.score = 0 # assign in task_func
+
+class PredScheduleItem:
+    def __init__(self, net_pool):
+        self.net_pool = net_pool
+        
+        # task info
+        self.task_id = -1
+        self.start_time = None
+        self.cost_time = 0
+        self.gpu_info = -1
+
+class TaskScheduler:
+    #  Mainly for coordinating GPU resources
     def __init__(self):
-        self.task = queue.Queue()
-        self.result = queue.Queue()
-        self.idle_gpuq = multiprocessing.Manager().Queue()
-        self.net_pool = ""
-        self.tables = []
-        self.round = 0
-        self.tw_count = NAS_CONFIG['nas_main']['num_opt_best'] - NAS_CONFIG['nas_main']['num_gpu']
-        for gpu in range(NAS_CONFIG['nas_main']['num_gpu']):
-            self.idle_gpuq.put(gpu)
+        self.task_list = []
+        self.result_list = []
 
-    def wake_up_train_winner(self, res):
-        score, time_cost, nn_id, spl_id = res
-        # print("nn_id spl_id item_list_length", nn_id, spl_id, len(self.net_pool[nn_id - 1].item_list))
-        self.net_pool[nn_id - 1].item_list[spl_id - 1].score = score
-        self.net_pool[nn_id - 1].spl.update_opt_model(self.net_pool[nn_id - 1].item_list[spl_id - 1].code,
-                                                      -self.net_pool[nn_id - 1].item_list[spl_id - 1].score)
-        item_id = len(self.net_pool[nn_id - 1].item_list) + 1
-        cnt = 0
-        while cnt < 500:
-            cell, graph, table = self.net_pool[nn_id - 1].spl.sample()
-            if table not in self.tables:
-                self.tables.append(table)
-                break
-            cnt += 1
-        if self.tw_count > 0:
-            self.net_pool[nn_id - 1].item_list.append(NetworkItem(item_id, graph, cell, table))
-            item = self.net_pool[nn_id - 1].item_list[-1]
-            task_param = [
-                item, self.net_pool[nn_id - 1].pre_block, self.round, nn_id, 1, item_id,
-                NAS_CONFIG['nas_main']['spl_network_round'] * (self.round - 1) + NAS_CONFIG['nas_main']['num_opt_best'],
-                True, True
-            ]
-            self.task.put(task_param)
-        self.tw_count -= 1
+        # for multiprocessing communication
+        self.result_buffer = multiprocessing.Queue()
+        self.signal = multiprocessing.Event()
 
+        # resource
+        self.gpu_num = NAS_CONFIG['nas_main']['num_gpu']
+        self.gpu_list = queue.Queue()
+        for gpu in range(self.gpu_num):
+            self.gpu_list.put(gpu)
+        
+        # for counting task(every task has a unique task_id)
+        self.task_id = 0
+
+    def load_tasks(self, tasks):
+        self.task_list.extend(tasks)
+
+    def get_task_id(self):
+        tmp_id = self.task_id
+        self.task_id += 1
+        return tmp_id
+
+    def exec_task_async(self, task_func, *args, **kwargs):
+        """Async: directly return whetherever the tasks is completed
+        """
+        while self.task_list and not self.gpu_list.empty():
+            gpu = self.gpu_list.get()  # get gpu
+            task_item = self.task_list.pop(0)  # get task
+            # config task
+            task_item.gpu_info = gpu
+            task_item.task_id = self.get_task_id()
+            # exec task
+            multiprocessing.Process(target=task_func, args=[task_item, self.result_buffer, self.signal, *args]).start()
+        self.signal.clear()
+
+    def load_part_result(self):
+        """load one or more results if there are tasks completed
+        """
+        self.signal.wait()
+        while not self.result_buffer.empty():
+            task_item = self.result_buffer.get()
+            self.result_list.append(task_item)
+            self.gpu_list.put(task_item.gpu_info)
+
+    def exec_task(self, task_func, *args, **kwargs):
+        """Sync: waiting for all the tasks completed before return
+        """
+        while self.task_list or self.gpu_list.qsize() < self.gpu_num:
+            self.exec_task_async(task_func, *args, **kwargs)
+            self.load_part_result()
+
+    def get_result(self):
+        result = self.result_list
+        self.result_list = []
+        return result
+#  for test...
+def task_fun(task_item, result_buffer, signal, *args, **kwargs):
+    import tensorflow as tf
+    print("computing gpu {} task {}".format(task_item.gpu_info, task_item.alig_id))
+    time.sleep(random.randint(2,20))
+    result_buffer.put(task_item)
+    signal.set()
 
 class Logger(object):
     def __init__(self):
-        self._eva_log = open(ifs.evalog_path, 'a')
-        self._sub_proc_log = open(ifs.subproc_log_path, 'a')
-        self._network_log = open(ifs.network_info_path, 'a')
-        self._nas_log = open(ifs.naslog_path, 'a')
+        _cur_ver_dir = os.getcwd()
+        log_dir = os.path.join(_cur_ver_dir, 'memory')
+        naslog_path = os.path.join(log_dir, 'nas_log.txt')
+        network_info_path = os.path.join(log_dir, 'network_info.txt')
+        evalog_path = os.path.join(log_dir, 'evaluator_log.txt')
+        errlog_path = os.path.join(log_dir, 'error_log.txt')
+        
+        self.base_data_dir = os.path.join(log_dir, 'base_data_serialize')
 
-        self._log_map = {  # module x func -> log
-            'nas': {
-                '_subproc_eva': self._sub_proc_log,
-                '_save_net_info': self._network_log,
-                'default': self._nas_log
-            },
-            'evaluator': {
-                'default': self._eva_log
-            }
+        self._nas_log = open(naslog_path, 'a')
+        self._network_log = open(network_info_path, 'a')
+        self._eva_log = open(evalog_path, 'a')
+        self._error_log = open(errlog_path, 'a')
+
+        self._log_match = {  # match -> log
+            'basedata': self.base_data_dir,
+            'nas': self._nas_log,
+            'net': self._network_log,
+            'eva': self._eva_log,
+            'err': self._error_log,
+            'utils': sys.stdout  # for test
         }
 
     def __del__(self):
-        self._eva_log.close()
-        self._sub_proc_log.close()
-        self._network_log.close()
         self._nas_log.close()
-
-    @staticmethod
-    def _get_where_called():
-        last_stack = traceback.extract_stack()[-3]
-        # absolute path -> last file name
-        where_file = os.path.split(last_stack[0])[-1]
-        where_func = last_stack[2]
-        # get rid of '.py'
-        where_module = os.path.splitext(where_file)[0]
-
-        return where_module, where_func
+        self._network_log.close()
+        self._eva_log.close()
+        self._error_log.close()
 
     @staticmethod
     def _get_action(args):
@@ -151,26 +243,24 @@ class Logger(object):
             raise Exception("empty or wrong log args")
         return
 
-    def _log_output(self, module, func, context):
-        output = None
-        try:
-            if func not in self._log_map[module].keys():
-                func = 'default'
-            output = self._log_map[module][func]
-        except:
-            # if can't find func's log, search module default log
-            # and print context.
-            default_log = '_%s_log' % module
-            if hasattr(self, default_log):
-                output = self.__getattribute__(default_log)
-            print(context)
-        if output:
-            if "evaluator" == module:
-                with open(ifs.evalog_path, "a") as f:
-                    f.write(context+"\n")
-                return
-            output.write(context)
-            output.write('\n')
+    def _log_output(self, match, output, temp, others):
+        if not temp:
+            assert len(others) == 1, "you must send net to log one by one"
+            content = others[0]
+            dump_path = os.path.join(self.base_data_dir, "blk_{}_nn_{}.pickle"
+                        .format(len(content.pre_block), content.id))
+            with open(dump_path, "wb") as f_dump:
+                pickle.dump(content, f_dump)
+            return
+        content = temp.format(others)
+        output.write(content)
+        output.write('\n')
+        if match == "nas":
+            print(content)
+        if match == "err":
+            traceback.print_exc(file=output)
+            traceback.print_exc(file=sys.stdout)
+        output.flush()
         return
 
     def __lshift__(self, args):
@@ -187,19 +277,74 @@ class Logger(object):
             NAS_LOG = Logger() # 'Nas.run' func in nas.py 
             NAS_LOG << 'enuming'
         """
-        module, func = Logger._get_where_called()
         act, others = Logger._get_action(args)
-        temp = ifs.MF_TEMP[module][func][act]
-        # print(module, func, temp, others)
-        # print(module, func, temp.format(others))
-        if func != "_save_net_info":
-            print(temp.format(others))
-
-        self._log_output(module, func, temp.format(others))
+        match = act.split("_")[0]
+        output = self._log_match[match]
+        temp = MF_TEMP[act] if match != "basedata" else None
+        self._log_output(match, output, temp, others)
 
 
 NAS_LOG = Logger()
 
+
+def _check_log():
+    _cur_ver_dir = os.getcwd()
+    log_dir = os.path.join(_cur_ver_dir, 'memory')
+    base_data_dir = os.path.join(log_dir, 'base_data_serialize')
+    model_dir = os.path.join(_cur_ver_dir, 'model')
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+        os.mkdir(base_data_dir)
+    else:
+        if not os.path.exists(base_data_dir):
+            os.mkdir(base_data_dir)
+        log_dir_sub = os.listdir(log_dir)
+        log_files = [os.path.join(log_dir, item) for item in log_dir_sub]
+        log_files = [item for item in log_files if os.path.isfile(item)]
+        have_content = False
+        for file in log_files:
+            if os.path.getsize(file) or os.listdir(base_data_dir):
+                have_content = True
+        if have_content:
+            _ask_user(log_files, base_data_dir)
+    if not os.path.exists(model_dir):
+        os.mkdir(model_dir)
+    else:
+        _clear_log([], [model_dir])
+
+def _ask_user(log_files, base_data_dir):
+    print(MF_TEMP['nas_log_hint'])
+    while True:
+        # answer = input()
+        answer = "y"
+        if answer == "n":
+            raise Exception(MF_TEMP['nas_existed_log'])
+        elif answer == "y":
+            log_files = _clear_log(log_files, [base_data_dir])
+            break
+        else:
+            print(MF_TEMP['nas_invalid_str'])
+
+def _clear_log(files, dirs):
+    for file in files:
+        with open(file, "w") as f:
+            f.truncate()
+    for dir_ in dirs:
+        for item in os.listdir(dir_):
+            os.remove(os.path.join(dir_, item))
+    return files
+
+
 if __name__ == '__main__':
-    NAS_LOG << ('hello', 'I am bread', 'hello world!')
-    NAS_LOG << 'enuming'
+    # NAS_LOG << ('hello', 'I am bread', 'hello world!')
+    # NAS_LOG << 'enuming'
+
+    item = NetworkItem(0, [[1,2,3],[4,5,6],[7,8,9]], Cell('conv', 48, 7, 'relu'), [1,0,2,0,1,0])
+    tasks = []
+    for i in range(15):
+        tasks.append(EvaScheduleItem(0, i, [], item, [], False, False, -1, 1, 1))
+    TSche = TaskScheduler()
+    TSche.load_tasks(tasks)
+    TSche.exec_task(task_fun)
+    result = TSche.get_result()
+

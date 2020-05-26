@@ -44,7 +44,7 @@ class Enumerater:
         self._info_dict = {}
         self._info_group = []
         self._log = ""
-        self._pickle_name = 'pcache\\enum_%d-%d-%d.pickle' % (self.depth, self.width, self.max_depth)
+        self._pickle_name = 'pcache/enum_%d-%d-%d.pickle' % (self.depth, self.width, self.max_depth)
 
     def enumerate(self):
         """
@@ -185,11 +185,8 @@ class Enumerater:
 
 if __name__ == '__main__':
     time1 = time.time()
-
     obj = Enumerater()
-
     res = obj.enumerate()
-
     # for i in res:
     #     print(i.get_graph_part())  #
     # print(len(res))

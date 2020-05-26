@@ -27,7 +27,7 @@ class Feature:
     def __init__(self, graph):
         self.graph = graph
 
-    def feature_links(self):
+    def _feature_links(self):
         # 从邻接矩阵中提取所有的支链，每一条支链有五个特征，编号，起点，终点，长度，节点编号
         g = self.graph
         link_set = []
@@ -56,9 +56,9 @@ class Feature:
 
         return link_set, endpoint_link_num_set, node_link_num_set
 
-    def feature_nodes(self):
+    def _feature_nodes(self):
         # 对每一个节点提取特征
-        link_set, endpointLinkNumSet, nodeLinkNumSet = self.feature_links()
+        link_set, endpointLinkNumSet, nodeLinkNumSet = self._feature_links()
 
         node_num = len(self.graph)
         feature_num = 25
@@ -317,7 +317,7 @@ class Predictor:
         graphs_orders = []
         for g in graphs:
             g_mat = self._list2mat(g)
-            links, _, _ = Feature(g_mat).feature_links()
+            links, _, _ = Feature(g_mat)._feature_links()
             order = self._get_new_order(links, len(g_mat))
             graph_mat = self._get_new_mat(order, g)
             graphs_mat.append(graph_mat)
@@ -385,11 +385,10 @@ class Predictor:
     def predictor(self, pre_block, graph_full):
         '''
         Method for predicting block's operation
-        Args:
-            pre_block:Previous block Networkitem_list
-            graph_full:Current block Networkitem
-        return:
-            Operation of each node in the current block,including size and filters
+        
+        :param pre_block: Previous block Networkitem_list
+        :param graph_full: Current block Networkitem
+        :return: Operation of each node in the current block,including size and filters
         '''
         graph_list = []
         if pre_block:
@@ -398,7 +397,7 @@ class Predictor:
         graph_list.append(graph_full)
         graphs_mat, graphs_orders = self._trans(graph_list)
         new_graph = self._graph_concat(graphs_mat)
-        inputs = Feature(new_graph).feature_nodes()
+        inputs = Feature(new_graph)._feature_nodes()
         inputs = self._padding(inputs, MAX_NETWORK_LENGTH)
         class_list = self._predict(inputs)
         ops = self._class_id_2_parameter(graphs_orders[-1],
@@ -409,10 +408,10 @@ class Predictor:
         '''
         Retrain the predictor model with networks that
         get high accuracy on the validation set
-        Args:
-            graph_full: a Network Topology
-            cell_list: Class Cell()'s list
-        no Returns
+        
+        :param graph_full: a Network Topology
+        :param cell_list: Cell list
+        :returns: None.
         '''
         x_train = []
         y_train = []
@@ -423,7 +422,7 @@ class Predictor:
             y_train.append(k)
         graphs_mat, _ = self._trans(graph_full)
         for graph in graphs_mat:
-            x = Feature(graph).feature_nodes()
+            x = Feature(graph)._feature_nodes()
             x = self._padding(x, MAX_NETWORK_LENGTH)
             x_train.append(x)
         x_train = np.array(x_train)
