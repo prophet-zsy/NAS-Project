@@ -20,7 +20,7 @@ class DataSet:
         self.NUM_CLASSES = num_class
         self.NUM_EXAMPLES_FOR_TRAIN = 40000
         self.NUM_EXAMPLES_FOR_EVAL = 10000
-        self.task = "cifar-10"
+        self.task = "cifar-100"
         self.data_path = './data/'
         return
 
@@ -140,7 +140,7 @@ class Evaluator:
         self.output_shape = [self.batch_size, num_class]
         self.train_data, self.train_label, self.valid_data, self.valid_label, self.test_data, self.test_label = self.data_set.inputs()
 
-        self.INITIAL_LEARNING_RATE = 0.025
+        self.INITIAL_LEARNING_RATE = 0.00025
         self.weight_decay = 0.0003
         self.momentum_rate = 0.9
 
@@ -403,13 +403,13 @@ class Evaluator:
 
         logits = tf.nn.dropout(block_input, keep_prob=1.0)
         # softmax
-        logits = self._makedense(logits, ('', [256, self.output_shape[-1]], 'relu'))
+        logits = self._makedense(logits, ('', [self.output_shape[-1]], 'relu'))
 
         sess = tf.Session()
         precision, log = self._eval(sess, logits, data_x, labels, train_flag, retrain=True)
         retrain_log += log
 
-        NAS_LOG << ('eva', retrain_log)
+        NAS_LOG << ('eva_eva', retrain_log)
         return float(precision)
 
     def _get_input(self, sess, pre_block, update_pre_weight=False):
@@ -591,10 +591,10 @@ class Evaluator:
 
 
 if __name__ == '__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
-    eval.set_data_size(10000)
-    eval.set_epoch(10)
+    eval.set_data_size(-1)
+    eval.set_epoch(80)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
@@ -607,12 +607,12 @@ if __name__ == '__main__':
                  Cell('conv', 32, 3, 'relu')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
     network2 = NetworkItem(1, graph_full, cell_list, "")
-    e = eval.evaluate(network1, is_bestNN=True)
-    print(e)
-    eval.set_data_size(10000)
-    e = eval.evaluate(network2, [network1], is_bestNN=True)
-    print(e)
-    eval.set_epoch(5)
+    # e = eval.evaluate(network1, is_bestNN=True)
+    # print(e)
+    # eval.set_data_size(10000)
+    # e = eval.evaluate(network2, [network1], is_bestNN=True)
+    # print(e)
+    eval.set_epoch(50)
     print(eval.retrain([network1, network2]))
     # eval.add_data(5000)
     # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
@@ -635,3 +635,27 @@ if __name__ == '__main__':
     # e = eval.evaluate(network3, is_bestNN=True)
     # e=eval.train(network.graph_full,cellist)
     # print(e)
+
+    #  retrain for contrast with new eva
+    # graph_full = [[1, 4, 5, 3], [2, 6, 3], [3, 7], [7], [2], [2], [3]]
+    # cell_list = [Cell('conv', 64, 1, 'relu6'), Cell('conv', 32, 5, 'relu'), Cell('conv', 32, 5, 'leakyrelu'), 
+    #              Cell('sep_conv', 48, 3, 'relu'), Cell('conv', 32, 1, 'relu'), Cell('sep_conv', 32, 3, 'leakyrelu'), 
+    #              Cell('conv', 32, 3, 'relu6')]
+    # network1 = NetworkItem(0, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 5, 6, 2, 3], [2, 3], [3], [8], [2], [3], [7], [3]]
+    # cell_list = [Cell('conv', 128, 5, 'relu6'), Cell('conv', 64, 5, 'relu6'), Cell('sep_conv', 64, 3, 'relu6'), 
+    #              Cell('conv', 48, 1, 'relu'), Cell('sep_conv', 128, 5, 'leakyrelu'), Cell('sep_conv', 64, 1, 'leakyrelu'), 
+    #              Cell('sep_conv', 48, 1, 'leakyrelu'), Cell('conv', 64, 3, 'relu')]
+    # network2 = NetworkItem(1, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 5, 7, 2], [2, 3, 9], [3, 9], [9], [2], [6], [3], [8], [3]]
+    # cell_list = [Cell('conv', 128, 1, 'relu6'), Cell('conv', 64, 5, 'relu'), Cell('conv', 192, 3, 'leakyrelu'), 
+    #              Cell('sep_conv', 64, 1, 'relu6'), Cell('conv', 192, 3, 'relu6'), Cell('sep_conv', 192, 1, 'relu'), 
+    #              Cell('conv', 64, 1, 'relu6'), Cell('conv', 128, 1, 'relu'), Cell('conv', 192, 5, 'leakyrelu')]
+    # network3 = NetworkItem(2, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 5], [2, 3, 7], [3, 7], [7], [2], [6], [3]]
+    # cell_list = [Cell('conv', 256, 1, 'relu6'), Cell('sep_conv', 192, 1, 'relu'), Cell('conv', 256, 5, 'relu'), 
+    #              Cell('conv', 256, 5, 'leakyrelu'), Cell('sep_conv', 192, 1, 'leakyrelu'), Cell('conv', 128, 1, 'relu'), 
+    #              Cell('conv', 192, 1, 'relu6')]
+    # network4 = NetworkItem(3, graph_full, cell_list, "")
+    # print(eval.retrain([network1, network2, network3, network4]))
+

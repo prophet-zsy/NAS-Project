@@ -347,6 +347,7 @@ def _train_winner(eva, net_pl, ds, round, spl_num=MAIN_CONFIG['num_opt_best']):
 
 def _subproc_init_ops(task_item, result_buffer, signal):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(task_item.gpu_info)
+    task_item.pid = os.getpid()
     import keras
     keras.backend.clear_session()
     from predictor import Predictor
@@ -480,6 +481,7 @@ class Nas:
 if __name__ == '__main__':
     nas = Nas()
     search_result = nas.run()
+    # when interrupt by the error, we can resume from interruption
     # if "resume_inter" in sys.argv:
     #     nas = Nas()
     #     search_result = nas.run()

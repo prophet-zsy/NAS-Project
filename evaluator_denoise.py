@@ -13,7 +13,7 @@ DATA_AUG_TIMES = 3
 DATA_PATH = "./data/denoise/"
 MODEL_PATH = "./model"
 DATA_RATIO_FOR_EVAL = 0.001
-BATCH_SIZE = 10
+BATCH_SIZE = 50
 INITIAL_LEARNING_RATE = 0.001
 
 def _open_a_Session():
@@ -256,7 +256,7 @@ class DataFlowGraph:
         self.train_flag = False
         self.run_ops = {}  # what sess.run
         self.saver = None
-        self._construct_graph()
+
 
     def _find_ends(self):
         if self.cur_block_id > 0 and self.net_item:  # if there are some previous blocks and not in retrain mode
@@ -278,7 +278,6 @@ class DataFlowGraph:
     def _construct_graph(self):
         tf.reset_default_graph()
         self.data_x, self.data_y, self.train_flag, mid_plug = self._find_ends()
-        # tf.summary.histogram('mid_plug', mid_plug)
         if self.net_item:
             blks = [[self.net_item.graph, self.net_item.cell_list]]
             mid_plug = self._construct_nblks(mid_plug, blks, self.cur_block_id)
@@ -300,13 +299,13 @@ class DataFlowGraph:
 
     def _cal_accuracy(self, logits, labels):
         mse = tf.losses.mean_squared_error(labels=labels * 255.0, predictions=logits * 255.0)
-        accuracy = 10.0 * (tf.log(255.0 ** 2 / mse) / tf.log(10.0))
+        accuracy = tf.multiply(10.0, (tf.log(255.0 ** 2 / mse) / tf.log(10.0)), name="acc")
         self.run_ops['acc'] = accuracy
         return accuracy
 
     def _loss(self, logits, labels):
         # TODO change here for the way of calculating loss
-        loss = (1.0 / BATCH_SIZE) * tf.nn.l2_loss(logits - labels)
+        loss = tf.multiply((1.0 / BATCH_SIZE), tf.nn.l2_loss(logits - labels), name="loss")
         self.run_ops['loss'] = loss
         return loss
 
@@ -314,7 +313,7 @@ class DataFlowGraph:
         opt = tf.train.AdamOptimizer(INITIAL_LEARNING_RATE, name='Momentum' + str(self.cur_block_id))
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
-            train_op = opt.minimize(loss)
+            train_op = opt.minimize(loss, name="train_op")
         self.run_ops['train_op'] = train_op
         return train_op
 
@@ -353,7 +352,6 @@ class DataFlowGraph:
             for node in topo_order:
                 layer = self._make_layer(inputs[node], cell_list[node], node, train_flag)
                 self.run_ops['blk{}_node{}'.format(blk_id, node)] = layer
-                # tf.summary.histogram('layer'+str(node), layer)
                 # update inputs information of the cells below this cell
                 for j in graph_full[node]:
                     if getinput[j]:  # if this cell already got inputs from other cells precedes it
@@ -503,6 +501,9 @@ class DataFlowGraph:
         self.data_x = graph.get_tensor_by_name("input:0")
         self.data_y = graph.get_tensor_by_name("label:0")
         self.train_flag = graph.get_tensor_by_name("train_flag:0")
+        self.run_ops['acc'] = graph.get_tensor_by_name("acc:0")
+        self.run_ops['loss'] = graph.get_tensor_by_name("loss:0")
+        self.run_ops['pred_img'] = graph.get_tensor_by_name("pred_img:0")
         return sess
 
     def _save_model(self, sess):  # for evaluate and retrain
@@ -517,7 +518,6 @@ class DataFlowGraph:
         flops = tf.profiler.profile(graph, options=tf.profiler.ProfileOptionBuilder.float_operation())
         params = tf.profiler.profile(graph, options=tf.profiler.ProfileOptionBuilder.trainable_variables_parameter())
         return flops.total_float_ops, params.total_parameters
-
 
 class Evaluator:
     def __init__(self):
@@ -542,6 +542,7 @@ class Evaluator:
     def evaluate(self, task_item):
         self._log_item_info(task_item)
         computing_graph = DataFlowGraph(task_item)
+        computing_graph._construct_graph()
         score = self._train(computing_graph, task_item)
         if not task_item.network_item:
             score = self._test(computing_graph)
@@ -582,7 +583,7 @@ class Evaluator:
         return valid_acc
 
     def _test(self, compute_graph):
-        # tf.reset_default_graph()
+        tf.reset_default_graph()
         sess = compute_graph._load_model()
         #  get 100 imgs for test in all 1423 imgs randomly
         img_idxs = random.sample(range(0, len(self.data_set.test_data)), 100)

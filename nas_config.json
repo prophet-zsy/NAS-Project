@@ -3,9 +3,9 @@
     "pattern": "Block",
     "num_gpu": 2,
     "block_num": 4,
-    "num_opt_best":10,
+    "num_opt_best": 12,
     "finetune_threshold": 5,
-    "spl_network_round": 3,
+    "spl_network_round": 5,
     "eliminate_policy": "best",
     "add_data_mode": "linear",
     "add_data_per_round": 1000,
@@ -23,14 +23,14 @@
   },
   "enum":{
     "depth": 4,
-    "width": 3,
+    "width": 2,
     "max_depth": 3,
     "enum_debug": 0
   },
   "eva": {
-    "task_name": "cifar-100",
-    "search_epoch": 10,
-    "confirm_epoch": 20,
+    "task_name": "cifar-10",
+    "search_epoch": 20,
+    "confirm_epoch": 50,
     "retrain_epoch": 120
   },
   "opt": {

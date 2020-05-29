@@ -130,6 +130,7 @@ class PredScheduleItem:
         
         # task info
         self.task_id = -1
+        self.pid = -1  # assgin in task_func
         self.start_time = None
         self.cost_time = 0
         self.gpu_info = -1
@@ -181,7 +182,8 @@ class TaskScheduler:
         while not self.result_buffer.empty():
             task_item = self.result_buffer.get()
             self.result_list.append(task_item)
-            self.gpu_list.put(task_item.gpu_info)
+            self.gpu_list.put(task_item.gpu_info)  # return gpu
+            pid, exit_code = os.waitpid(task_item.pid, 0)  # make the sub zombie process vanish
 
     def exec_task(self, task_func, *args, **kwargs):
         """Sync: waiting for all the tasks completed before return

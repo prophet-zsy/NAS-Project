@@ -22,6 +22,9 @@ if __name__ == '__main__':
 			Process(target=gpu_compute,args=[e, item, gpu, result]).start()
 		e.clear()
 		e.wait()
+		#  这里应该加一个p.join()或者os.waitpid()来回收执行完毕后进入僵尸进程状态的子进程
+		#  <僵尸状态的子进程不一定会被自动回收，据查资料再次调用p.start()会回收，但这样最后一个调用的子进程便不能被回收>
+		#  <这里gpu_compute函数过于简单，所以测试问题，但是复杂场景下，僵尸进程便会跳出来叨扰你>
 		with open("temp.txt", "a", encoding="utf-8") as f:
 			f.write("host is waked up\n")
 			print("host is waked up")
