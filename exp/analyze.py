@@ -123,10 +123,19 @@ class Analyzer:
             print("\t"+"\t".join([str(i) for i in range(len(blk_search[0]))]))
             for nn_id in range(len(blk_search)):
                 print(nn_id, end="")
+                cnt = 0
                 for score in blk_search[nn_id]:
-                    context = "\t{:.3f}".format(score) if score != "-" else\
+                    if cnt < self.spl_batch and self.net_pool[i*self.nn_num+nn_id].item_list[cnt].use_pred:  # the item use pred
+                        if score >= max(blk_search[nn_id][:self.spl_batch]):
+                            aux_info = " pred_work"
+                        else:
+                            aux_info = " pred"
+                    else:
+                        aux_info = ""
+                    context = "\t{:.3f}{}".format(score, aux_info) if score != "-" else\
                               "\t{}".format(score)
                     print(context, end="")
+                    cnt += 1
                 print()
             print("\n")
         return search_process
@@ -171,6 +180,7 @@ class Analyzer:
         # self.show_png(output_path)
 
     def _item_to_blkgraph(self, item, with_preblk=False):
+        #  get the pre_blk and concat them with cur item, then return them to func "display_item" to draw them
         task_info = item.task_info
         blk_list = task_info.pre_block + [item]
         blk_graph = []
@@ -203,6 +213,43 @@ class Analyzer:
         blk_to_png(blk_graph, output_path, mark_skip_edge=mark_skipping)
         # self.show_png(output_path)
 
+    def display_item_use_pred(self, blk_id, nn_id):
+        nn = self.net_pool[blk_id*self.nn_num+nn_id]
+        for item_id in range(len(nn.item_list)):
+            item = nn.item_list[item_id]
+            if item.use_pred:
+                self.display_item(blk_id, nn_id, item_id, with_preblk=True)
+                return blk_id, nn_id, item_id
+        raise Exception("We assert that there is at least one item used pred, but we found none!")
+
+    def display_items_first_round(self, blk_id, nn_id):
+        nn = self.net_pool[blk_id*self.nn_num+nn_id]
+        first_round_items = nn.item_list[:self.spl_batch]
+        for idx, item in enumerate(first_round_items):
+            self.display_item(blk_id, nn_id, idx, with_preblk=True)
+            if item.use_pred:
+                print(idx, "use_pred")
+            else:
+                print(idx)
+            print(item.graph)
+            print(item.cell_list)
+            print(item.code)
+            print(item.score)
+
+    def compute_pred_work_rate(self):
+        work_cnt = 0
+        for nn in self.net_pool:
+            first_round_items = nn.item_list[:self.spl_batch]
+            max_score = 0
+            score_use_pred = 0
+            for item in first_round_items:  # get the max_score and score_use_pred
+                max_score = item.score if item.score > max_score else max_score
+                if item.use_pred:
+                    score_use_pred = item.score
+            if score_use_pred == max_score:  # pred work in this nn
+                work_cnt += 1
+        return work_cnt/len(self.net_pool)
+    
     # def get_search_result(self):
 
 
@@ -212,11 +259,13 @@ if __name__ == "__main__":
     # print(analyze.nn_num)
     # print(analyze.get_graph_parts())
     # print(analyze.get_items(1, 1))
-    analyze.reappear_search(blk_id=0)
+    analyze.reappear_search(blk_id="all")
     # analyze.display_item(blk_id=2, nn_id=1, item_id=0, with_preblk=True)
     # for i in range(analyze.nn_num):
     #     analyze.display_graph_part(nn_id=i)
     # print(analyze.get_item_use_pred(blk_id=2, nn_id=1))
+    # analyze.display_items_first_round(blk_id=0, nn_id=0)
+    # print(analyze.compute_pred_work_rate())
     # 如何查看单个枚举的网络，从头到尾的变化
         
 

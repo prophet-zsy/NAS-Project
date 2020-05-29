@@ -1,9 +1,10 @@
 import os, sys, queue, time, random, re, json
 import datetime, traceback, pickle
-import multiprocessing, copy
+import multiprocessing, copy, signal
 from base import Network, NetworkItem, Cell
 from info_str import NAS_CONFIG, MF_TEMP
 
+# signal.signal(signal.SIGCHLD,signal.SIG_IGN)
 
 def _dump_stage(stage_info):
     _cur_dir = os.getcwd()
@@ -144,7 +145,10 @@ class TaskScheduler:
         # for multiprocessing communication
         self.result_buffer = multiprocessing.Queue()
         self.signal = multiprocessing.Event()
-
+        
+        # store all the running sub process object, and we will use it when make sure the subprocess return
+        self.sub_process = {}
+        
         # resource
         self.gpu_num = NAS_CONFIG['nas_main']['num_gpu']
         self.gpu_list = queue.Queue()
@@ -162,6 +166,23 @@ class TaskScheduler:
         self.task_id += 1
         return tmp_id
 
+    def all_alive(self):
+        for subpid in self.sub_process.keys():
+            if not self.sub_process[subpid].is_alive:
+                return False
+        return True
+
+    def makesure_sub_return(self, subpid):
+        # make sure the sub zombie process vanish
+        print("we vanishing ", subpid)
+        pid, exit_code = os.waitpid(subpid, 0)
+        # p_wait_vanish = self.sub_process[subpid]
+        # p_wait_vanish.join(timeout=10)  # block itself to wait for the subprocess's return
+        # if p_wait_vanish.is_alive:
+        #     p_wait_vanish.terminate()  # stop it forcely
+        #     p_wait_vanish.join()
+        del self.sub_process[subpid]
+
     def exec_task_async(self, task_func, *args, **kwargs):
         """Async: directly return whetherever the tasks is completed
         """
@@ -172,23 +193,48 @@ class TaskScheduler:
             task_item.gpu_info = gpu
             task_item.task_id = self.get_task_id()
             # exec task
-            multiprocessing.Process(target=task_func, args=[task_item, self.result_buffer, self.signal, *args]).start()
+            subp = multiprocessing.Process(target=task_func, args=[task_item, self.result_buffer, self.signal, *args])
+            subp.start()
+            # sign up the subpid
+            print("arrange pid", subp.pid)
+            self.sub_process[subp.pid] = subp
         self.signal.clear()
 
     def load_part_result(self):
         """load one or more results if there are tasks completed
         """
+        # while self.all_alive():  # when all the subp is alive
+        #     self.signal.wait(timeout=100)  # check the subp every 100s
+
+        print("before block , waiting result", self.signal.is_set(), os.getpid(), flush=True)
         self.signal.wait()
-        while not self.result_buffer.empty():
-            task_item = self.result_buffer.get()
+        print("host is awake", self.signal.is_set(), os.getpid(), flush=True)
+        print("in host, result buffer length", self.result_buffer.qsize())
+        # while not self.result_buffer.empty():
+        # while self.result_buffer.qsize() > 0:
+        while True:
+            try:
+                task_item = self.result_buffer.get(timeout=2)
+            except:
+                break
             self.result_list.append(task_item)
+            print(task_item.gpu_info)
+            length = self.gpu_list.qsize()
+            temp = []
+            for i in range(length):
+                gpu = self.gpu_list.get()
+                temp.append(gpu)
+                self.gpu_list.put(gpu)
+            print(temp)
             self.gpu_list.put(task_item.gpu_info)  # return gpu
-            pid, exit_code = os.waitpid(task_item.pid, 0)  # make the sub zombie process vanish
+            self.makesure_sub_return(task_item.pid)
 
     def exec_task(self, task_func, *args, **kwargs):
         """Sync: waiting for all the tasks completed before return
         """
         while self.task_list or self.gpu_list.qsize() < self.gpu_num:
+            print("iter######")
+            print(len(self.task_list), self.gpu_list.qsize(), self.gpu_num)
             self.exec_task_async(task_func, *args, **kwargs)
             self.load_part_result()
 
