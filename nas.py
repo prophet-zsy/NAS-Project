@@ -44,13 +44,12 @@ def _subproc_eva(task_item, result_buffer, signal, eva):
         NAS_LOG << ('nas_eva_fin', len(task_item.pre_block)+1,\
                 task_item.round, task_item.nn_id, task_item.network_item.id,\
                 task_item.score, task_item.cost_time, task_item.pid)
+
     #  use in subprocess
-    print("before wirte result", flush=True)
     if result_buffer and signal:
-        print("writing result", flush=True)
         result_buffer.put(task_item)
         signal.set()
-        print("write result done", flush=True)
+        
     return task_item
 
 def _err_log(NAS_LOG, task_item, error):
@@ -359,15 +358,10 @@ def _subproc_init_ops(task_item, result_buffer, signal):
     _sample(net_pool, batch_num=MAIN_CONFIG['spl_network_round'], pred=pred)
 
     # use in subprocess
-    print("before wirte result", flush=True)
     if result_buffer and signal:
-        print("writing result", flush=True)
         result_buffer.put(task_item)
-        print("result buffer length", result_buffer.qsize())
         signal.set()
-        print("signal state", signal.is_set())
-        print("write result done", flush=True)
-    
+
     return net_pool
     
 

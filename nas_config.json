@@ -1,18 +1,18 @@
 {
   "nas_main": {
     "pattern": "Block",
-    "num_gpu": 1,
-    "block_num": 2,
-    "num_opt_best": 3,
+    "num_gpu": 2,
+    "block_num": 4,
+    "num_opt_best": 12,
     "finetune_threshold": 5,
-    "spl_network_round": 3,
+    "spl_network_round": 5,
     "eliminate_policy": "best",
     "add_data_mode": "linear",
-    "add_data_per_round": 500,
+    "add_data_per_round": 1000,
     "init_data_size": 1000,
     "data_increase_scale": 1.5,
-    "add_data_for_confirm_train": 1000,
-    "add_data_for_retrain": 1000,
+    "add_data_for_confirm_train": -1,
+    "add_data_for_retrain": -1,
     "repeat_num": 1,
     "subp_eva_debug": 0,
     "subp_pred_debug": 0,
@@ -22,16 +22,16 @@
     "retrain_switch": 1
   },
   "enum":{
-    "depth": 3,
-    "width": 1,
-    "max_depth": 2,
+    "depth": 4,
+    "width": 2,
+    "max_depth": 3,
     "enum_debug": 0
   },
   "eva": {
     "task_name": "cifar-10",
-    "search_epoch": 2,
-    "confirm_epoch": 3,
-    "retrain_epoch": 4
+    "search_epoch": 20,
+    "confirm_epoch": 50,
+    "retrain_epoch": 120
   },
   "opt": {
       "sample_size": 3,

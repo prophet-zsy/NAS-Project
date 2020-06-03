@@ -10,13 +10,15 @@ EVA_COFIG = NAS_CONFIG['eva']
 
 # config params for eva alone
 INSTANT_PRINT = False  # set True only in run the eva alone
+DEBUG = False
 IMAGE_SIZE = 32
-DATA_RATIO_FOR_EVAL = 0.2
+DATA_RATIO_FOR_EVAL = 0.0
 TASK_NAME = EVA_COFIG['task_name']
 DATA_PATH = "./data/"
 MODEL_PATH = "./model"
-BATCH_SIZE = 50
-INITIAL_LEARNING_RATE = 0.025
+BATCH_SIZE = 250  # 50
+DROP_OUT_RATE = 0.5  # only for train
+INITIAL_LEARNING_RATE = 0.1  # 0.025
 WEIGHT_DECAY = 0.0003
 MOMENTUM_RATE = 0.9
 
@@ -101,7 +103,7 @@ class DataSet:
         return x_train
 
     def data_augment(self, x):
-        x = copy.deepcopy(x)  #TODO check if it is operated on original data
+        x = copy.deepcopy(x)  # avoid that it is operated on original data
         x = self._random_flip_leftright(x)
         x = self._random_crop(x, [32, 32], 4)
         x = self._cutout(x)
@@ -188,7 +190,8 @@ class DataFlowGraph:
         else:  # retrain mode
             blks = [[net_item.graph, net_item.cell_list] for net_item in self.pre_block]
             mid_plug = self._construct_nblks(mid_plug, blks, first_blk_id=0)
-        logits = tf.nn.dropout(mid_plug, keep_prob=1.0)
+        drop_rate = tf.cond(self.train_flag, lambda :DROP_OUT_RATE, lambda :1.0)
+        logits = tf.nn.dropout(mid_plug, keep_prob=drop_rate)
         logits = self._makedense(logits, ('', [self.num_classes], ''), with_bias=True)
         global_step = tf.Variable(0, trainable=False, name='global_step' + str(self.cur_block_id))
         accuracy = self._cal_accuracy(logits, self.data_y)
@@ -260,7 +263,8 @@ class DataFlowGraph:
 
     def _construct_blk(self, blk_input, graph_full, cell_list, train_flag, blk_id):
         topo_order = self._toposort(graph_full)
-        print("topo_order", topo_order)
+        if DEBUG:
+            print("topo_order", topo_order)
         nodelen = len(graph_full)
         # input list for every cell in network
         inputs = [blk_input for _ in range(nodelen)]
@@ -269,14 +273,16 @@ class DataFlowGraph:
         getinput[0] = True
         with tf.variable_scope('block' + str(blk_id)) as scope:
             for node in topo_order:
-                print("constructing", node)
-                print(cell_list[node])
-                print("inputs", inputs[node])
+                if DEBUG:
+                    print("constructing", node)
+                    print(cell_list[node])
+                    print("inputs", inputs[node])
                 layer = self._make_layer(inputs[node], cell_list[node], node, train_flag)
                 self.run_ops['blk{}_node{}'.format(blk_id, node)] = layer
                 # update inputs information of the cells below this cell
                 for j in graph_full[node]:
-                    print("give data to node", j)
+                    if DEBUG:
+                        print("give data to node", j)
                     if getinput[j]:  # if this cell already got inputs from other cells precedes it
                         inputs[j] = self._pad(inputs[j], layer)
                     else:
@@ -477,17 +483,17 @@ class Evaluator:
         return score
 
     def _train(self, compute_graph, task_item):
-        # get the data
-        train_data, train_label = self.data_set.get_train_data(self.data_size)
-        train_data = self.data_set.data_augment(train_data)  #TODO check here if it changed the original data???
-        valid_data, valid_label = self.data_set.valid_data, self.data_set.valid_label
-
         sess = _open_a_Session()
         sess.run(tf.global_variables_initializer())
         if task_item.pre_block and task_item.network_item:  # if not in retrain and there are font blks
             compute_graph.saver.restore(sess, os.path.join(MODEL_PATH, 'model' + str(len(task_item.pre_block)-1)))
 
         for ep in range(self.epoch):
+            # get the data
+            train_data, train_label = self.data_set.get_train_data(self.data_size)
+            train_data = self.data_set.data_augment(train_data)
+            valid_data, valid_label = self.data_set.valid_data, self.data_set.valid_label
+
             if INSTANT_PRINT:
                 print("epoch {}/{}".format(ep, self.epoch))
             start_epoch = time.time()
@@ -537,7 +543,7 @@ class Evaluator:
                 stage_type = 'train' if train_flag else 'valid'
                 stage_type = 'test' if is_test else stage_type
                 print(">>%s %d/%d loss %.4f acc %.4f" % (stage_type, step, max_steps, loss, acc))
-        return acc_cur_epoch/max_steps
+        return acc_cur_epoch/max_steps if max_steps else acc_cur_epoch  # when set the valid data to 0, we return acc_cur_epoch directly
 
     def _cal_multi_target(self, compute_graph, precision, time):
         flops, model_size = compute_graph._stats_graph()
@@ -563,10 +569,11 @@ class Evaluator:
 
 if __name__ == '__main__':
     INSTANT_PRINT = True
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    DEBUG = False
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(-1)
-    cur_epoch = eval._set_epoch(80)
+    cur_epoch = eval._set_epoch(120)
     
     # graph_full = [[1]]
     # cell_list = [Cell('conv', 64, 3, 'relu')]
@@ -683,7 +690,21 @@ if __name__ == '__main__':
     # cell_list = [Cell('conv', 128, 3, 'relu6'), Cell('conv', 256, 1, 'relu6'), Cell('conv', 256, 3, 'leakyrelu'), Cell('conv', 192, 1, 'relu'), Cell('conv', 192, 1, 'relu6'), Cell('conv', 256, 3, 'leakyrelu'), Cell('conv', 192, 1, 'leakyrelu'), Cell('conv', 128, 3, 'relu'), Cell('conv', 128, 5, 'relu6')]
     # network4 = NetworkItem(3, graph_full, cell_list, "")
 
-    # vgg
+    # 0.8427 cifar-10 refactor 5/31
+    # graph_full = [[1, 4, 5, 2, 3], [2, 3], [3, 6], [6], [3], [3]]
+    # cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('sep_conv', 64, 3, 'relu6'), Cell('conv', 64, 1, 'relu'), Cell('sep_conv', 64, 1, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu'), Cell('sep_conv', 48, 5, 'relu')]
+    # network1 = NetworkItem(0, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 2], [2, 6, 3, 7], [3, 7], [7], [5], [3], [3]]
+    # cell_list = [Cell('conv', 64, 5, 'leakyrelu'), Cell('sep_conv', 128, 3, 'relu'), Cell('conv', 64, 5, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu'), Cell('conv', 48, 3, 'leakyrelu'), Cell('sep_conv', 64, 5, 'relu6'), Cell('conv', 48, 1, 'relu')]
+    # network2 = NetworkItem(1, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 3], [2, 3], [3, 6], [6], [5], [3]]
+    # cell_list = [Cell('conv', 64, 3, 'relu'), Cell('conv', 128, 3, 'relu6'), Cell('conv', 128, 3, 'relu6'), Cell('sep_conv', 192, 3, 'relu'), Cell('sep_conv', 64, 3, 'leakyrelu'), Cell('sep_conv', 192, 3, 'leakyrelu')]
+    # network3 = NetworkItem(2, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 5], [2, 3, 7], [3, 7], [7], [2], [6], [3]]
+    # cell_list = [Cell('conv', 256, 1, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 192, 1, 'leakyrelu'), Cell('sep_conv', 128, 1, 'relu'), Cell('conv', 192, 1, 'leakyrelu')]
+    # network4 = NetworkItem(3, graph_full, cell_list, "")
+
+    # # vgg
     graph_full = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17]]
     cell_list = [Cell('conv', 64, 3, 'relu'), Cell('conv', 64, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 128, 3, 'relu'),
                  Cell('conv', 128, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 256, 3, 'relu'),
@@ -692,6 +713,7 @@ if __name__ == '__main__':
                  Cell('pooling', 'max', 2), Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'),
                  Cell('conv', 512, 3, 'relu')]
     network = NetworkItem(0, graph_full, cell_list, "")
+
     # graph_full = [[1]]
     # cell_list = [Cell('conv', 64, 3, 'relu')]
     # network = NetworkItem(0, graph_full, cell_list, "")

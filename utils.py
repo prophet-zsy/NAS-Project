@@ -174,7 +174,6 @@ class TaskScheduler:
 
     def makesure_sub_return(self, subpid):
         # make sure the sub zombie process vanish
-        print("we vanishing ", subpid)
         pid, exit_code = os.waitpid(subpid, 0)
         # p_wait_vanish = self.sub_process[subpid]
         # p_wait_vanish.join(timeout=10)  # block itself to wait for the subprocess's return
@@ -196,7 +195,6 @@ class TaskScheduler:
             subp = multiprocessing.Process(target=task_func, args=[task_item, self.result_buffer, self.signal, *args])
             subp.start()
             # sign up the subpid
-            print("arrange pid", subp.pid)
             self.sub_process[subp.pid] = subp
         self.signal.clear()
 
@@ -205,27 +203,15 @@ class TaskScheduler:
         """
         # while self.all_alive():  # when all the subp is alive
         #     self.signal.wait(timeout=100)  # check the subp every 100s
-
-        print("before block , waiting result", self.signal.is_set(), os.getpid(), flush=True)
         self.signal.wait()
-        print("host is awake", self.signal.is_set(), os.getpid(), flush=True)
-        print("in host, result buffer length", self.result_buffer.qsize())
-        # while not self.result_buffer.empty():
-        # while self.result_buffer.qsize() > 0:
+        # while not self.result_buffer.empty():  # empty() is unreliable!!!
+        # while self.result_buffer.qsize() > 0:  # qsize() is unreliable!!!
         while True:
             try:
                 task_item = self.result_buffer.get(timeout=2)
             except:
                 break
             self.result_list.append(task_item)
-            print(task_item.gpu_info)
-            length = self.gpu_list.qsize()
-            temp = []
-            for i in range(length):
-                gpu = self.gpu_list.get()
-                temp.append(gpu)
-                self.gpu_list.put(gpu)
-            print(temp)
             self.gpu_list.put(task_item.gpu_info)  # return gpu
             self.makesure_sub_return(task_item.pid)
 
@@ -233,8 +219,6 @@ class TaskScheduler:
         """Sync: waiting for all the tasks completed before return
         """
         while self.task_list or self.gpu_list.qsize() < self.gpu_num:
-            print("iter######")
-            print(len(self.task_list), self.gpu_list.qsize(), self.gpu_num)
             self.exec_task_async(task_func, *args, **kwargs)
             self.load_part_result()
 
