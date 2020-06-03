@@ -594,7 +594,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     eval.set_data_size(-1)
-    eval.set_epoch(80)
+    eval.set_epoch(200)
     # graph_full = [[1], [2], [3], []]
     # cell_list = [Cell('conv', 64, 5, 'relu'), Cell('pooling', 'max', 3), Cell('conv', 64, 5, 'relu'),
     #              Cell('pooling', 'max', 3)]
@@ -602,18 +602,18 @@ if __name__ == '__main__':
     # e = eval.evaluate(lenet, [], is_bestNN=True)
     # Network.pre_block.append(lenet)
 
-    graph_full = [[1, 3], [2, 3], [3], [4]]
-    cell_list = [Cell('conv', 24, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
-                 Cell('conv', 32, 3, 'relu')]
-    network1 = NetworkItem(0, graph_full, cell_list, "")
-    network2 = NetworkItem(1, graph_full, cell_list, "")
+    # graph_full = [[1, 3], [2, 3], [3], [4]]
+    # cell_list = [Cell('conv', 24, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
+    #              Cell('conv', 32, 3, 'relu')]
+    # network1 = NetworkItem(0, graph_full, cell_list, "")
+    # network2 = NetworkItem(1, graph_full, cell_list, "")
     # e = eval.evaluate(network1, is_bestNN=True)
     # print(e)
     # eval.set_data_size(10000)
     # e = eval.evaluate(network2, [network1], is_bestNN=True)
     # print(e)
-    eval.set_epoch(50)
-    print(eval.retrain([network1, network2]))
+    # eval.set_epoch(50)
+    # print(eval.retrain([network1, network2]))
     # eval.add_data(5000)
     # print(eval._toposort([[1, 3, 6, 7], [2, 3, 4], [3, 5, 7, 8], [
     #       4, 5, 6, 8], [5, 7], [6, 7, 9, 10], [7, 9], [8], [9, 10], [10]]))
@@ -657,5 +657,20 @@ if __name__ == '__main__':
     #              Cell('conv', 256, 5, 'leakyrelu'), Cell('sep_conv', 192, 1, 'leakyrelu'), Cell('conv', 128, 1, 'relu'), 
     #              Cell('conv', 192, 1, 'relu6')]
     # network4 = NetworkItem(3, graph_full, cell_list, "")
-    # print(eval.retrain([network1, network2, network3, network4]))
+
+    # 0.95 cifar-10
+    graph_full = [[1, 4, 5, 6, 8, 3, 7, 10], [2, 10], [3, 10], [10], [3, 10], [3, 10], [7, 10], [3, 10], [9, 3], [3, 10]]
+    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 5, 'relu'), Cell('sep_conv', 32, 1, 'leakyrelu'), Cell('sep_conv', 16, 5, 'relu'), Cell('conv', 32, 1, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 5, 'relu6'), Cell('conv', 16, 3, 'relu6'), Cell('sep_conv', 32, 3, 'relu6'), Cell('conv', 32, 5, 'leakyrelu')]
+    network1 = NetworkItem(0, graph_full, cell_list, "")
+    graph_full = [[1, 4, 6, 7, 5], [2, 6, 7, 8, 9], [3, 9], [9], [5, 9], [3, 9], [3, 9], [3, 9], [3, 9]]
+    cell_list = [Cell('conv', 64, 1, 'relu'), Cell('conv', 48, 5, 'relu6'), Cell('sep_conv', 32, 3, 'relu'), Cell('sep_conv', 48, 5, 'relu6'), Cell('conv', 32, 5, 'relu'), Cell('sep_conv', 64, 5, 'relu'), Cell('conv', 32, 1, 'leakyrelu'), Cell('conv', 48, 5, 'relu6'), Cell('conv', 64, 3, 'leakyrelu')]
+    network2 = NetworkItem(1, graph_full, cell_list, "")
+    graph_full = [[1, 4, 6, 8, 10, 2, 11, 3], [2, 3, 12], [3, 12], [12], [5, 12], [3, 12], [7, 3], [3], [9, 3, 12], [3, 12], [11, 3], [3]]
+    cell_list = [Cell('conv', 128, 1, 'relu'), Cell('conv', 128, 3, 'leakyrelu'), Cell('sep_conv', 64, 3, 'relu6'), Cell('sep_conv', 128, 5, 'leakyrelu'), Cell('conv', 96, 5, 'relu6'), Cell('sep_conv', 128, 5, 'leakyrelu'), Cell('conv', 128, 1, 'leakyrelu'), Cell('conv', 128, 5, 'relu6'), Cell('sep_conv', 64, 3, 'relu'), Cell('sep_conv', 128, 1, 'leakyrelu'), Cell('conv', 96, 5, 'relu'), Cell('conv', 128, 1, 'relu')]
+    network3 = NetworkItem(2, graph_full, cell_list, "")
+    graph_full = [[1, 4, 5, 7, 6, 8, 9], [2, 3, 9], [3, 9], [9], [3], [6, 3], [3, 9], [8, 3, 9], [3, 9]]
+    cell_list = [Cell('sep_conv', 128, 3, 'relu6'), Cell('sep_conv', 256, 1, 'relu6'), Cell('conv', 256, 3, 'leakyrelu'), Cell('sep_conv', 192, 1, 'relu'), Cell('conv', 192, 1, 'relu6'), Cell('conv', 256, 3, 'leakyrelu'), Cell('conv', 192, 1, 'leakyrelu'), Cell('sep_conv', 128, 3, 'relu'), Cell('conv', 128, 5, 'relu6')]
+    network4 = NetworkItem(3, graph_full, cell_list, "")
+
+    print(eval.retrain([network1, network2, network3, network4]))
 
