@@ -12,13 +12,13 @@ EVA_COFIG = NAS_CONFIG['eva']
 INSTANT_PRINT = False  # set True only in run the eva alone
 DEBUG = False
 IMAGE_SIZE = 32
-DATA_RATIO_FOR_EVAL = 0.0
+DATA_RATIO_FOR_EVAL = 0.2
 TASK_NAME = EVA_COFIG['task_name']
 DATA_PATH = "./data/"
 MODEL_PATH = "./model"
-BATCH_SIZE = 250  # 50
+BATCH_SIZE = 50  # 50
 DROP_OUT_RATE = 0.5  # only for train
-INITIAL_LEARNING_RATE = 0.1  # 0.025
+INITIAL_LEARNING_RATE = 0.025  # 0.025
 WEIGHT_DECAY = 0.0003
 MOMENTUM_RATE = 0.9
 
@@ -471,10 +471,6 @@ class Evaluator:
         self._log_item_info(task_item)
         computing_graph = DataFlowGraph(task_item)
         computing_graph._construct_graph()
-        # sess = _open_a_Session()
-        # sess.run(tf.global_variables_initializer())
-        # computing_graph._save_model(sess)
-        # sess.close()
         score = self._train(computing_graph, task_item)
         if not task_item.network_item:
             score = self._test(computing_graph)
@@ -498,8 +494,8 @@ class Evaluator:
                 print("epoch {}/{}".format(ep, self.epoch))
             start_epoch = time.time()
             # trian steps
-            train_ops_keys = ['acc', 'loss', 'train_op', 'correction', 'logits', 'lr', 'global_step']
-            # for k in range(compute_graph.cur_block_id):
+            train_ops_keys = ['acc', 'loss', 'train_op'] + ['correction', 'logits', 'lr', 'global_step']
+            # for k in range(compute_graph.cur_block_id):  # for debug
             #     train_ops_keys.extend(['blk{}_node{}'.format(k, i) for i in range(len(task_item.pre_block[0].graph))])
             train_acc = self._iter_run_on_graph(train_data, train_label, train_ops_keys, compute_graph, sess, train_flag=True)
             # valid steps
@@ -570,7 +566,7 @@ class Evaluator:
 if __name__ == '__main__':
     INSTANT_PRINT = True
     DEBUG = False
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(-1)
     cur_epoch = eval._set_epoch(120)
@@ -691,28 +687,28 @@ if __name__ == '__main__':
     # network4 = NetworkItem(3, graph_full, cell_list, "")
 
     # 0.8427 cifar-10 refactor 5/31
-    # graph_full = [[1, 4, 5, 2, 3], [2, 3], [3, 6], [6], [3], [3]]
-    # cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('sep_conv', 64, 3, 'relu6'), Cell('conv', 64, 1, 'relu'), Cell('sep_conv', 64, 1, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu'), Cell('sep_conv', 48, 5, 'relu')]
-    # network1 = NetworkItem(0, graph_full, cell_list, "")
-    # graph_full = [[1, 4, 2], [2, 6, 3, 7], [3, 7], [7], [5], [3], [3]]
-    # cell_list = [Cell('conv', 64, 5, 'leakyrelu'), Cell('sep_conv', 128, 3, 'relu'), Cell('conv', 64, 5, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu'), Cell('conv', 48, 3, 'leakyrelu'), Cell('sep_conv', 64, 5, 'relu6'), Cell('conv', 48, 1, 'relu')]
-    # network2 = NetworkItem(1, graph_full, cell_list, "")
-    # graph_full = [[1, 4, 3], [2, 3], [3, 6], [6], [5], [3]]
-    # cell_list = [Cell('conv', 64, 3, 'relu'), Cell('conv', 128, 3, 'relu6'), Cell('conv', 128, 3, 'relu6'), Cell('sep_conv', 192, 3, 'relu'), Cell('sep_conv', 64, 3, 'leakyrelu'), Cell('sep_conv', 192, 3, 'leakyrelu')]
-    # network3 = NetworkItem(2, graph_full, cell_list, "")
-    # graph_full = [[1, 4, 5], [2, 3, 7], [3, 7], [7], [2], [6], [3]]
-    # cell_list = [Cell('conv', 256, 1, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 192, 1, 'leakyrelu'), Cell('sep_conv', 128, 1, 'relu'), Cell('conv', 192, 1, 'leakyrelu')]
-    # network4 = NetworkItem(3, graph_full, cell_list, "")
+    graph_full = [[1, 4, 5, 2, 3], [2, 3], [3, 6], [6], [3], [3]]
+    cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('sep_conv', 64, 3, 'relu6'), Cell('conv', 64, 1, 'relu'), Cell('sep_conv', 64, 1, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu'), Cell('sep_conv', 48, 5, 'relu')]
+    network1 = NetworkItem(0, graph_full, cell_list, "")
+    graph_full = [[1, 4, 2], [2, 6, 3, 7], [3, 7], [7], [5], [3], [3]]
+    cell_list = [Cell('conv', 64, 5, 'leakyrelu'), Cell('sep_conv', 128, 3, 'relu'), Cell('conv', 64, 5, 'leakyrelu'), Cell('sep_conv', 48, 5, 'relu'), Cell('conv', 48, 3, 'leakyrelu'), Cell('sep_conv', 64, 5, 'relu6'), Cell('conv', 48, 1, 'relu')]
+    network2 = NetworkItem(1, graph_full, cell_list, "")
+    graph_full = [[1, 4, 3], [2, 3], [3, 6], [6], [5], [3]]
+    cell_list = [Cell('conv', 64, 3, 'relu'), Cell('conv', 128, 3, 'relu6'), Cell('conv', 128, 3, 'relu6'), Cell('sep_conv', 192, 3, 'relu'), Cell('sep_conv', 64, 3, 'leakyrelu'), Cell('sep_conv', 192, 3, 'leakyrelu')]
+    network3 = NetworkItem(2, graph_full, cell_list, "")
+    graph_full = [[1, 4, 5], [2, 3, 7], [3, 7], [7], [2], [6], [3]]
+    cell_list = [Cell('conv', 256, 1, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 128, 5, 'relu6'), Cell('sep_conv', 192, 1, 'leakyrelu'), Cell('sep_conv', 128, 1, 'relu'), Cell('conv', 192, 1, 'leakyrelu')]
+    network4 = NetworkItem(3, graph_full, cell_list, "")
 
-    # # vgg
-    graph_full = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17]]
-    cell_list = [Cell('conv', 64, 3, 'relu'), Cell('conv', 64, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 128, 3, 'relu'),
-                 Cell('conv', 128, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 256, 3, 'relu'),
-                 Cell('conv', 256, 3, 'relu'), Cell('conv', 256, 3, 'relu'), Cell('pooling', 'max', 2),
-                 Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'),
-                 Cell('pooling', 'max', 2), Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'),
-                 Cell('conv', 512, 3, 'relu')]
-    network = NetworkItem(0, graph_full, cell_list, "")
+    # vgg baseline 0.939(cifar10) 0.728(cifar100)
+    # graph_full = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17]]
+    # cell_list = [Cell('conv', 64, 3, 'relu'), Cell('conv', 64, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 128, 3, 'relu'),
+    #              Cell('conv', 128, 3, 'relu'), Cell('pooling', 'max', 2), Cell('conv', 256, 3, 'relu'),
+    #              Cell('conv', 256, 3, 'relu'), Cell('conv', 256, 3, 'relu'), Cell('pooling', 'max', 2),
+    #              Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'),
+    #              Cell('pooling', 'max', 2), Cell('conv', 512, 3, 'relu'), Cell('conv', 512, 3, 'relu'),
+    #              Cell('conv', 512, 3, 'relu')]
+    # network = NetworkItem(0, graph_full, cell_list, "")
 
     # graph_full = [[1]]
     # cell_list = [Cell('conv', 64, 3, 'relu')]
@@ -726,7 +722,7 @@ if __name__ == '__main__':
     # e = eval.evaluate(task_item)
     # print(e)
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
-         pre_blk=[network], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+         pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     e = eval.evaluate(task_item)
     print(e)
     # computing_graph = DataFlowGraph(task_item)
