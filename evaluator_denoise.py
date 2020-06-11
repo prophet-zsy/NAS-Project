@@ -1,4 +1,4 @@
-import os, sys, cv2, random, time
+import os, sys, cv2, random, time, copy
 import tensorflow as tf
 import numpy as np
 from glob import glob
@@ -11,10 +11,12 @@ from utils import NAS_LOG, Logger, EvaScheduleItem
 INSTANT_PRINT = False  # set True only in run the eva alone
 DATA_AUG_TIMES = 3
 DATA_PATH = "./data/denoise/"
+DATA_SIZE_FOR_SEARCH = 50000  # max: 355120
 MODEL_PATH = "./model"
-DATA_RATIO_FOR_EVAL = 0.001
-BATCH_SIZE = 50
+DATA_RATIO_FOR_EVAL = 0.1
+BATCH_SIZE = 10
 INITIAL_LEARNING_RATE = 0.001
+
 
 def _open_a_Session():
     config = tf.ConfigProto()
@@ -23,10 +25,9 @@ def _open_a_Session():
     return sess
 
 class DataSet:
-    # TODO for dataset changing please rewrite this class's "inputs" function and "process" function
     def __init__(self):
-        self.train_data, self.train_label, self.valid_data, self.valid_label,\
-             self.test_data, self.test_label = self.inputs()
+        self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
+             self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs()
 
     def get_train_data(self, data_size):
         return self.train_data[:data_size], self.train_label[:data_size]
@@ -71,44 +72,29 @@ class DataSet:
         noisy_image = noisy_image.astype(np.uint8)
         return noisy_image
 
-    def normalize(self, data):
-        norm_data = data.astype(np.float32) / 255.0
+    def normalize(self, data, is_test=False):
+        if is_test:  # when in test, we normalize them one by one 
+            norm_data = [item.astype(np.float32) / 255.0 for item in data]
+        else:
+            norm_data = data.astype(np.float32) / 255.0
         return norm_data
 
     def _expend_test_dim(self, data):
-        new_data = []
-        for item in data:
-            item = item[np.newaxis, :]
-            new_data.append(item)
+        new_data = [item[np.newaxis, :] for item in data]
         return new_data
 
-    def inputs(self, pat_size=50, stride=100):
-        if not os.path.exists(DATA_PATH + "train/noisy/") or not os.listdir(DATA_PATH + "train/noisy/"):
-            self.add_noise()
-        noisy_eval_files = glob(DATA_PATH + 'test/noisy/*.png')
-        noisy_eval_files = sorted(noisy_eval_files)
-        test_data = [cv2.imread(img) for img in noisy_eval_files]
+    def _process_data(self, all_train_data, all_train_label, test_data, test_label):
+        all_train_data = self.normalize(all_train_data)
+        all_train_label = self.normalize(all_train_label)
+        train_data, train_label, valid_data, valid_label =\
+            self._shuffle_and_split_valid(all_train_data, all_train_label)
+        test_data = self._expend_test_dim(test_data)
+        test_label = self._expend_test_dim(test_label)
+        test_data = self.normalize(test_data, is_test=True)
+        test_label = self.normalize(test_label, is_test=True)
+        return all_train_data, all_train_label, train_data, train_label, valid_data, valid_label, test_data, test_label
 
-        eval_files = glob(DATA_PATH + 'test/original/*.png')
-        eval_files = sorted(eval_files)
-        test_label = [cv2.imread(img) for img in eval_files]
-        if os.path.exists(DATA_PATH + "train/img_noisy_pats.npy"):
-            train_data = np.load(DATA_PATH + "train/img_noisy_pats.npy")
-            train_label = np.load(DATA_PATH + "train/img_clean_pats.npy")
-            train_data, train_label, valid_data, valid_label =\
-                self._shuffle_and_split_valid(train_data, train_label)
-            train_data = self.normalize(train_data)
-            train_label = self.normalize(train_label)
-            valid_data = self.normalize(valid_data)
-            valid_label = self.normalize(valid_label)
-            test_data = self._expend_test_dim(test_data)
-            for item in test_data:
-                item = self.normalize(item)
-            test_label = self._expend_test_dim(test_label)
-            for item in test_label:
-                item = self.normalize(item)
-            return train_data, train_label, valid_data, valid_label, test_data, test_label
-
+    def _read_traindata_frompath_save2npy(self, pat_size=50, stride=100):
         global DATA_AUG_TIMES
         count = 0
         filepaths = glob(
@@ -138,7 +124,7 @@ class DataSet:
         else:
             numPatches = origin_patch_num
         print("[*] Number of patches = %d, batch size = %d, total batches = %d" % \
-              (numPatches, BATCH_SIZE, numPatches / BATCH_SIZE))
+            (numPatches, BATCH_SIZE, numPatches / BATCH_SIZE))
 
         # data matrix 4-D
         train_label = np.zeros((numPatches, pat_size, pat_size, 3), dtype="uint8")  # clean patches
@@ -154,9 +140,9 @@ class DataSet:
                 img_s = cv2.resize(img, newsize, interpolation=cv2.INTER_CUBIC)
                 img_s_noisy = cv2.resize(img_noisy, newsize, interpolation=cv2.INTER_CUBIC)
                 img_s = np.reshape(np.array(img_s, dtype="uint8"),
-                                   (img_s.shape[0], img_s.shape[1], 3))  # extend one dimension
+                                (img_s.shape[0], img_s.shape[1], 3))  # extend one dimension
                 img_s_noisy = np.reshape(np.array(img_s_noisy, dtype="uint8"),
-                                         (img_s_noisy.shape[0], img_s_noisy.shape[1], 3))  # extend one dimension
+                                        (img_s_noisy.shape[0], img_s_noisy.shape[1], 3))  # extend one dimension
 
                 for j in range(DATA_AUG_TIMES):
                     im_h = img_s.shape[0]
@@ -174,23 +160,38 @@ class DataSet:
             to_pad = numPatches - count
             train_label[-to_pad:, :, :, :] = train_label[:to_pad, :, :, :]
             train_data[-to_pad:, :, :, :] = train_data[:to_pad, :, :, :]
-
+        
+        train_data = train_data[:DATA_SIZE_FOR_SEARCH]
+        train_label = train_label[:DATA_SIZE_FOR_SEARCH]
         np.save(DATA_PATH + "train/img_noisy_pats.npy", train_data)
         np.save(DATA_PATH + "train/img_clean_pats.npy", train_label)
 
-        train_data, train_label, valid_data, valid_label =\
-            self._shuffle_and_split_valid(train_data, train_label)
-        train_data = self.normalize(train_data)
-        train_label = self.normalize(train_label)
-        valid_data = self.normalize(valid_data)
-        valid_label = self.normalize(valid_label)
-        test_data = self._expend_test_dim(test_data)
-        for item in test_data:
-            item = self.normalize(item)
-        test_label = self._expend_test_dim(test_label)
-        for item in test_label:
-            item = self.normalize(item)
-        return train_data, train_label, valid_data, valid_label, test_data, test_label
+        all_train_data, all_train_label = train_data, train_label
+
+        return all_train_data, all_train_label
+
+    def inputs(self):
+        if not os.path.exists(DATA_PATH + "train/noisy/") or not os.listdir(DATA_PATH + "train/noisy/"):
+            self.add_noise()
+        noisy_eval_files = glob(DATA_PATH + 'test/noisy/*.png')
+        noisy_eval_files = sorted(noisy_eval_files)
+        test_data = [cv2.imread(img) for img in noisy_eval_files]
+
+        eval_files = glob(DATA_PATH + 'test/original/*.png')
+        eval_files = sorted(eval_files)
+        test_label = [cv2.imread(img) for img in eval_files]
+        if os.path.exists(DATA_PATH + "train/img_noisy_pats.npy"):  # read train data from npy directly
+            all_train_data = np.load(DATA_PATH + "train/img_noisy_pats.npy")
+            all_train_label = np.load(DATA_PATH + "train/img_clean_pats.npy")
+            if all_train_data.shape[0] < DATA_SIZE_FOR_SEARCH:  # size of cur npy is not enough
+                all_train_data, all_train_label = self._read_traindata_frompath_save2npy()
+                # print(all_train_data.shape)
+            else:
+                all_train_data, all_train_label = all_train_data[:DATA_SIZE_FOR_SEARCH], all_train_label[:DATA_SIZE_FOR_SEARCH]
+            return self._process_data(all_train_data, all_train_label, test_data, test_label)
+        else:  # read train data and save it to npy
+            all_train_data, all_train_label = self._read_traindata_frompath_save2npy()
+            return self._process_data(all_train_data, all_train_label, test_data, test_label)
 
     def process(self, image, mode):
         if mode == 0:
@@ -257,7 +258,6 @@ class DataFlowGraph:
         self.run_ops = {}  # what sess.run
         self.saver = None
 
-
     def _find_ends(self):
         if self.cur_block_id > 0 and self.net_item:  # if there are some previous blocks and not in retrain mode
             self._load_pre_model()
@@ -286,13 +286,14 @@ class DataFlowGraph:
             mid_plug = self._construct_nblks(mid_plug, blks, first_blk_id=0)
         logits = tf.nn.dropout(mid_plug, keep_prob=1.0)
         pred_noise = tf.layers.conv2d(logits, 3, 3, padding='same', name="pred_noise", use_bias=False)
-        tf.summary.histogram('last_pred_noise', pred_noise)
-        pred_img = self.data_x - pred_noise
+        # tf.summary.histogram('last_pred_noise', pred_noise)
+        pred_img = tf.subtract(self.data_x, pred_noise, name="pred_img")
         global_step = tf.Variable(0, trainable=False, name='global_step' + str(self.cur_block_id))
         accuracy = self._cal_accuracy(pred_img, self.data_y)
         loss = self._loss(pred_img, self.data_y)
         train_op = self._train_op(global_step, loss)
         merged = tf.summary.merge_all()
+        writer = tf.summary.FileWriter('./log')
         self.run_ops['logits'] = logits
         self.run_ops['pred_img'] = pred_img
         self.run_ops['merged'] = merged
@@ -415,10 +416,10 @@ class DataFlowGraph:
             inputdim = x.shape[3]
             kernel = self._get_variable('weights',
                                         shape=[hplist.kernel_size, hplist.kernel_size, inputdim, hplist.filter_size])
-            x = self._activation_layer(hplist.activation, x, scope)
             x = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
             biases = self._get_variable('biases', hplist.filter_size)
             x = self._batch_norm(tf.nn.bias_add(x, biases), train_flag)
+            x = self._activation_layer(hplist.activation, x, scope)
         return x
 
     def _makesep_conv(self, inputs, hplist, node, train_flag):
@@ -503,7 +504,8 @@ class DataFlowGraph:
         self.train_flag = graph.get_tensor_by_name("train_flag:0")
         self.run_ops['acc'] = graph.get_tensor_by_name("acc:0")
         self.run_ops['loss'] = graph.get_tensor_by_name("loss:0")
-        self.run_ops['pred_img'] = graph.get_tensor_by_name("pred_img:0")
+        self.run_ops['pred_img'] = graph.get_tensor_by_name("pred_img:0")  #TODO replace back
+        # self.run_ops['pred_img'] = graph.get_tensor_by_name("sub_2:0")
         return sess
 
     def _save_model(self, sess):  # for evaluate and retrain
@@ -523,6 +525,9 @@ class Evaluator:
     def __init__(self):
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
         self.log = ''
+        self.denoise_test_path = os.path.join("memory", "denoise_test")
+        if not os.path.exists(self.denoise_test_path):
+            os.mkdir(self.denoise_test_path)
         self.data_set = DataSet()
         self.epoch = 0
         self.data_size = 0
@@ -544,23 +549,27 @@ class Evaluator:
         computing_graph = DataFlowGraph(task_item)
         computing_graph._construct_graph()
         score = self._train(computing_graph, task_item)
-        if not task_item.network_item:
+        if not task_item.network_item:  # we test the model saved by load it again
             score = self._test(computing_graph)
         NAS_LOG = Logger()
         NAS_LOG << ('eva_eva', self.log)
         return score
 
     def _train(self, compute_graph, task_item):
-        # get the data
-        train_data, train_label = self.data_set.get_train_data(self.data_size)
-        valid_data, valid_label = self.data_set.valid_data, self.data_set.valid_label
-
         sess = _open_a_Session()
         sess.run(tf.global_variables_initializer())
         if task_item.pre_block and task_item.network_item:  # if not in retrain and there are font blks
             compute_graph.saver.restore(sess, os.path.join(MODEL_PATH, 'model' + str(len(task_item.pre_block)-1)))
         
         for ep in range(self.epoch):
+            # get the data
+            if task_item.network_item:
+                train_data, train_label = self.data_set.get_train_data(self.data_size)
+                valid_data, valid_label = self.data_set.valid_data, self.data_set.valid_label
+            else:  # if in retrain
+                train_data, train_label = self.data_set.all_train_data, self.data_set.all_train_label
+                valid_data, valid_label = train_data[len(train_data):], train_label[len(train_label):]
+
             if INSTANT_PRINT:
                 print("epoch {}/{}".format(ep, self.epoch))
             start_epoch = time.time()
@@ -578,15 +587,20 @@ class Evaluator:
             if INSTANT_PRINT:
                 print(epoch_log)
 
+            if not task_item.network_item:  # if in retrain, we test the model every epoch
+                self._test(compute_graph, sess=sess)
+
         compute_graph._save_model(sess)
         sess.close()
         return valid_acc
 
-    def _test(self, compute_graph):
-        tf.reset_default_graph()
-        sess = compute_graph._load_model()
+    def _test(self, compute_graph, sess=None):
+        online = bool(sess)  # if online we do not have to load model, due to existed model there
+        if not online:
+            tf.reset_default_graph()
+            sess = compute_graph._load_model()
         #  get 100 imgs for test in all 1423 imgs randomly
-        img_idxs = random.sample(range(0, len(self.data_set.test_data)), 100)
+        img_idxs = random.sample(range(0, len(self.data_set.test_data)), 10)  #TODO 100
         test_data = [self.data_set.test_data[idx] for idx in img_idxs]
         test_label = [self.data_set.test_label[idx] for idx in img_idxs]
         test_ops_keys = ['acc', 'loss', 'pred_img']
@@ -595,7 +609,9 @@ class Evaluator:
         self.log += test_log
         if INSTANT_PRINT:
             print(test_log)
-        sess.close()
+
+        if not online:
+            sess.close()
         return acc
 
     def _iter_run_on_graph(self, data, label, run_ops_keys, compute_graph, sess, train_flag, is_test=False, batch_size=BATCH_SIZE):
@@ -604,23 +620,39 @@ class Evaluator:
         for step in range(max_steps):
             batch_x = data[step * batch_size:(step + 1) * batch_size]
             batch_y = label[step * batch_size:(step + 1) * batch_size]
+
             if batch_size == 1:  # only in denoise retrain test
                 batch_x, batch_y = batch_x[0], batch_y[0]
+
             run_ops = [compute_graph.run_ops[key] for key in run_ops_keys]
             result = sess.run(run_ops, feed_dict={compute_graph.data_x: batch_x, \
                 compute_graph.data_y: batch_y, compute_graph.train_flag: train_flag})
             acc, loss = result[0], result[1]
-            acc_cur_epoch += acc / max_steps
+
+            if batch_size == 1:  # only in denoise retrain test
+                pred_img = result[2]
+                self._write_img(step, batch_x[0], batch_y[0], pred_img[0])  # get the one from the batch which is one 
+
+            acc_cur_epoch += acc
             if INSTANT_PRINT and step % 50 == 0:
                 stage_type = 'train' if train_flag else 'valid'
                 stage_type = 'test' if is_test else stage_type
                 print(">>%s %d/%d loss %.4f acc %.4f" % (stage_type, step, max_steps, loss, acc))
-        return acc_cur_epoch
+        return acc_cur_epoch/max_steps if max_steps else acc_cur_epoch  # when set the valid data to 0, we return acc_cur_epoch directly
 
     def _cal_multi_target(self, precision):
         # TODO change here for target calculating
         target = precision
         return target
+
+    def _write_img(self, step, noise_img, clear_img, pred_img):
+        noise_img = (copy.deepcopy(noise_img)*225.0)
+        clear_img = (copy.deepcopy(clear_img)*255.0)
+        pred_img = (copy.deepcopy(pred_img)*255.0)
+
+        cv2.imwrite(os.path.join(self.denoise_test_path, str(step)+"noise_img.jpg"), noise_img)
+        cv2.imwrite(os.path.join(self.denoise_test_path, str(step)+"clear_img.jpg"), clear_img)
+        cv2.imwrite(os.path.join(self.denoise_test_path, str(step)+"pred_img.jpg"), pred_img)
 
     def _log_item_info(self, task_item):
         #  we record the eva info in self.log and write it into the eva file once
@@ -645,8 +677,9 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(500)
-    cur_epoch = eval._set_epoch(1)
+    cur_epoch = eval._set_epoch(2)
 
+    # easy block
     # graph_full = [[1]]
     # cell_list = [Cell('conv', 128, 3, 'relu')]
     # for i in range(2, 19):
@@ -659,6 +692,7 @@ if __name__ == '__main__':
     # cell_list = [Cell('conv', 128, 3, 'relu'), Cell('conv', 32, 3, 'relu'), Cell('conv', 24, 3, 'relu'),
     #              Cell('conv', 32, 3, 'relu')]
 
+    # simulate the search process
     graph_full = [[1, 6, 2, 3], [2, 3, 4], [3, 8, 5], [4, 5], [5], [10], [7], [5], [9], [5]]
     cell_list = [Cell('conv', 64, 3, 'leakyrelu'), Cell('sep_conv', 32, 3, 'relu'), Cell('conv', 64, 3, 'leakyrelu'),
                  Cell('conv', 32, 3, 'relu'), Cell('conv', 64, 1, 'relu6'), Cell('conv', 48, 3, 'relu'),
@@ -682,22 +716,31 @@ if __name__ == '__main__':
     network4 = NetworkItem(3, graph_full, cell_list, "")
 
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network1,\
-         pre_blk=[], ft_sign=False, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+         pre_blk=[], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     e = eval.evaluate(task_item)
 
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network2,\
-         pre_blk=[network1], ft_sign=False, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+         pre_blk=[network1], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     e = eval.evaluate(task_item)
 
-    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network2,\
-         pre_blk=[network1, network2], ft_sign=False, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network3,\
+         pre_blk=[network1, network2], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     e = eval.evaluate(task_item)
 
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network4,\
-         pre_blk=[network1, network2, network2], ft_sign=False, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+         pre_blk=[network1, network2, network3], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     e = eval.evaluate(task_item)
 
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
-         pre_blk=[network1, network2, network2, network4], ft_sign=False, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+         pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     e = eval.evaluate(task_item)
+
+
+
+    ############################
+    # load the model and test it directly
+    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
+    #      pre_blk=[network1], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    # computing_graph = DataFlowGraph(task_item)
+    # print(eval._test(computing_graph))
 

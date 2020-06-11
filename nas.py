@@ -206,12 +206,21 @@ def _record_result(net_pool, result):
         newly_added_id.append((task_item.alig_id, task_item.network_item.id))
     return newly_added_id
 
-def _eliminate(net_pool, round, batch_num=MAIN_CONFIG['spl_network_round']):
-    if MAIN_CONFIG['eliminate_policy'] == "best":
+def _choose_policy(batch_num=MAIN_CONFIG['spl_network_round']):
+    obj, pattern = MAIN_CONFIG['eliminate_policy'].split("_")
+    if obj == "history":
+        idx = 0
+    elif obj == "cur":
+        idx = - batch_num
+    if pattern == "best":
         policy = max
-    elif MAIN_CONFIG['eliminate_policy'] == "over_average":
+    elif pattern == "average":
         policy = np.mean
-    scores = [policy([x.score for x in net_pool[nn_id].item_list[-batch_num:]])
+    return idx, policy
+
+def _eliminate(net_pool, round, batch_num=MAIN_CONFIG['spl_network_round']):
+    idx, policy = _choose_policy(batch_num)
+    scores = [policy([x.score for x in net_pool[nn_id].item_list[idx:]])
               for nn_id in range(len(net_pool))]
     scores = [item for item in list(enumerate(scores))]
     original_len = len(scores)
@@ -225,7 +234,6 @@ def _eliminate(net_pool, round, batch_num=MAIN_CONFIG['spl_network_round']):
                     net_rm.id, len(net_rm.item_list))
         _save_net_info(net_rm, round, len(net_pool))
     NAS_LOG << ('nas_eliinfo_tem', len(scores_rm), len(scores)-len(scores_rm))
-
     
 def _game(eva, net_pool, ds, round):
     time_cnt = TimeCnt()

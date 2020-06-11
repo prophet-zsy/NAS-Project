@@ -20,8 +20,8 @@ class Analyzer:
         self.net_pool = []
         self._load_base_data()
 
-        self.stage_info = None
-        self._load_stage()
+        # self.stage_info = None
+        # self._load_stage()
 
         self.blk_num = -1
         self.nn_num = -1
@@ -104,7 +104,7 @@ class Analyzer:
         max_item_num = 0
         for i in range(self.blk_num):
             blk_search = []
-            for j in range(i, i+self.nn_num):
+            for j in range(i*self.nn_num, (i+1)*self.nn_num):
                 scores = [item.score for item in self.net_pool[j].item_list]
                 blk_search.append(scores)
                 if len(scores) > max_item_num:
@@ -115,6 +115,7 @@ class Analyzer:
             for nn in blk_search:
                 while len(nn) < max_item_num:
                     nn.append("-")
+        
         # display
         blk_ids = [blk_id] if blk_id is not "all" else [idx for idx in range(self.blk_num)]
         for i in blk_ids:
@@ -127,9 +128,9 @@ class Analyzer:
                 for score in blk_search[nn_id]:
                     if cnt < self.spl_batch and self.net_pool[i*self.nn_num+nn_id].item_list[cnt].use_pred:  # the item use pred
                         if score >= max(blk_search[nn_id][:self.spl_batch]):
-                            aux_info = " pred_work"
+                            aux_info = " pd_ok"
                         else:
-                            aux_info = " pred"
+                            aux_info = " pd"
                     else:
                         aux_info = ""
                     context = "\t{:.3f}{}".format(score, aux_info) if score != "-" else\
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     # print(analyze.get_graph_parts())
     # print(analyze.get_items(1, 1))
     analyze.reappear_search(blk_id="all")
-    # analyze.display_item(blk_id=2, nn_id=1, item_id=0, with_preblk=True)
+    analyze.display_item(blk_id=3, nn_id=5, item_id=0, with_preblk=True)
     # for i in range(analyze.nn_num):
     #     analyze.display_graph_part(nn_id=i)
     # print(analyze.get_item_use_pred(blk_id=2, nn_id=1))
