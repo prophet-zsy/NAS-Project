@@ -1,10 +1,11 @@
-import pickle, os, sys, copy, json
+import pickle, os, sys, copy, json, math
 sys.path.append(os.path.dirname(__file__) + os.sep + '../')
 import base
 from functools import cmp_to_key
 from gen_gv_file import blk_to_png
 from graph_subtraction import subtraction
 import cv2
+import matplotlib.pyplot as plt
 
 
 class Analyzer:
@@ -22,6 +23,8 @@ class Analyzer:
 
         # self.stage_info = None
         # self._load_stage()
+
+        # self.
 
         self.blk_num = -1
         self.nn_num = -1
@@ -75,12 +78,11 @@ class Analyzer:
         graph_templates = [copy.deepcopy(nn.graph_template) for nn in self.net_pool[:self.nn_num]]
         return graph_templates
 
-    def get_items(self, blk_num, round):
-        i = blk_num  # - 1
-        j = round # - 1
+    def get_items_by_round(self, blk_id, round):
+        ##  round start from 1
         items = []
-        for nn in self.net_pool[i*self.nn_num:blk_num*self.nn_num]:
-            items.extend(nn.item_list[j*self.spl_batch:round*self.spl_batch])
+        for nn in self.net_pool[blk_id*self.nn_num:(blk_id+1)*self.nn_num]:
+            items.extend(nn.item_list[(round-1)*self.spl_batch:round*self.spl_batch])
             #  for last round, in train winner num_opt_best > spl_batch_num
             if round*self.spl_batch<len(nn.item_list) and\
                 nn.item_list[round*self.spl_batch].task_info.round == round:
@@ -251,7 +253,46 @@ class Analyzer:
                 work_cnt += 1
         return work_cnt/len(self.net_pool)
     
-    # def get_search_result(self):
+    def display_search_result(self):
+        #  find the final nn item 
+        last_blk = self.blk_num-1
+        final_nnid = None
+        max_item_num = 0
+        for nn in self.net_pool[last_blk*self.nn_num:]:
+            if len(nn.item_list) > max_item_num:
+                final_nnid = nn.id
+                max_item_num = len(nn.item_list)
+        
+        self.display_item(blk_id=last_blk, nn_id=final_nnid, item_id=max_item_num-1, with_preblk=True)
+        source_name = "blk{}_nn{}_item{}.png".format(last_blk, final_nnid, max_item_num-1)
+        dest_name = "result_blk{}_nn{}_item{}.png".format(last_blk, final_nnid, max_item_num-1)
+        try:
+            os.rename(os.path.join(self._bin_dir, source_name), os.path.join(self._bin_dir, dest_name))
+        except:
+            print("rename failed!")
+
+    def display_bestscore_with_round(self):
+        rd_scores = []
+        for blk_id in range(self.blk_num):
+            max_rd = math.ceil(math.log2(self.nn_num))+1
+            for rd in range(1, 1+max_rd):
+                items = self.get_items_by_round(blk_id=blk_id, round=rd)
+                scores = list(map(lambda x: x.score, items))
+                rd_max_score = 0
+                for item in items:
+                    rd_max_score = max(rd_max_score, item.score)
+                rd_scores.append(rd_max_score)
+        
+        #  plot it
+        # print(rd_scores)
+        x = [i for i in range(1, 1+len(rd_scores))]
+        plt.plot(x, rd_scores)
+        plt.xlabel('round')
+        plt.ylabel('score')
+        plt.show()
+
+    def plt_train_process_byitem(self, blk_id, nn_id, item_id):
+        
 
 
         
@@ -261,13 +302,16 @@ if __name__ == "__main__":
     # print(analyze.get_graph_parts())
     # print(analyze.get_items(1, 1))
     analyze.reappear_search(blk_id="all")
-    analyze.display_item(blk_id=3, nn_id=5, item_id=0, with_preblk=True)
+    # print(analyze.get_item(blk_id=3, nn_id=2, item_id=27).score)
+    analyze.display_item(blk_id=1, nn_id=5, item_id=0, with_preblk=True)
     # for i in range(analyze.nn_num):
     #     analyze.display_graph_part(nn_id=i)
     # print(analyze.get_item_use_pred(blk_id=2, nn_id=1))
     # analyze.display_items_first_round(blk_id=0, nn_id=0)
+    analyze.display_search_result()
+    analyze.display_bestscore_with_round()
     # print(analyze.compute_pred_work_rate())
     # 如何查看单个枚举的网络，从头到尾的变化
         
 
-    
+
