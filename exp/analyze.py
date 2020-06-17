@@ -17,14 +17,13 @@ class Analyzer:
         self.memory_path =  os.path.join(self._cur_dir, "memory/")
         self.base_data_dir = os.path.join(self.memory_path, "base_data_serialize")
         self.stage_path = os.path.join(self.memory_path, "stage_info.pickle")
+        self.eva_info_path = os.path.join(self.memory_path, "evaluator_log.txt")
 
         self.net_pool = []
         self._load_base_data()
 
         # self.stage_info = None
         # self._load_stage()
-
-        # self.
 
         self.blk_num = -1
         self.nn_num = -1
@@ -71,6 +70,27 @@ class Analyzer:
         self.blk_num = len(self.net_pool[-1].item_list[-1].task_info.pre_block)+1
         self.nn_num = len(self.net_pool)//self.blk_num
         self.spl_batch = self.net_pool[0].item_list[0].task_info.spl_batch_num
+
+    def get_eva_info(self, blk_id=-1, nn_id=-1, item_id=-1):
+        #  blk_id=-1, nn_id=-1, item_id=-1 for retrain
+        if blk_id==-1 and nn_id==-1 and item_id==-1:
+            net_flag = "retrain"
+        else:
+            net_flag = "blk_id:{} nn_id:{} item_id:{}".format(blk_id, nn_id, item_id)
+        with open(self.eva_info_path, "r") as f:
+            eva_info = f.readlines()
+            res = []
+            net_info_ = False
+            for line in eva_info:
+                #  find which net we want
+                if line.startswith("-") and net_flag in line:
+                    net_info_ = True  # tell the net info begin
+                if net_info_:
+                    if line == "\n":
+                        net_info_ = False  # tell the net info end
+                        break
+                    res.append(line)
+        return res
 
     def get_graph_parts(self):
         #  graph_part scheme of all the block are the same
@@ -277,7 +297,6 @@ class Analyzer:
             max_rd = math.ceil(math.log2(self.nn_num))+1
             for rd in range(1, 1+max_rd):
                 items = self.get_items_by_round(blk_id=blk_id, round=rd)
-                scores = list(map(lambda x: x.score, items))
                 rd_max_score = 0
                 for item in items:
                     rd_max_score = max(rd_max_score, item.score)
@@ -292,8 +311,30 @@ class Analyzer:
         plt.show()
 
     def plt_train_process_byitem(self, blk_id, nn_id, item_id):
-        
+        #  blk_id=-1, nn_id=-1, item_id=-1 for retrain
+        eva_info = self.get_eva_info(blk_id, nn_id, item_id)
+        train_acc = []
+        val_acc = []
+        test_acc = []  # only in retrain
+        for line in eva_info:
+            if line.startswith("epoch"):
+                train_acc.append(float(line.split(" ")[4][:-1]))
+                val_acc.append(float(line.split(" ")[7][:-1]))
+            if line.startswith("test_acc"):
+                test_acc.append(float(line.split(" ")[-1]))
+        if test_acc:
+            test_acc = test_acc[:-1]
 
+        # print(train_acc, val_acc, test_acc)
+        x = [i for i in range(len(train_acc))]
+        plt.plot(x, train_acc, "-", label="train_acc")
+        plt.plot(x, val_acc, "-", label="val_acc")
+        if test_acc:
+            plt.plot(x, test_acc, "-", label="test_acc")
+        plt.xlabel('round')
+        plt.ylabel('score')
+        plt.legend()
+        plt.show()
 
         
 if __name__ == "__main__":
@@ -303,7 +344,9 @@ if __name__ == "__main__":
     # print(analyze.get_items(1, 1))
     analyze.reappear_search(blk_id="all")
     # print(analyze.get_item(blk_id=3, nn_id=2, item_id=27).score)
-    analyze.display_item(blk_id=1, nn_id=5, item_id=0, with_preblk=True)
+    # analyze.display_item(blk_id=1, nn_id=5, item_id=0, with_preblk=True)
+    # print(analyze.get_eva_info(blk_id=1, nn_id=5, item_id=0))
+    # analyze.plt_train_process_byitem(blk_id=-1, nn_id=-1, item_id=-1)  # retrain
     # for i in range(analyze.nn_num):
     #     analyze.display_graph_part(nn_id=i)
     # print(analyze.get_item_use_pred(blk_id=2, nn_id=1))
