@@ -241,12 +241,17 @@ class DataFlowGraph:
     @staticmethod
     def _pad(inputs1, inputs2):
         # padding
-        a = tf.shape(inputs2)[1]
-        b = tf.shape(inputs1)[1]
-        pad = tf.abs(tf.subtract(a, b))
-        output = tf.where(tf.greater(a, b), 
-                          tf.concat([tf.pad(inputs1, [[0, 0], [0, pad], [0, pad], [0, 0]]), inputs2], 3),
-                          tf.concat([inputs1, tf.pad(inputs2, [[0, 0], [0, pad], [0, pad], [0, 0]])], 3))
+        a = int(inputs1.shape[1])
+        b = int(inputs2.shape[1])
+        pad = abs(a - b)
+        if inputs1.shape[1] > inputs2.shape[1]:
+            tmp = tf.pad(inputs2, [[0, 0], [0, pad], [0, pad], [0, 0]])
+            output = tf.concat([tmp, inputs1], 3)
+        elif inputs1.shape[1] < inputs2.shape[1]:
+            tmp = tf.pad(inputs1, [[0, 0], [0, pad], [0, pad], [0, 0]])
+            output = tf.concat([inputs2, tmp], 3)
+        else:
+            output = tf.concat([inputs2, inputs1], 3)
         return output
 
     @staticmethod
@@ -579,7 +584,7 @@ class Evaluator:
 if __name__ == '__main__':
     INSTANT_PRINT = True
     DEBUG = False
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(-1)
     cur_epoch = eval._set_epoch(640)
