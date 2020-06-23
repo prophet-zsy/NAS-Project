@@ -87,7 +87,8 @@ class TopologyEval:
             t2 = Feature(t2)._feature_nodes()
             t2 = self._padding(t2, 71)
             x_2.append(t2)
-        
+        batch_size = 512
+        result = []
         with tf.Session() as sess:
             with tf.gfile.FastGFile(MODEL_TEMPLATE_PATH.format(block_id), 'rb') as f:
                 graph_def = tf.GraphDef()
@@ -99,9 +100,14 @@ class TopologyEval:
             graph = tf.get_default_graph()
             input_1 = graph.get_tensor_by_name("Placeholder:0")
             input_2 = graph.get_tensor_by_name("Placeholder_1:0")
-            pred = graph.get_tensor_by_name("Softmax:0")
-            out = tf.argmax(pred, 1)
-            return sess.run(out, feed_dict={input_1: x_1, input_2: x_2})
+            logits = graph.get_tensor_by_name("Softmax:0")
+            pred = tf.argmax(logits, 1)
+            for i in range(int(len(x_1)/batch_size)+1):
+                start = i*batch_size
+                end = (i+1)*batch_size if (i+1)*batch_size<len(x_1) else len(x_1)
+                out = sess.run(pred, feed_dict={input_1: x_1[start:end], input_2: x_2[start:end]})
+                result.extend(out)
+            return result
 
 
 if __name__ == "__main__":

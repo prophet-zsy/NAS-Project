@@ -354,26 +354,91 @@ def _train_winner(eva, net_pl, ds, round, spl_num=MAIN_CONFIG['num_opt_best']):
     Stage_Info["blk_info"][blk_id]["train_winner_cost"] = trian_winner_end
     return network_item
 
+def _filter_topo(net_pool, blk_id):
+    import keras
+    keras.backend.clear_session()
+    from TopologyEval import TopologyEval
 
-def _subproc_init_ops(task_item, result_buffer, signal):
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(task_item.gpu_info)
-    task_item.pid = os.getpid()
+    # create couples which to be compared, and it is id in it
+    cmp_couple = []
+    for nn_id1 in range(len(net_pool)):
+        for_cmp = list(range(len(net_pool)))
+        for_cmp.remove(nn_id1)
+        for nn_id2 in for_cmp:
+            cmp_couple.append((nn_id1, nn_id2))
+
+    #  pred the cmp result
+    pre_blk_graph_part = []
+    for item in net_pool[0].pre_block:
+        pre_blk_graph_part.append(item.task_info.graph_template)
+
+    graph_parts1, graph_parts2 = [], []
+    for couple in cmp_couple:
+        graph_part1 = pre_blk_graph_part + [net_pool[couple[0]].graph_template]
+        graph_part2 = pre_blk_graph_part + [net_pool[couple[1]].graph_template]
+        graph_parts1.append(graph_part1)
+        graph_parts2.append(graph_part2)
+    
+    # eva topo1 and topo2, which is better
+    res = TopologyEval().topo1vstopo2(graph_parts1, graph_parts2, block_id=blk_id+1)
+
+    cmp_res = {}
+    for couple, res_item in zip(cmp_couple, res):
+        cmp_res[couple] = res_item
+
+    # check consistency
+    cnt = 0
+    for nn_id1 in range(len(net_pool)):
+        for nn_id2 in range(nn_id1+1, len(net_pool)):
+            if cmp_res[(nn_id1, nn_id2)] + cmp_res[(nn_id2, nn_id1)] == 1:
+                cnt += 1
+    NAS_LOG = Logger()
+    NAS_LOG << ("nas_evatopo_consistency_ratio", cnt/(len(net_pool)*(len(net_pool)-1)/2))
+
+    #  rank due to win times
+    rank_score = [0 for _ in range(len(net_pool))]
+    for couple in cmp_couple:
+        if cmp_res[couple] == 0:
+            rank_score[couple[1]] += 1
+        elif cmp_res[couple] == 1:
+            rank_score[couple[0]] += 1
+    
+    for_rank = list(zip(net_pool, rank_score))
+    for_rank.sort(key=lambda x: x[1], reverse=True)
+
+    net_pool = [item[0] for item in for_rank]
+    net_pool = net_pool[:MAIN_CONFIG["max_player_nums"]]
+    for net_rm in net_pool[MAIN_CONFIG["max_player_nums"]:]:
+        _save_net_info(net_rm, 0, MAIN_CONFIG["max_player_nums"])
+    return net_pool
+
+def _init_ops(net_pool):
     import keras
     keras.backend.clear_session()
     from predictor import Predictor
-    net_pool = task_item.net_pool
+    
     pred = Predictor() if not MAIN_CONFIG["pred_mask"] else None
     _sample(net_pool, batch_num=MAIN_CONFIG['spl_network_round'], pred=pred)
+    return net_pool
+
+def _subproc_use_priori(task_item, result_buffer, signal):
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(task_item.gpu_info)
+    task_item.pid = os.getpid()
+
+    #  rank all the topo
+    task_item.net_pool = _filter_topo(task_item.net_pool, task_item.blk_id)
+
+    #  pred ops for every topo
+    task_item.net_pool = _init_ops(task_item.net_pool)
 
     # use in subprocess
     if result_buffer and signal:
         result_buffer.put(task_item)
         signal.set()
 
-    return net_pool
-    
+    return task_item.net_pool
 
-def _init_ops(net_pool):
+def _filter_topo_and_init_ops(net_pool, blk_id):
     """Generates ops and skipping for every Network,
 
     Args:
@@ -383,12 +448,12 @@ def _init_ops(net_pool):
         scores (list of score, and its length equals to that of net_pool)
     """
     NAS_LOG << 'nas_config_ing'
-    task_item = PredScheduleItem(net_pool)
+    task_item = PredScheduleItem(net_pool, blk_id)
     if MAIN_CONFIG['subp_pred_debug']:
-        net_pool = _subproc_init_ops(task_item, None, None)
+        net_pool = _subproc_use_priori(task_item, None, None)
     else:
         TSche.load_tasks([task_item])
-        TSche.exec_task(_subproc_init_ops)
+        TSche.exec_task(_subproc_use_priori)
         net_pool = TSche.get_result()[0].net_pool
     return net_pool
 
@@ -413,7 +478,7 @@ def _search_blk(block_id, eva, ds, npool_tem):
     
     net_pool = copy.deepcopy(npool_tem)
     _init_npool_sampler(net_pool, block_id)
-    net_pool = _init_ops(net_pool)
+    net_pool = _filter_topo_and_init_ops(net_pool, block_id)
     
     round = 0
     time_game = TimeCnt()
@@ -469,7 +534,7 @@ class Nas:
     def run(self):
         NAS_LOG << 'nas_enuming'
         network_pool_tem = self.enu.enumerate()
-        NAS_LOG << ('nas_enum_nums', len(network_pool_tem))
+        NAS_LOG << ('nas_enum_nums', len(network_pool_tem), min(len(network_pool_tem), MAIN_CONFIG['max_player_nums']))
         time_search = TimeCnt()
         start_search = time_search.start()
         NAS_LOG << ('nas_start_search', start_search)

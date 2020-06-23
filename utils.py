@@ -126,8 +126,9 @@ class EvaScheduleItem:
         self.score = 0 # assign in task_func
 
 class PredScheduleItem:
-    def __init__(self, net_pool):
+    def __init__(self, net_pool, blk_id):
         self.net_pool = net_pool
+        self.blk_id = blk_id
         
         # task info
         self.task_id = -1
@@ -174,7 +175,7 @@ class TaskScheduler:
 
     def makesure_sub_return(self, subpid):
         # make sure the sub zombie process vanish
-        pid, exit_code = os.waitpid(subpid, 0)
+        # pid, exit_code = os.waitpid(subpid, 0)
         # p_wait_vanish = self.sub_process[subpid]
         # p_wait_vanish.join(timeout=10)  # block itself to wait for the subprocess's return
         # if p_wait_vanish.is_alive:

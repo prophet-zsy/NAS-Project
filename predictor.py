@@ -3,7 +3,7 @@ import os
 from info_str import _cur_ver_dir
 import numpy as np
 from enumerater import Enumerater
-from predict_op.label_encoding import decoder, encoder, getClassNum
+from use_priori.predict_op.label_encoding import decoder, encoder, getClassNum
 from keras.utils.np_utils import to_categorical
 from keras.models import model_from_json
 import time
@@ -12,11 +12,11 @@ MAX_NETWORK_LENGTH = 71
 #model_json_path = './predict_op/model.json'
 #model_weights_path = './predict_op/model.json.h5'
 
-net_data_path = os.path.join(_cur_ver_dir, 'predict_op/data', 'net.npy')
-label_data_path = os.path.join(_cur_ver_dir, 'predict_op/data', 'label.npy')
+net_data_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op/data', 'net.npy')
+label_data_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op/data', 'label.npy')
 
-model_json_path = os.path.join(_cur_ver_dir, 'predict_op', 'model.json')
-model_weights_path = os.path.join(_cur_ver_dir, 'predict_op', 'model.json.h5')
+model_json_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op', 'model.json')
+model_weights_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op', 'model.json.h5')
 
 # TODO Predictor.train -> Predictor.train_model (defined in interface.md)
 # TODO DO NOT overuse @staticmethod. It can be your private function in predictor.py.

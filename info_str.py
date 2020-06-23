@@ -17,7 +17,8 @@ eva_fin = 'NAS: eva fin -> block_num:{0[0]} round:{0[1]} nn_id:{0[2]} item_id:{0
 eliinfo_tem = 'NAS: eliminating {0[0]}, remaining {0[1]}...'
 init_ing = 'NAS: Initializing...'
 enum_ing = 'NAS: Enumerating all possible networks!'
-enum_toponet_nums = "NAS: We got {0[0]} topo networks, and we will evaluate them in every block!"
+enum_toponet_nums = "NAS: We got {0[0]} topo networks, and we will evaluate {0[1]} of them in every block!"
+evatopo_consist_ratio = "NAS: The ratio that cmp(a,b) and cmp(b,a) is consistency is {0[0]}"
 start_search = "NAS: search work start, start_time: {0[0]}"
 search_block_start = 'NAS: Searching for block {0[0]}/{0[1]}, start_time: {0[2]}'
 config_ing = 'NAS: Configuring the networks in the first round...'
@@ -59,6 +60,7 @@ MF_TEMP = {
     # run
     'nas_enuming': enum_ing,
     'nas_enum_nums': enum_toponet_nums,
+    'nas_evatopo_consistency_ratio': evatopo_consist_ratio,
     'nas_start_search': start_search,
     'nas_search_blk': search_block_start,
     'nas_search_blk_end': blk_search_tem,
