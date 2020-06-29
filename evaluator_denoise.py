@@ -17,6 +17,7 @@ MODEL_PATH = "./model"
 DATA_RATIO_FOR_EVAL = 0.1
 BATCH_SIZE = 10
 INITIAL_LEARNING_RATE = 0.001
+TEST_NUMS_EVERY_EPOCH = -1  # -1 represent all
 
 
 def _open_a_Session():
@@ -30,8 +31,44 @@ class DataSet:
         self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
              self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs()
 
+        self.custom_test_data, self.custom_test_label = self.custom_inputs()
+
     def get_train_data(self, data_size):
         return self.train_data[:data_size], self.train_label[:data_size]
+
+    def custom_inputs(self):
+        custom_test_data = []
+        custom_test_label = []
+
+        custom_path = os.path.join(DATA_PATH, 'custom_test')
+        noisy_imgs = [os.path.join(custom_path, 'noisy', item) for item in os.listdir(os.path.join(custom_path, 'noisy'))]
+        original_imgs = [os.path.join(custom_path, 'original', item) for item in os.listdir(os.path.join(custom_path, 'original'))]
+        if noisy_imgs and original_imgs:  # original img and noisy img
+            noisy_imgs = sorted(noisy_imgs)
+            original_imgs = sorted(original_imgs)
+            custom_test_data = [cv2.imread(img) for img in noisy_imgs]
+            custom_test_label = [cv2.imread(img) for img in original_imgs]
+
+        elif original_imgs and not noisy_imgs:  # only original imgs 
+            for original_img_path in original_imgs:
+                img_file = os.path.basename(original_img_path).split('.')[0]
+                original_img = cv2.imread(original_img_path)
+                sigma = np.random.randint(0, 50)
+                noisy_img = self.gaussian_noise(sigma, original_img)
+                cv2.imwrite(os.path.join(custom_path, 'noisy') + img_file + ".png", noisy_img)
+                custom_test_data.append(noisy_img)
+                custom_test_label.append(original_img)
+                
+        elif noisy_imgs and not original_imgs:  # only noisy imgs, we create fake original imgs for the model input
+            for noisy_img_path in noisy_imgs:
+                img_file = os.path.basename(noisy_img_path).split('.')[0]
+                noisy_img = cv2.imread(noisy_img_path)
+                img_size = noisy_img.shape
+                original_img = np.random.randint(0, 255, size=img_size)
+                cv2.imwrite(os.path.join(custom_path, 'original') + img_file + ".png", original_img)
+                custom_test_data.append(noisy_img)
+                custom_test_label.append(original_img)
+        return self._process_test_data(custom_test_data, custom_test_label)
 
     def add_noise(self):
         imgs_path = glob(DATA_PATH + "pristine_images/*.bmp")
@@ -94,6 +131,13 @@ class DataSet:
         test_data = self.normalize(test_data, is_test=True)
         test_label = self.normalize(test_label, is_test=True)
         return all_train_data, all_train_label, train_data, train_label, valid_data, valid_label, test_data, test_label
+
+    def _process_test_data(self, test_data, test_label):
+        test_data = self._expend_test_dim(test_data)
+        test_label = self._expend_test_dim(test_label)
+        test_data = self.normalize(test_data, is_test=True)
+        test_label = self.normalize(test_label, is_test=True)
+        return test_data, test_label
 
     def _read_traindata_frompath_save2npy(self, pat_size=50, stride=100):
         global DATA_AUG_TIMES
@@ -613,15 +657,21 @@ class Evaluator:
         sess.close()
         return valid_acc
 
-    def _test(self, compute_graph, sess=None):
+    def _test(self, compute_graph, sess=None, custom=False):
         online = bool(sess)  # if online we do not have to load model, due to existed model there
         if not online:
             tf.reset_default_graph()
             sess = compute_graph._load_model()
-        #  get 100 imgs for test in all 1423 imgs randomly
-        img_idxs = random.sample(range(0, len(self.data_set.test_data)), 10)  #TODO 100
-        test_data = [self.data_set.test_data[idx] for idx in img_idxs]
-        test_label = [self.data_set.test_label[idx] for idx in img_idxs]
+        all_test_data = self.data_set.custom_test_data if custom else self.data_set.test_data
+        all_test_label = self.data_set.custom_test_label if custom else self.data_set.test_label
+        #  get some imgs for test randomly
+        if TEST_NUMS_EVERY_EPOCH > 0:
+            assert TEST_NUMS_EVERY_EPOCH < len(all_test_data), "sample from test_data, but sample num is more than summery"
+            img_idxs = random.sample(range(len(all_test_data)), TEST_NUMS_EVERY_EPOCH)
+        else:
+            img_idxs = [i for i in range(len(all_test_data))]
+        test_data = [all_test_data[idx] for idx in img_idxs]
+        test_label = [all_test_label[idx] for idx in img_idxs]
         test_ops_keys = ['acc', 'loss', 'pred_img']
         acc = self._iter_run_on_graph(test_data, test_label, test_ops_keys, compute_graph, sess, train_flag=False, is_test=True, batch_size=1)
         test_log = "test_acc: {}\n".format(acc)
@@ -759,7 +809,7 @@ if __name__ == '__main__':
     ############################
     # load the model and test it directly
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
-         pre_blk=[network1], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+         pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
     computing_graph = DataFlowGraph(task_item)
-    print(eval._test(computing_graph))
+    print(eval._test(computing_graph, custom=True))
 

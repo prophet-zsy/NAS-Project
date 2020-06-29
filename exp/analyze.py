@@ -291,7 +291,7 @@ class Analyzer:
         except:
             print("rename failed!")
 
-    def display_bestscore_with_round(self):
+    def display_history_bestscore_with_round(self):
         rd_scores = []
         for blk_id in range(self.blk_num):
             max_rd = math.ceil(math.log2(self.nn_num))+1
@@ -300,10 +300,14 @@ class Analyzer:
                 rd_max_score = 0
                 for item in items:
                     rd_max_score = max(rd_max_score, item.score)
-                rd_scores.append(rd_max_score)
-        
+                # history bestsocre
+                if not rd_scores or rd_scores and rd_max_score > rd_scores[-1]:
+                    rd_scores.append(rd_max_score)
+                else:
+                    rd_scores.append(rd_scores[-1])
+
         #  plot it
-        # print(rd_scores)
+        #  print(rd_scores)
         x = [i for i in range(1, 1+len(rd_scores))]
         plt.plot(x, rd_scores)
         plt.xlabel('round')
@@ -352,7 +356,7 @@ if __name__ == "__main__":
     # print(analyze.get_item_use_pred(blk_id=2, nn_id=1))
     # analyze.display_items_first_round(blk_id=0, nn_id=0)
     analyze.display_search_result()
-    analyze.display_bestscore_with_round()
+    analyze.display_history_bestscore_with_round()
     # print(analyze.compute_pred_work_rate())
     # 如何查看单个枚举的网络，从头到尾的变化
         
