@@ -1,4 +1,4 @@
-import copy
+import copy, os
 from queue import Queue
 import time
 
@@ -44,7 +44,7 @@ class Enumerater:
         self._info_dict = {}
         self._info_group = []
         self._log = ""
-        self._pickle_name = 'pcache/enum_%d-%d-%d.pickle' % (self.depth, self.width, self.max_depth)
+        self._pickle_name = os.path.join(os.getcwd(), 'pcache', 'enum_%d-%d-%d.pickle' % (self.depth, self.width, self.max_depth))
 
     def enumerate(self):
         """

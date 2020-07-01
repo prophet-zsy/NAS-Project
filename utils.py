@@ -239,6 +239,8 @@ class Logger(object):
     def __init__(self):
         _cur_ver_dir = os.getcwd()
         log_dir = os.path.join(_cur_ver_dir, 'memory')
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
         naslog_path = os.path.join(log_dir, 'nas_log.txt')
         network_info_path = os.path.join(log_dir, 'network_info.txt')
         evalog_path = os.path.join(log_dir, 'evaluator_log.txt')
@@ -322,6 +324,9 @@ NAS_LOG = Logger()
 
 def _check_log():
     _cur_ver_dir = os.getcwd()
+    pache_dir = os.path.join(_cur_ver_dir, 'pache')
+    if not os.path.exists(pache_dir):
+        os.mkdir(pache_dir)
     log_dir = os.path.join(_cur_ver_dir, 'memory')
     base_data_dir = os.path.join(log_dir, 'base_data_serialize')
     model_dir = os.path.join(_cur_ver_dir, 'model')
