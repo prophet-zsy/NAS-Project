@@ -20,6 +20,8 @@ class Analyzer:
         self.eva_info_path = os.path.join(self.memory_path, "evaluator_log.txt")
 
         self.net_pool = []
+        self.nn_id2align_id = {}  # for map nn_id to nn_align_id after sort
+        self.align_id2nn_id = {}  # for map nn_align_id to nn_id after sort
         self._load_base_data()
 
         # self.stage_info = None
@@ -29,8 +31,9 @@ class Analyzer:
         self.nn_num = -1
         self.spl_batch = -1
         self._init_param()
+        self._construct_dict()
 
-        self._check_data()
+        # self._check_data()  # not used in new pred
 
     def _load_stage(self):
         with open(self.stage_path, "r") as f:
@@ -43,13 +46,13 @@ class Analyzer:
             raise Exception("There is nothing in the folder base_data_serialize")
         def get_blk_id(item):
             return int(item.split("_")[1])
-        def get_item_id(item):
+        def get_nn_id(item):
             return int(item.split("_")[-1].split(".")[0])
         def cmp(a, b):
             a_blk_id = get_blk_id(a)
             b_blk_id = get_blk_id(b)
             if a_blk_id == b_blk_id:
-                return get_item_id(a) - get_item_id(b)
+                return get_nn_id(a) - get_nn_id(b)
             return a_blk_id - b_blk_id
         paths.sort(key=cmp_to_key(cmp))
         # init the net_pool
@@ -59,11 +62,24 @@ class Analyzer:
                 net = pickle.load(f_dump)
                 self.net_pool.append(net)
 
-    def _check_data(self):
-        for nn_id in range(self.nn_num):
-            tem_graph_part = self.net_pool[nn_id].graph_template
+    def _construct_dict(self):
+        for idx, nn in enumerate(self.net_pool):
+            blk_id, align_id = idx // self.nn_num, idx % self.nn_num
+            print(blk_id, align_id, nn.item_list[-1].task_info.nn_id)
+            nn_id = nn.item_list[-1].task_info.nn_id
+            if blk_id not in self.nn_id2align_id.keys():
+                self.nn_id2align_id[blk_id] = {}
+            if blk_id not in self.align_id2nn_id.keys():
+                self.align_id2nn_id[blk_id] = {}
+            self.nn_id2align_id[blk_id][nn_id] = align_id
+            self.align_id2nn_id[blk_id][align_id] = nn_id
+        # print(self.align_id2nn_id[1])
+
+    def _check_data(self):  # 添加预测模块后，每个blk剩下的枚举的网络结构不一定相同，所以检查数据的函数不再适用
+        for align_id in range(self.nn_num):
+            tem_graph_part = self.net_pool[align_id].graph_template
             for blk_id in range(1, self.blk_num):
-                if self.net_pool[blk_id*self.nn_num+nn_id].graph_template != tem_graph_part:
+                if self.net_pool[blk_id*self.nn_num+align_id].graph_template != tem_graph_part:
                     raise Exception("graph_part of every block is not same, you must check it by your self")
     
     def _init_param(self):
@@ -110,11 +126,13 @@ class Analyzer:
         return items
 
     def get_item(self, blk_id, nn_id, item_id):
-        item = self.net_pool[blk_id*self.nn_num+nn_id].item_list[item_id]
+        align_id = self.nn_id2align_id[blk_id][nn_id]
+        item = self.net_pool[blk_id*self.nn_num+align_id].item_list[item_id]
         return item
 
     def get_item_use_pred(self, blk_id, nn_id):
-        nn = self.net_pool[blk_id*self.nn_num+nn_id]
+        align_id = self.nn_id2align_id[blk_id][nn_id]
+        nn = self.net_pool[blk_id*self.nn_num+align_id]
         items = [item for item in nn.item_list if item.use_pred]
         assert len(items) == 1, "there are many items in one nn using pred,"\
                                 "please make sure you use not only one pred in every nn"
@@ -144,12 +162,12 @@ class Analyzer:
             print("blk_id: {}/{}".format(i, self.blk_num))
             blk_search = search_process[i]
             print("\t"+"\t".join([str(i) for i in range(len(blk_search[0]))]))
-            for nn_id in range(len(blk_search)):
-                print(nn_id, end="")
+            for align_id in range(len(blk_search)):
+                print(self.align_id2nn_id[i][align_id], end="")
                 cnt = 0
-                for score in blk_search[nn_id]:
-                    if cnt < self.spl_batch and self.net_pool[i*self.nn_num+nn_id].item_list[cnt].use_pred:  # the item use pred
-                        if score >= max(blk_search[nn_id][:self.spl_batch]):
+                for score in blk_search[align_id]:
+                    if cnt < self.spl_batch and self.net_pool[i*self.nn_num+align_id].item_list[cnt].use_pred:  # the item use pred
+                        if score >= max(blk_search[align_id][:self.spl_batch]):
                             aux_info = " pd_ok"
                         else:
                             aux_info = " pd"
@@ -183,16 +201,17 @@ class Analyzer:
         cv2.imshow(png_name, img)
         cv2.waitKey(2000)
 
-    def get_graph_part(self, nn_id):
-        graph_part = copy.deepcopy(self.net_pool[nn_id].graph_template)
+    def get_graph_part(self, blk_id, nn_id):
+        align_id = self.nn_id2align_id[blk_id][nn_id]
+        graph_part = copy.deepcopy(self.net_pool[blk_id * self.nn_num + align_id].graph_template)
         identity_id = len(graph_part)
         old_tail = graph_part.index([])
         graph_part[old_tail] = [identity_id]
         graph_part.append([])
         return graph_part
 
-    def display_graph_part(self, nn_id):
-        graph_part = self.get_graph_part(nn_id)
+    def display_graph_part(self, blk_id, nn_id):
+        graph_part = self.get_graph_part(blk_id, nn_id)
         cell_list = ['None' for _ in range(len(graph_part)-1)]
         cell_list.append('identity')
 
@@ -208,7 +227,7 @@ class Analyzer:
         blk_list = task_info.pre_block + [item]
         blk_graph = []
         mark_skipping = []
-        for item in blk_list:
+        for blk_id, item in enumerate(blk_list):
             cell_list = [tuple(item) for item in item.cell_list]
             graph, cell_list = copy.deepcopy(item.graph), copy.deepcopy(cell_list)
             graph.append([])
@@ -216,8 +235,7 @@ class Analyzer:
             blk_graph.append([graph, cell_list])
 
             nn_id = item.task_info.nn_id
-            graph_part = self.get_graph_part(nn_id)
-            # print(graph, graph_part)
+            graph_part = self.get_graph_part(blk_id, nn_id)
             skipping = subtraction(graph, graph_part)
             mark_skipping.append([skipping])
         return blk_graph, mark_skipping
@@ -237,7 +255,8 @@ class Analyzer:
         # self.show_png(output_path)
 
     def display_item_use_pred(self, blk_id, nn_id):
-        nn = self.net_pool[blk_id*self.nn_num+nn_id]
+        align_id = self.nn_id2align_id[blk_id][nn_id]
+        nn = self.net_pool[blk_id*self.nn_num+align_id]
         for item_id in range(len(nn.item_list)):
             item = nn.item_list[item_id]
             if item.use_pred:
@@ -246,7 +265,8 @@ class Analyzer:
         raise Exception("We assert that there is at least one item used pred, but we found none!")
 
     def display_items_first_round(self, blk_id, nn_id):
-        nn = self.net_pool[blk_id*self.nn_num+nn_id]
+        align_id = self.nn_id2align_id[blk_id][nn_id]
+        nn = self.net_pool[blk_id*self.nn_num+align_id]
         first_round_items = nn.item_list[:self.spl_batch]
         for idx, item in enumerate(first_round_items):
             self.display_item(blk_id, nn_id, idx, with_preblk=True)
@@ -351,8 +371,9 @@ if __name__ == "__main__":
     # analyze.display_item(blk_id=1, nn_id=5, item_id=0, with_preblk=True)
     # print(analyze.get_eva_info(blk_id=1, nn_id=5, item_id=0))
     # analyze.plt_train_process_byitem(blk_id=-1, nn_id=-1, item_id=-1)  # retrain
-    # for i in range(analyze.nn_num):
-    #     analyze.display_graph_part(nn_id=i)
+    # for k in range(analyze.blk_num):
+    #     for i in range(analyze.nn_num):
+    #         analyze.display_graph_part(blk_id=k, nn_id=i)
     # print(analyze.get_item_use_pred(blk_id=2, nn_id=1))
     # analyze.display_items_first_round(blk_id=0, nn_id=0)
     analyze.display_search_result()

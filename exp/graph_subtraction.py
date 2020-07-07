@@ -54,7 +54,7 @@ def subtraction(graph1, graph2):
     # you can assume the first node is root of DAG
     # so you don't have to find the root by your self
     # return: graph1 - graph2 (the additive edges)
-    assert len(graph1) == len(graph2), "node_num of two graphs do not equal"
+    assert len(graph1) == len(graph2), "node_num of two graphs do not equal, but you are {} and {}".format(len(graph1), len(graph2))
     node1, node2 = 0, 0
     match_scheme_in_graph1_pattern = bfs(node1, node2, graph1, graph2)
     additive_edge = minus(graph1, match_scheme_in_graph1_pattern)
