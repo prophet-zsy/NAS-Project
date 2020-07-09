@@ -24,9 +24,9 @@
     "retrain_switch": 1
   },
   "enum":{
-    "depth": 5,
-    "width": 3,
-    "max_depth": 4,
+    "depth": 3,
+    "width": 1,
+    "max_depth": 2,
     "enum_debug": 0
   },
   "eva": {

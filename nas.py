@@ -334,6 +334,7 @@ def _train_winner(eva, net_pl, ds, round, spl_num=MAIN_CONFIG['num_opt_best']):
             newly_num = newly_num if i+newly_num<spl_num else spl_num-i
             _update(net_pl, newly_added_id=newly_added_id)
             base_alig_id = [idx[0] for idx in newly_added_id]
+            base_alig_id = base_alig_id[:newly_num]
             base_item_id = _sample(net_pl, batch_num=1, base_alig_id=base_alig_id)
             async_exec = True if i+newly_num<spl_num else False
             task_list = _spl_info_to_tasks(net_pl, round, cur_epoch, cur_data_size, base_item_id=base_item_id)
@@ -342,8 +343,7 @@ def _train_winner(eva, net_pl, ds, round, spl_num=MAIN_CONFIG['num_opt_best']):
             i += newly_num
 
     best_nn = net_pl.pop(0)
-    
-    scores = [x.score for x in best_nn.item_list[-spl_num:]]
+    scores = [x.score for x in best_nn.item_list]
     best_index = scores.index(max(scores)) - len(scores)
     network_item = _confirm_train(eva, best_nn, best_index, ds)
     _save_net_info(best_nn, round, len(net_pl))
@@ -409,12 +409,15 @@ def _prevent_deadlock(stop_cnt, original_num, net_pool, NAS_LOG):
 def _filter_topo(net_pool, blk_id):
     if MAIN_CONFIG["filter_mask"]:
         return net_pool
+    NAS_LOG = Logger()
+    if len(net_pool) <= MAIN_CONFIG["max_player_nums"]:
+        NAS_LOG << ("nas_not_filter_topo", len(net_pool), MAIN_CONFIG["max_player_nums"])
+        return net_pool
 
     import keras
     keras.backend.clear_session()
     from TopologyEval import TopologyEval
 
-    NAS_LOG = Logger()
     pred_consistent_cnt = 0
     pred_cnt = 0
     stop_cnt = 0
@@ -448,7 +451,6 @@ def _filter_topo(net_pool, blk_id):
         
     assert len(net_pool) == MAIN_CONFIG["max_player_nums"], "nums of nets should be {}, but now it is {}"\
         .format(MAIN_CONFIG["max_player_nums"], len(net_pool))
-    
     NAS_LOG << ("nas_evatopo_consistency_ratio", pred_consistent_cnt/pred_cnt)
 
     return net_pool
@@ -488,7 +490,11 @@ def _filter_topo_and_init_ops(net_pool, blk_id):
         net_pool (list of NetworkUnit)
         scores (list of score, and its length equals to that of net_pool)
     """
-    NAS_LOG << 'nas_config_ing'
+    config_time = TimeCnt()
+    config_start = config_time.start()
+    NAS_LOG << ('nas_config_ing', config_start)
+    Stage_Info['blk_info'][blk_id]['configure_by_priori_start'] = config_start
+
     task_item = PredScheduleItem(net_pool, blk_id)
     if MAIN_CONFIG['subp_pred_filter_debug']:
         net_pool = _subproc_use_priori(task_item, None, None)
@@ -496,14 +502,16 @@ def _filter_topo_and_init_ops(net_pool, blk_id):
         TSche.load_tasks([task_item])
         TSche.exec_task(_subproc_use_priori)
         net_pool = TSche.get_result()[0].net_pool
-    return net_pool
 
+    config_end = config_time.stop()
+    NAS_LOG << ('nas_config_fin', config_end)
+    Stage_Info['blk_info'][blk_id]['configure_by_priori_cost'] = config_end
+    return net_pool
 
 def _init_npool_sampler(netpool, block_id):
     for nw in netpool:
         nw.spl = Sampler(nw.graph_template, block_id)
     return
-
 
 def _search_blk(block_id, eva, ds, npool_tem):
     """evaluate all the networks asynchronously inside one round and synchronously between rounds
@@ -591,6 +599,7 @@ class Nas:
             NAS_LOG << ('nas_pre_block', str(block.graph), str(block.cell_list))
         if MAIN_CONFIG['retrain_switch']:
             _retrain(self.eva, self.ds)
+        os.system("tar -zcvf nas_log.tar.gz nas_config.json memory")
         return Network.pre_block
 
 

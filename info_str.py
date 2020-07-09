@@ -22,7 +22,9 @@ filter_net = "NAS: We rm {0[0]} topo networks by priori, and {0[1]} networks lef
 evatopo_consist_ratio = "NAS: The ratio that cmp(a,b) and cmp(b,a) is consistency is {0[0]}"
 start_search = "NAS: search work start, start_time: {0[0]}"
 search_block_start = 'NAS: Searching for block {0[0]}/{0[1]}, start_time: {0[2]}'
-config_ing = 'NAS: Configuring the networks in the first round...'
+not_filter_topo = "NAS: We got {0[0]} networks from enumerater, it is no maore than {0[1]}, we will evaluate all of them"
+config_ing = 'NAS: We filter the topo net and configure the ops in the first round, start_time: {0[0]}'
+config_fin = 'NAS: configure finished and cost_time: {0[0]}'
 get_winner = 'NAS: We got a WINNER and cost time: {0[0]}'
 best_and_score_tem = 'NAS: We have got the best network and its score is {0[0]:.4f}'
 start_game_tem = 'NAS: Now we have {0[0]} networks. Start game!'
@@ -67,7 +69,6 @@ MF_TEMP = {
     'nas_search_blk': search_block_start,
     'nas_search_blk_end': blk_search_tem,
     'nas_search_end': search_fin_tem,
-    'nas_retrain_end': retrain_end,
     'nas_no_dim_spl': no_dim_spl,
     'nas_pre_block': pre_block,
     # _subproc_eva
@@ -75,11 +76,14 @@ MF_TEMP = {
     'nas_eva_fin': eva_fin,
     # _algo
     'nas_start_game': start_game_tem,
-    'nas_config_ing': config_ing,
     'nas_rounds_game_start': rounds_game_start,
     'nas_round_start': round_start,
     'nas_round_over': round_over,
     'nas_get_winner': get_winner,
+    # filter topo and pred ops
+    'nas_config_ing': config_ing,
+    'nas_config_fin': config_fin,
+    "nas_not_filter_topo": not_filter_topo,
     # _eliminate
     'nas_eliinfo_tem': eliinfo_tem,
     'nas_elim_net': elim_net,
@@ -128,7 +132,10 @@ Stage_Info = {
         {
             "blk_start": None,
             "blk_cost": None,
-
+            
+            "configure_by_priori_start": None,
+            "configure_by_priori_cost": None,
+            
             "rounds_game_start": None,
             "search_epoch": None,
             "rounds_game_cost": None,
