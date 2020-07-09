@@ -135,7 +135,6 @@ def _sample(net_pool, batch_num=MAIN_CONFIG['spl_network_round'], base_alig_id=[
         for nn in net_pool:
             _sample_batch(nn, batch_num, pred)
 
-
 def _update_batch(network, batch_num=1):
     for idx in range(1, batch_num+1):
         network.spl.update_opt_model(network.item_list[-idx].code, -network.item_list[-idx].score)
@@ -354,24 +353,12 @@ def _train_winner(eva, net_pl, ds, round, spl_num=MAIN_CONFIG['num_opt_best']):
     Stage_Info["blk_info"][blk_id]["train_winner_cost"] = trian_winner_end
     return network_item
 
-def _filter_topo(net_pool, blk_id):
-    import keras
-    keras.backend.clear_session()
-    from TopologyEval import TopologyEval
-
-    # create couples which to be compared, and it is id in it
-    cmp_couple = []
-    for nn_id1 in range(len(net_pool)):
-        for_cmp = list(range(len(net_pool)))
-        for_cmp.remove(nn_id1)
-        for nn_id2 in for_cmp:
-            cmp_couple.append((nn_id1, nn_id2))
-
-    #  pred the cmp result
+def _round_cmp_topo(net_pool, cmp_couple, blk_id, TopologyEval):
+    # add the pre_blk
     pre_blk_graph_part = []
     for item in net_pool[0].pre_block:
         pre_blk_graph_part.append(item.task_info.graph_template)
-
+    
     graph_parts1, graph_parts2 = [], []
     for couple in cmp_couple:
         graph_part1 = pre_blk_graph_part + [net_pool[couple[0]].graph_template]
@@ -382,34 +369,88 @@ def _filter_topo(net_pool, blk_id):
     # eva topo1 and topo2, which is better
     res = TopologyEval().topo1vstopo2(graph_parts1, graph_parts2, block_id=blk_id+1)
 
+    # construct dict for find
     cmp_res = {}
     for couple, res_item in zip(cmp_couple, res):
         cmp_res[couple] = res_item
+    return cmp_res
 
-    # check consistency
+def _rm_net(net_pool, cmp_res, rm_num, pred_cnt, pred_consistent_cnt):
+    # check consistency and prepare for next rm round
+    next_net_pool = []
     cnt = 0
-    for nn_id1 in range(len(net_pool)):
-        for nn_id2 in range(nn_id1+1, len(net_pool)):
-            if cmp_res[(nn_id1, nn_id2)] + cmp_res[(nn_id2, nn_id1)] == 1:
-                cnt += 1
+    for nn_id in range(0, len(net_pool), 2):
+        pred_cnt += 1
+        res1 = cmp_res[(nn_id, nn_id+1)]  # 1 represent that nn_id max
+        res2 = cmp_res[(nn_id+1, nn_id)]  # 1 represent that nn_id+1 max
+        if res1 + res2 == 1:  # res is consistent
+            pred_consistent_cnt += 1
+            next_net_pool.append(net_pool[nn_id+res2])
+            net_rm = net_pool[nn_id+res1]
+            _save_net_info(net_rm, 0, MAIN_CONFIG["max_player_nums"])
+            cnt += 1
+            if rm_num != -1 and cnt >= rm_num:  # rm cnt achive MAIN_CONFIG["max_player_nums"]
+                next_net_pool.extend(net_pool[nn_id+2:])
+                break
+        else:  # res is not consistent, we keep both of them into next round
+            next_net_pool.append(net_pool[nn_id])
+            next_net_pool.append(net_pool[nn_id+1])
+    return next_net_pool, pred_cnt, pred_consistent_cnt
+
+def _prevent_deadlock(stop_cnt, original_num, net_pool, NAS_LOG):
+    if original_num - len(net_pool) == 0:
+        stop_cnt += 1
+        NAS_LOG << ("nas_filter_topo_stop_cnt", stop_cnt)
+        if stop_cnt >= 30:  # if we can not rm net by priori, get first 32 directly
+            net_pool = net_pool[:MAIN_CONFIG["max_player_nums"]]
+            NAS_LOG << ("nas_filter_topo_get_first_part", MAIN_CONFIG["max_player_nums"])
+    return stop_cnt, net_pool
+
+def _filter_topo(net_pool, blk_id):
+    if MAIN_CONFIG["filter_mask"]:
+        return net_pool
+
+    import keras
+    keras.backend.clear_session()
+    from TopologyEval import TopologyEval
+
     NAS_LOG = Logger()
-    NAS_LOG << ("nas_evatopo_consistency_ratio", cnt/(len(net_pool)*(len(net_pool)-1)/2))
+    pred_consistent_cnt = 0
+    pred_cnt = 0
+    stop_cnt = 0
+    while len(net_pool) > MAIN_CONFIG["max_player_nums"]:
+        original_num = len(net_pool)
 
-    #  rank due to win times
-    rank_score = [0 for _ in range(len(net_pool))]
-    for couple in cmp_couple:
-        if cmp_res[couple] == 0:
-            rank_score[couple[1]] += 1
-        elif cmp_res[couple] == 1:
-            rank_score[couple[0]] += 1
+        rm_num = -1  # when in the last rm round
+        if len(net_pool) / 2 < MAIN_CONFIG["max_player_nums"]:
+            rm_num = len(net_pool) - MAIN_CONFIG["max_player_nums"]
+        
+        random.shuffle(net_pool)
+        cmp_couple = []
+        # add the last net to next round directly if num is odd
+        tail_net = None
+        if len(net_pool) % 2 == 1:
+            tail_net = net_pool[-1]
+            net_pool = net_pool[:-1]
+
+        for nn_id in range(0, len(net_pool), 2):
+            cmp_couple.append((nn_id, nn_id+1))
+            cmp_couple.append((nn_id+1, nn_id))
+
+        cmp_res = _round_cmp_topo(net_pool, cmp_couple, blk_id, TopologyEval)
+
+        net_pool, pred_cnt, pred_consistent_cnt = _rm_net(net_pool, cmp_res, rm_num, pred_cnt, pred_consistent_cnt)
+        if tail_net:
+            net_pool.append(tail_net)
+        
+        NAS_LOG << ("nas_filter_net", original_num - len(net_pool), len(net_pool))
+        stop_cnt, net_pool = _prevent_deadlock(stop_cnt, original_num, net_pool, NAS_LOG)
+        
+    assert len(net_pool) == MAIN_CONFIG["max_player_nums"], "nums of nets should be {}, but now it is {}"\
+        .format(MAIN_CONFIG["max_player_nums"], len(net_pool))
     
-    for_rank = list(zip(net_pool, rank_score))
-    for_rank.sort(key=lambda x: x[1], reverse=True)
+    NAS_LOG << ("nas_evatopo_consistency_ratio", pred_consistent_cnt/pred_cnt)
 
-    net_pool = [item[0] for item in for_rank]
-    net_pool = net_pool[:MAIN_CONFIG["max_player_nums"]]
-    for net_rm in net_pool[MAIN_CONFIG["max_player_nums"]:]:
-        _save_net_info(net_rm, 0, MAIN_CONFIG["max_player_nums"])
     return net_pool
 
 def _init_ops(net_pool):
@@ -425,7 +466,7 @@ def _subproc_use_priori(task_item, result_buffer, signal):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(task_item.gpu_info)
     task_item.pid = os.getpid()
 
-    #  rank all the topo
+    #  get part of the topo
     task_item.net_pool = _filter_topo(task_item.net_pool, task_item.blk_id)
 
     #  pred ops for every topo
@@ -449,7 +490,7 @@ def _filter_topo_and_init_ops(net_pool, blk_id):
     """
     NAS_LOG << 'nas_config_ing'
     task_item = PredScheduleItem(net_pool, blk_id)
-    if MAIN_CONFIG['subp_pred_debug']:
+    if MAIN_CONFIG['subp_pred_filter_debug']:
         net_pool = _subproc_use_priori(task_item, None, None)
     else:
         TSche.load_tasks([task_item])

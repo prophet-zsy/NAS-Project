@@ -101,7 +101,7 @@ class TopologyEval:
             input_1 = graph.get_tensor_by_name("Placeholder:0")
             input_2 = graph.get_tensor_by_name("Placeholder_1:0")
             logits = graph.get_tensor_by_name("Softmax:0")
-            pred = tf.argmax(logits, 1)
+            pred = tf.argmax(logits, 1)  # return confidence
             for i in range(int(len(x_1)/batch_size)+1):
                 start = i*batch_size
                 end = (i+1)*batch_size if (i+1)*batch_size<len(x_1) else len(x_1)
