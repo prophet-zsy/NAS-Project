@@ -20,7 +20,7 @@
     "pred_mask": 0,
     "filter_mask":0,
     "eva_mask": 0,
-    "link_node": true,
+    "link_node": false,
     "retrain_switch": 1
   },
   "enum":{
@@ -30,7 +30,7 @@
     "enum_debug": 0
   },
   "eva": {
-    "task_name": "cifar-10",
+    "task_name": "cifar-100",
     "search_epoch": 1,
     "confirm_epoch": 2,
     "retrain_epoch": 3

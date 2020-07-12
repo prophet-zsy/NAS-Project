@@ -31,7 +31,10 @@ class DataSet:
         self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
              self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs()
 
-        self.custom_test_data, self.custom_test_label = self.custom_inputs()
+        if os.path.exists(os.path.join(DATA_PATH, 'custom_test')):
+            self.custom_test_data, self.custom_test_label = self.custom_inputs()
+        else:
+            self.custom_test_data, self.custom_test_label = [], []
 
     def get_train_data(self, data_size):
         return self.train_data[:data_size], self.train_label[:data_size]
@@ -745,8 +748,8 @@ if __name__ == '__main__':
     INSTANT_PRINT = True
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
-    cur_data_size = eval._set_data_size(500)
-    cur_epoch = eval._set_epoch(2)
+    cur_data_size = eval._set_data_size(100)
+    cur_epoch = eval._set_epoch(1)
 
     # easy block
     # graph_full = [[1]]
@@ -784,32 +787,32 @@ if __name__ == '__main__':
                  Cell('conv', 128, 1, 'relu'), Cell('conv', 192, 5, 'leakyrelu')]
     network4 = NetworkItem(3, graph_full, cell_list, "")
 
-    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network1,\
-    #      pre_blk=[], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
-    # e = eval.evaluate(task_item)
+    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network1,\
+         pre_blk=[], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    e = eval.evaluate(task_item)
 
-    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network2,\
-    #      pre_blk=[network1], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
-    # e = eval.evaluate(task_item)
+    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network2,\
+         pre_blk=[network1], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    e = eval.evaluate(task_item)
 
-    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network3,\
-    #      pre_blk=[network1, network2], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
-    # e = eval.evaluate(task_item)
+    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network3,\
+         pre_blk=[network1, network2], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    e = eval.evaluate(task_item)
 
-    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network4,\
-    #      pre_blk=[network1, network2, network3], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
-    # e = eval.evaluate(task_item)
+    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=network4,\
+         pre_blk=[network1, network2, network3], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    e = eval.evaluate(task_item)
 
-    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
-    #      pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
-    # e = eval.evaluate(task_item)
+    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
+         pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    e = eval.evaluate(task_item)
 
 
 
     ############################
     # load the model and test it directly
-    task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
-         pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
-    computing_graph = DataFlowGraph(task_item)
-    print(eval._test(computing_graph, custom=True))
+    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
+    #      pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    # computing_graph = DataFlowGraph(task_item)
+    # print(eval._test(computing_graph, custom=True))
 
