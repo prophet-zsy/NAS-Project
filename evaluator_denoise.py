@@ -17,7 +17,7 @@ MODEL_PATH = "./model"
 DATA_RATIO_FOR_EVAL = 0.1
 BATCH_SIZE = 10
 INITIAL_LEARNING_RATE = 0.001
-TEST_NUMS_EVERY_EPOCH = -1  # -1 represent all
+TEST_NUMS_EVERY_EPOCH = 100  # -1 represent all
 
 
 def _open_a_Session():
@@ -650,8 +650,8 @@ class Evaluator:
             if INSTANT_PRINT:
                 print(epoch_log)
 
-            if not task_item.network_item:  # if in retrain, we test the model every epoch
-                self._test(compute_graph, sess=sess)
+            # if not task_item.network_item:  # if in retrain, we test the model every epoch
+            #     self._test(compute_graph, sess=sess)
 
         compute_graph._save_model(sess)
         sess.close()
@@ -666,7 +666,7 @@ class Evaluator:
         all_test_label = self.data_set.custom_test_label if custom else self.data_set.test_label
         #  get some imgs for test randomly
         if TEST_NUMS_EVERY_EPOCH > 0:
-            assert TEST_NUMS_EVERY_EPOCH < len(all_test_data), "sample from test_data, but sample num is more than summery"
+            assert TEST_NUMS_EVERY_EPOCH < len(all_test_data), "sample from test_data, but sample num is more than summary"
             img_idxs = random.sample(range(len(all_test_data)), TEST_NUMS_EVERY_EPOCH)
         else:
             img_idxs = [i for i in range(len(all_test_data))]
