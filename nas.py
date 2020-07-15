@@ -600,6 +600,7 @@ class Nas:
         if MAIN_CONFIG['retrain_switch']:
             _retrain(self.eva, self.ds)
         os.system("tar -zcvf nas_log.tar.gz nas_config.json memory")
+        os.system("tar -zcvf model.tar.gz model")
         return Network.pre_block
 
 
