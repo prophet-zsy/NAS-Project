@@ -324,7 +324,7 @@ NAS_LOG = Logger()
 
 def _check_log():
     _cur_ver_dir = os.getcwd()
-    pache_dir = os.path.join(_cur_ver_dir, 'pache')
+    pache_dir = os.path.join(_cur_ver_dir, 'pcache')
     if not os.path.exists(pache_dir):
         os.mkdir(pache_dir)
     log_dir = os.path.join(_cur_ver_dir, 'memory')
