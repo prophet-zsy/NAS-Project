@@ -36,7 +36,8 @@ log_format = '%(asctime)s %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
     format=log_format, datefmt='%m/%d %I:%M:%S %p')
 
-CIFAR_CLASSES = 10
+# CIFAR_CLASSES = 10
+CIFAR_CLASSES = 100
 
 
 def main():
@@ -63,8 +64,10 @@ def main():
   criterion = nn.CrossEntropyLoss()
   criterion = criterion.cuda()
 
-  _, test_transform = utils._data_transforms_cifar10(args)
-  test_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=test_transform)
+  # _, test_transform = utils._data_transforms_cifar10(args)
+  # test_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=test_transform)
+  _, test_transform = utils._data_transforms_cifar100(args)
+  test_data = dset.CIFAR100(root=args.data, train=False, download=True, transform=test_transform)
 
   test_queue = torch.utils.data.DataLoader(
       test_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)

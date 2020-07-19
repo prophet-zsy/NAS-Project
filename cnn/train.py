@@ -50,7 +50,8 @@ fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
 
-CIFAR_CLASSES = 10
+# CIFAR_CLASSES = 10
+CIFAR_CLASSES = 100
 
 
 def main():
@@ -82,9 +83,12 @@ def main():
       weight_decay=args.weight_decay
       )
 
-  train_transform, valid_transform = utils._data_transforms_cifar10(args)
-  train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
-  valid_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=valid_transform)
+  # train_transform, valid_transform = utils._data_transforms_cifar10(args)
+  # train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
+  # valid_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=valid_transform)
+  train_transform, valid_transform = utils._data_transforms_cifar100(args)
+  train_data = dset.CIFAR100(root=args.data, train=True, download=True, transform=train_transform)
+  valid_data = dset.CIFAR100(root=args.data, train=False, download=True, transform=valid_transform)
 
   train_queue = torch.utils.data.DataLoader(
       train_data, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=2)

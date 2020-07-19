@@ -79,6 +79,26 @@ def _data_transforms_cifar10(args):
   return train_transform, valid_transform
 
 
+def _data_transforms_cifar100(args):
+  CIFAR_MEAN = [0.5071, 0.4867, 0.4408]
+  CIFAR_STD = [0.2675, 0.2565, 0.2761]
+
+  train_transform = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
+  ])
+  if args.cutout:
+    train_transform.transforms.append(Cutout(args.cutout_length))
+
+  valid_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
+    ])
+  return train_transform, valid_transform
+
+
 def count_parameters_in_MB(model):
   return np.sum(np.prod(v.size()) for name, v in model.named_parameters() if "auxiliary" not in name)/1e6
 
