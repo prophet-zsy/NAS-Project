@@ -13,7 +13,7 @@ NAS_CONFIG = json.load(open(_nas_config_path, encoding='utf-8'), object_pairs_ho
 # System information
 eva_ing = 'NAS: eva ing -> block_num:{0[0]} round:{0[1]} nn_id:{0[2]} item_id:{0[3]}'
 eva_fin = 'NAS: eva fin -> block_num:{0[0]} round:{0[1]} nn_id:{0[2]} item_id:{0[3]}'\
-          ' score:{0[4]:.4f} time_cost:{0[5]} eva_pid:{0[6]}'
+          ' score:{0[4]:.4f} model_params:{0[5]} time_cost:{0[6]} eva_pid:{0[7]}'
 eliinfo_tem = 'NAS: eliminating {0[0]}, remaining {0[1]}...'
 init_ing = 'NAS: Initializing...'
 enum_ing = 'NAS: Enumerating all possible networks!'

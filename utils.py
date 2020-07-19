@@ -1,10 +1,12 @@
 import os, sys, queue, time, random, re, json
+import numpy as np
 import datetime, traceback, pickle
 import multiprocessing, copy, signal
 from base import Network, NetworkItem, Cell
 from info_str import NAS_CONFIG, MF_TEMP
 
 # signal.signal(signal.SIGCHLD,signal.SIG_IGN)
+
 
 def _dump_stage(stage_info):
     _cur_dir = os.getcwd()
@@ -124,6 +126,7 @@ class EvaScheduleItem:
 
         # result
         self.score = 0 # assign in task_func
+        self.model_params = 0 # assign in task_func
 
 class PredScheduleItem:
     def __init__(self, net_pool, blk_id):

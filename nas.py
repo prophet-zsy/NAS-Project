@@ -43,7 +43,7 @@ def _subproc_eva(task_item, result_buffer, signal, eva):
     if task_item.network_item:
         NAS_LOG << ('nas_eva_fin', len(task_item.pre_block)+1,\
                 task_item.round, task_item.nn_id, task_item.network_item.id,\
-                task_item.score, task_item.cost_time, task_item.pid)
+                task_item.score, task_item.model_params, task_item.cost_time, task_item.pid)
 
     #  use in subprocess
     if result_buffer and signal:

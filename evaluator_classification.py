@@ -186,6 +186,7 @@ class DataFlowGraph:
     def _construct_graph(self):
         tf.reset_default_graph()
         self.data_x, self.data_y, self.train_flag, mid_plug = self._find_ends()
+
         if self.net_item:
             blks = [[self.net_item.graph, self.net_item.cell_list]]
             mid_plug = self._construct_nblks(mid_plug, blks, self.cur_block_id)
@@ -195,6 +196,7 @@ class DataFlowGraph:
         drop_keep_rate = tf.cond(self.train_flag, lambda :DROP_OUT_KEEP_RATE, lambda :1.0)
         logits = tf.nn.dropout(mid_plug, keep_prob=drop_keep_rate)
         logits = self._makedense(logits, ('', [self.num_classes], ''), with_bias=True)
+        
         global_step = tf.Variable(0, trainable=False, name='global_step' + str(self.cur_block_id))
         accuracy = self._cal_accuracy(logits, self.data_y)
         loss = self._loss(logits, self.data_y)
@@ -205,6 +207,13 @@ class DataFlowGraph:
         self.run_ops['merged'] = merged
         self.run_ops['writer'] = writer
         self.run_ops['global_step'] = global_step
+
+    def _count_model_params(self):
+        tf_variables = [var for var in tf.trainable_variables() if var.name.startswith("block")]
+        num_vars = 0
+        for var in tf_variables:
+            num_vars += np.prod([dim.value for dim in var.get_shape()])
+        return num_vars
 
     def _cal_accuracy(self, logits, labels):
         correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
@@ -478,6 +487,7 @@ class Evaluator:
         self._log_item_info(task_item)
         computing_graph = DataFlowGraph(task_item)
         computing_graph._construct_graph()
+        task_item.model_params = computing_graph._count_model_params()  # count the params of the model
         score = self._train(computing_graph, task_item)
         if not task_item.network_item:  # we test the model saved by load it again
             score = self._test(computing_graph)
