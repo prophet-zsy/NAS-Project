@@ -18,7 +18,7 @@ from model import NetworkCIFAR as Network
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=96, help='batch size')
+parser.add_argument('--batch_size', type=int, default=96, help='batch size')  # 96
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--init_channels', type=int, default=36, help='num of init channels')
@@ -68,7 +68,8 @@ def main():
 
   test_queue = torch.utils.data.DataLoader(
       test_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)
-
+  
+  
   model.drop_path_prob = args.drop_path_prob
   test_acc, test_obj = infer(test_queue, model, criterion)
   logging.info('test_acc %f', test_acc)
