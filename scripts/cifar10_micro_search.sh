@@ -2,11 +2,11 @@
 
 export PYTHONPATH="$(pwd)"
 
-python src/cifar10/main.py \
+python3.5 ../src/cifar10/main.py \
   --data_format="NCHW" \
   --search_for="micro" \
   --reset_output_dir \
-  --data_path="data/cifar10" \
+  --data_path="../data/cifar10" \
   --output_dir="outputs" \
   --batch_size=160 \
   --num_epochs=150 \

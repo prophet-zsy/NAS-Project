@@ -1,13 +1,13 @@
 #!/bin/bash
 
 export PYTHONPATH="$(pwd)"
-
-python src/cifar10/main.py \
+CUDA_VISIBLE_DEVICES=0 \
+python3 ../src/cifar10/main.py \
   --data_format="NCHW" \
   --search_for="macro" \
   --reset_output_dir \
-  --data_path="data/cifar10" \
-  --output_dir="outputs" \
+  --data_path="../data/cifar10" \
+  --output_dir="../src/outputs" \
   --batch_size=128 \
   --num_epochs=310 \
   --log_every=50 \

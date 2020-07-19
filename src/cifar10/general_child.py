@@ -17,8 +17,8 @@ from src.cifar10.image_ops import relu
 from src.cifar10.image_ops import max_pool
 from src.cifar10.image_ops import global_avg_pool
 
-from src.utils import count_model_params
-from src.utils import get_train_ops
+from src.utils_1 import count_model_params
+from src.utils_1 import get_train_ops
 from src.common_ops import create_weight
 
 
@@ -52,6 +52,7 @@ class GeneralChild(Model):
                num_aggregate=None,
                num_replicas=None,
                data_format="NHWC",
+               classes=10,
                name="child",
                *args,
                **kwargs
@@ -77,6 +78,7 @@ class GeneralChild(Model):
       num_aggregate=num_aggregate,
       num_replicas=num_replicas,
       data_format=data_format,
+      classes=classes,
       name=name)
 
     self.whole_channels = whole_channels
@@ -238,7 +240,7 @@ class GeneralChild(Model):
           inp_c = x.get_shape()[1].value
         else:
           raise ValueError("Unknown data_format {0}".format(self.data_format))
-        w = create_weight("w", [inp_c, 10])
+        w = create_weight("w", [inp_c, self.classes])
         x = tf.matmul(x, w)
     return x
 
@@ -291,13 +293,17 @@ class GeneralChild(Model):
           y = self._pool_branch(inputs, is_training, out_filters, "max",
                                 start_idx=0)
         branches[tf.equal(count, 5)] = lambda: y
-      out = tf.case(branches, default=lambda: tf.constant(0, tf.float32),
-                    exclusive=True)
+#      out = tf.case(branches, default=lambda: tf.constant(0, tf.float32),
+#                    exclusive=True)
 
       if self.data_format == "NHWC":
-        out.set_shape([None, inp_h, inp_w, out_filters])
+#        out.set_shape([None, inp_h, inp_w, out_filters])
+        out_shape = [self.batch_size, inp_h, inp_w, out_filters]
       elif self.data_format == "NCHW":
-        out.set_shape([None, out_filters, inp_h, inp_w])
+#        out.set_shape([None, out_filters, inp_h, inp_w])
+        out_shape = [self.batch_size, out_filters, inp_h, inp_w]
+      out = tf.case(branches, default=lambda: tf.constant(0, tf.float32, shape=out_shape),
+                    exclusive=True)
     else:
       count = self.sample_arc[start_idx:start_idx + 2 * self.num_branches]
       branches = []

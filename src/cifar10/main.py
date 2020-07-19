@@ -3,21 +3,21 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import cPickle as pickle
+import pickle as pickle
 import shutil
 import sys
 import time
 
 import numpy as np
 import tensorflow as tf
-
-from src import utils
-from src.utils import Logger
-from src.utils import DEFINE_boolean
-from src.utils import DEFINE_float
-from src.utils import DEFINE_integer
-from src.utils import DEFINE_string
-from src.utils import print_user_flags
+sys.path.append("..")
+from src import utils_1
+from src.utils_1 import Logger
+from src.utils_1 import DEFINE_boolean
+from src.utils_1 import DEFINE_float
+from src.utils_1 import DEFINE_integer
+from src.utils_1 import DEFINE_string
+from src.utils_1 import print_user_flags
 
 from src.cifar10.data_utils import read_data
 from src.cifar10.general_controller import GeneralController
@@ -31,7 +31,7 @@ FLAGS = flags.FLAGS
 
 DEFINE_boolean("reset_output_dir", False, "Delete output_dir if exists.")
 DEFINE_string("data_path", "", "")
-DEFINE_string("output_dir", "", "")
+DEFINE_string("output_dir", "", "./")
 DEFINE_string("data_format", "NHWC", "'NHWC' or 'NCWH'")
 DEFINE_string("search_for", None, "Must be [macro|micro]")
 
@@ -123,6 +123,7 @@ def get_ops(images, labels):
     num_epochs=FLAGS.num_epochs,
     l2_reg=FLAGS.child_l2_reg,
     data_format=FLAGS.data_format,
+    classes=int(FLAGS.data_path.split("/")[-1][5:]),
     batch_size=FLAGS.batch_size,
     clip_mode="norm",
     grad_bound=FLAGS.child_grad_bound,
@@ -322,11 +323,20 @@ def train():
                       end = start + 1 + layer_id
                     else:
                       end = start + 2 * FLAGS.child_num_branches + layer_id
-                    print(np.reshape(arc[start: end], [-1]))
+                    model_layer = np.reshape(arc[start: end], [-1])
+                    print(model_layer)
+                    with open("sequence.txt", "a") as f:
+                        model_layer = list(model_layer)
+                        for item in model_layer:
+                            f.write(str(item))
+                            f.write(" ")
+                        f.write("\n")
                     start = end
                 print("val_acc={:<6.4f}".format(acc))
                 print("-" * 80)
-
+                with open("sequence.txt", "a") as f:
+                    f.write("val_acc={:<6.4f}\n".format(acc))
+                    f.write("-" * 80 + "\n")
             print("Epoch {}: Eval".format(epoch))
             if FLAGS.child_fixed_arc is None:
               ops["eval_func"](sess, "valid")
@@ -338,6 +348,12 @@ def train():
 
 def main(_):
   print("-" * 80)
+  print(FLAGS.data_path)
+  print(FLAGS.data_path)
+  print(FLAGS.data_path)
+  print(FLAGS.data_path)
+  print(FLAGS.data_path)
+  print("{} is datapath".format(FLAGS.data_path))
   if not os.path.isdir(FLAGS.output_dir):
     print("Path {} does not exist. Creating.".format(FLAGS.output_dir))
     os.makedirs(FLAGS.output_dir)
@@ -351,7 +367,7 @@ def main(_):
   print("Logging to {}".format(log_file))
   sys.stdout = Logger(log_file)
 
-  utils.print_user_flags()
+  utils_1.print_user_flags()
   train()
 
 

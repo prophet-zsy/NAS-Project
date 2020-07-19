@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from src.controller import Controller
-from src.utils import get_train_ops
+from src.utils_1 import get_train_ops
 from src.common_ops import stack_lstm
 
 from tensorflow.python.training import moving_averages
@@ -43,8 +43,8 @@ class GeneralController(Controller):
                *args,
                **kwargs):
 
-    print "-" * 80
-    print "Building ConvController"
+    print ("-" * 80)
+    print ("Building ConvController")
 
     self.search_for = search_for
     self.search_whole_channels = search_whole_channels
@@ -85,7 +85,7 @@ class GeneralController(Controller):
     with tf.variable_scope(self.name, initializer=initializer):
       with tf.variable_scope("lstm"):
         self.w_lstm = []
-        for layer_id in xrange(self.lstm_num_layers):
+        for layer_id in range(self.lstm_num_layers):
           with tf.variable_scope("layer_{}".format(layer_id)):
             w = tf.get_variable(
               "w", [2 * self.lstm_size, 4 * self.lstm_size])
@@ -102,7 +102,7 @@ class GeneralController(Controller):
       else:
         self.w_emb = {"start": [], "count": []}
         with tf.variable_scope("emb"):
-          for branch_id in xrange(self.num_branches):
+          for branch_id in range(self.num_branches):
             with tf.variable_scope("branch_{}".format(branch_id)):
               self.w_emb["start"].append(tf.get_variable(
                 "w_start", [self.out_filters, self.lstm_size]));
@@ -111,7 +111,7 @@ class GeneralController(Controller):
 
         self.w_soft = {"start": [], "count": []}
         with tf.variable_scope("softmax"):
-          for branch_id in xrange(self.num_branches):
+          for branch_id in range(self.num_branches):
             with tf.variable_scope("branch_{}".format(branch_id)):
               self.w_soft["start"].append(tf.get_variable(
                 "w_start", [self.lstm_size, self.out_filters]));
@@ -126,8 +126,8 @@ class GeneralController(Controller):
   def _build_sampler(self):
     """Build the sampler ops and the log_prob ops."""
 
-    print "-" * 80
-    print "Build controller sampler"
+    print ("-" * 80)
+    print ("Build controller sampler")
     anchors = []
     anchors_w_1 = []
 
@@ -138,13 +138,13 @@ class GeneralController(Controller):
     skip_penaltys = []
 
     prev_c = [tf.zeros([1, self.lstm_size], tf.float32) for _ in
-              xrange(self.lstm_num_layers)]
+              range(self.lstm_num_layers)]
     prev_h = [tf.zeros([1, self.lstm_size], tf.float32) for _ in
-              xrange(self.lstm_num_layers)]
+              range(self.lstm_num_layers)]
     inputs = self.g_emb
     skip_targets = tf.constant([1.0 - self.skip_target, self.skip_target],
                                dtype=tf.float32)
-    for layer_id in xrange(self.num_layers):
+    for layer_id in range(self.num_layers):
       if self.search_whole_channels:
         next_c, next_h = stack_lstm(inputs, prev_c, prev_h, self.w_lstm)
         prev_c, prev_h = next_c, next_h
@@ -169,7 +169,7 @@ class GeneralController(Controller):
         entropys.append(entropy)
         inputs = tf.nn.embedding_lookup(self.w_emb, branch_id)
       else:
-        for branch_id in xrange(self.num_branches):
+        for branch_id in range(self.num_branches):
           next_c, next_h = stack_lstm(inputs, prev_c, prev_h, self.w_lstm)
           prev_c, prev_h = next_c, next_h
           logit = tf.matmul(next_h[-1], self.w_soft["start"][branch_id])
@@ -212,6 +212,9 @@ class GeneralController(Controller):
 
       next_c, next_h = stack_lstm(inputs, prev_c, prev_h, self.w_lstm)
       prev_c, prev_h = next_c, next_h
+      print(prev_c)
+      print(prev_h)
+
 
       if layer_id > 0:
         query = tf.concat(anchors_w_1, axis=0)
@@ -295,9 +298,9 @@ class GeneralController(Controller):
         0, dtype=tf.int32, trainable=False, name="train_step")
     tf_variables = [var
         for var in tf.trainable_variables() if var.name.startswith(self.name)]
-    print "-" * 80
+    print ("-" * 80)
     for var in tf_variables:
-      print var
+      print (var)
 
     self.train_op, self.lr, self.grad_norm, self.optimizer = get_train_ops(
       self.loss,

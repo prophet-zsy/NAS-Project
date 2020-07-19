@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 from src.controller import Controller
-from src.utils import get_train_ops
+from src.utils_1 import get_train_ops
 from src.common_ops import stack_lstm
 
 from tensorflow.python.training import moving_averages

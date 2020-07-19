@@ -27,13 +27,13 @@ fixed_arc="$fixed_arc 3 0 1 0 1 1 0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 0"
 fixed_arc="$fixed_arc 0 1 0 1 0 1 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 0 0"
 fixed_arc="$fixed_arc 0 1 1 0 0 0 1 1 1 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0"
 
-
-python src/cifar10/main.py \
+CUDA_VISIBLE_DEVICES=0 \
+python3 ../src/cifar10/main.py \
   --data_format="NCHW" \
   --search_for="macro" \
   --reset_output_dir \
-  --data_path="data/cifar10" \
-  --output_dir="outputs" \
+  --data_path="../data/cifar10" \
+  --output_dir="../src/outputs" \
   --batch_size=100 \
   --num_epochs=310 \
   --log_every=50 \
@@ -65,3 +65,4 @@ python src/cifar10/main.py \
   --controller_skip_weight=0.8 \
   "$@"
 
+#  controller_search_whole_channels exist present that it is True? or False? implicitly

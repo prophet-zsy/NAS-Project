@@ -18,8 +18,8 @@ from src.cifar10.image_ops import max_pool
 from src.cifar10.image_ops import drop_path
 from src.cifar10.image_ops import global_avg_pool
 
-from src.utils import count_model_params
-from src.utils import get_train_ops
+from src.utils_1 import count_model_params
+from src.utils_1 import get_train_ops
 from src.common_ops import create_weight
 
 class MicroChild(Model):
@@ -53,6 +53,7 @@ class MicroChild(Model):
                num_aggregate=None,
                num_replicas=None,
                data_format="NHWC",
+               classes=10,
                name="child",
                **kwargs
               ):
@@ -77,6 +78,7 @@ class MicroChild(Model):
       num_aggregate=num_aggregate,
       num_replicas=num_replicas,
       data_format=data_format,
+      classes=classes,
       name=name)
 
     if self.data_format == "NHWC":
@@ -334,7 +336,7 @@ class MicroChild(Model):
         x = tf.nn.dropout(x, self.keep_prob)
       with tf.variable_scope("fc"):
         inp_c = self._get_C(x)
-        w = create_weight("w", [inp_c, 10])
+        w = create_weight("w", [inp_c, self.classes])
         x = tf.matmul(x, w)
     return x
 
