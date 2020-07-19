@@ -1,0 +1,1282 @@
+
+ epoch 1/640:
+iteration: 1000/1000, cost_time: 266s, train_loss: 1.8432, train_acc: 0.4627, test_loss: 1.4428, test_acc: 0.5174
+ epoch 2/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 1.3483, train_acc: 0.5892, test_loss: 1.0990, test_acc: 0.6260
+ epoch 3/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 1.0888, train_acc: 0.6889, test_loss: 0.9019, test_acc: 0.6944
+ epoch 4/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.9363, train_acc: 0.7452, test_loss: 0.7568, test_acc: 0.7403
+ epoch 5/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.8277, train_acc: 0.7882, test_loss: 0.6701, test_acc: 0.7689
+ epoch 6/640:
+iteration: 1000/1000, cost_time: 259s, train_loss: 0.7492, train_acc: 0.8162, test_loss: 0.7090, test_acc: 0.7649
+ epoch 7/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.6955, train_acc: 0.8377, test_loss: 0.5730, test_acc: 0.8053
+ epoch 8/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.6464, train_acc: 0.8594, test_loss: 0.5793, test_acc: 0.8045
+ epoch 9/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.6026, train_acc: 0.8778, test_loss: 0.5034, test_acc: 0.8343
+ epoch 10/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.5679, train_acc: 0.8924, test_loss: 0.5097, test_acc: 0.8297
+ epoch 11/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.5431, train_acc: 0.9022, test_loss: 0.4353, test_acc: 0.8540
+ epoch 12/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.5210, train_acc: 0.9101, test_loss: 0.4307, test_acc: 0.8550
+ epoch 13/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4964, train_acc: 0.9220, test_loss: 0.4478, test_acc: 0.8527
+ epoch 14/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4786, train_acc: 0.9280, test_loss: 0.5397, test_acc: 0.8250
+ epoch 15/640:
+iteration: 1000/1000, cost_time: 259s, train_loss: 0.4658, train_acc: 0.9329, test_loss: 0.4421, test_acc: 0.8564
+ epoch 16/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4466, train_acc: 0.9406, test_loss: 0.4598, test_acc: 0.8509
+ epoch 17/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4373, train_acc: 0.9445, test_loss: 0.3854, test_acc: 0.8722
+ epoch 18/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4234, train_acc: 0.9501, test_loss: 0.4114, test_acc: 0.8655
+ epoch 19/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4169, train_acc: 0.9530, test_loss: 0.3844, test_acc: 0.8682
+ epoch 20/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.4050, train_acc: 0.9551, test_loss: 0.3636, test_acc: 0.8801
+ epoch 21/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3976, train_acc: 0.9588, test_loss: 0.3596, test_acc: 0.8762
+ epoch 22/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3893, train_acc: 0.9603, test_loss: 0.3647, test_acc: 0.8784
+ epoch 23/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.3827, train_acc: 0.9625, test_loss: 0.3566, test_acc: 0.8829
+ epoch 24/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3731, train_acc: 0.9655, test_loss: 0.4530, test_acc: 0.8577
+ epoch 25/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3677, train_acc: 0.9681, test_loss: 0.3962, test_acc: 0.8707
+ epoch 26/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3663, train_acc: 0.9675, test_loss: 0.3813, test_acc: 0.8746
+ epoch 27/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.3553, train_acc: 0.9694, test_loss: 0.3755, test_acc: 0.8801
+ epoch 28/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3531, train_acc: 0.9723, test_loss: 0.3847, test_acc: 0.8750
+ epoch 29/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3528, train_acc: 0.9709, test_loss: 0.3311, test_acc: 0.8882
+ epoch 30/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3411, train_acc: 0.9728, test_loss: 0.3380, test_acc: 0.8916
+ epoch 31/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.3360, train_acc: 0.9742, test_loss: 0.3122, test_acc: 0.8979
+ epoch 32/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.3329, train_acc: 0.9745, test_loss: 0.2994, test_acc: 0.9027
+ epoch 33/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3290, train_acc: 0.9757, test_loss: 0.3890, test_acc: 0.8759
+ epoch 34/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3253, train_acc: 0.9767, test_loss: 0.3176, test_acc: 0.8957
+ epoch 35/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3170, train_acc: 0.9783, test_loss: 0.3277, test_acc: 0.8946
+ epoch 36/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.3200, train_acc: 0.9782, test_loss: 0.3034, test_acc: 0.8995
+ epoch 37/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3192, train_acc: 0.9781, test_loss: 0.3289, test_acc: 0.8937
+ epoch 38/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3132, train_acc: 0.9804, test_loss: 0.2901, test_acc: 0.9076
+ epoch 39/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3090, train_acc: 0.9802, test_loss: 0.2928, test_acc: 0.9058
+ epoch 40/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3071, train_acc: 0.9823, test_loss: 0.3168, test_acc: 0.8978
+ epoch 41/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.3013, train_acc: 0.9809, test_loss: 0.2536, test_acc: 0.9132
+ epoch 42/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2978, train_acc: 0.9812, test_loss: 0.3240, test_acc: 0.8932
+ epoch 43/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2984, train_acc: 0.9820, test_loss: 0.3006, test_acc: 0.9064
+ epoch 44/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2915, train_acc: 0.9831, test_loss: 0.2984, test_acc: 0.9019
+ epoch 45/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2958, train_acc: 0.9833, test_loss: 0.2898, test_acc: 0.9049
+ epoch 46/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2879, train_acc: 0.9833, test_loss: 0.3103, test_acc: 0.8983
+ epoch 47/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2902, train_acc: 0.9840, test_loss: 0.3020, test_acc: 0.9060
+ epoch 48/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2860, train_acc: 0.9842, test_loss: 0.3159, test_acc: 0.8992
+ epoch 49/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2828, train_acc: 0.9848, test_loss: 0.2940, test_acc: 0.9052
+ epoch 50/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2770, train_acc: 0.9861, test_loss: 0.2602, test_acc: 0.9162
+ epoch 51/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2769, train_acc: 0.9858, test_loss: 0.2661, test_acc: 0.9169
+ epoch 52/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2780, train_acc: 0.9861, test_loss: 0.2759, test_acc: 0.9124
+ epoch 53/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2757, train_acc: 0.9862, test_loss: 0.2991, test_acc: 0.9019
+ epoch 54/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2742, train_acc: 0.9856, test_loss: 0.2966, test_acc: 0.9060
+ epoch 55/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2753, train_acc: 0.9869, test_loss: 0.2678, test_acc: 0.9131
+ epoch 56/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2692, train_acc: 0.9861, test_loss: 0.2766, test_acc: 0.9080
+ epoch 57/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2700, train_acc: 0.9868, test_loss: 0.2557, test_acc: 0.9182
+ epoch 58/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2677, train_acc: 0.9873, test_loss: 0.3211, test_acc: 0.8966
+ epoch 59/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2686, train_acc: 0.9873, test_loss: 0.2684, test_acc: 0.9127
+ epoch 60/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2697, train_acc: 0.9872, test_loss: 0.2879, test_acc: 0.9109
+ epoch 61/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2642, train_acc: 0.9871, test_loss: 0.2723, test_acc: 0.9107
+ epoch 62/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2646, train_acc: 0.9870, test_loss: 0.3316, test_acc: 0.8985
+ epoch 63/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2602, train_acc: 0.9886, test_loss: 0.2868, test_acc: 0.9090
+ epoch 64/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2612, train_acc: 0.9873, test_loss: 0.2889, test_acc: 0.9059
+ epoch 65/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2602, train_acc: 0.9885, test_loss: 0.3442, test_acc: 0.8925
+ epoch 66/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2591, train_acc: 0.9876, test_loss: 0.2793, test_acc: 0.9106
+ epoch 67/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2582, train_acc: 0.9881, test_loss: 0.2870, test_acc: 0.9099
+ epoch 68/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2573, train_acc: 0.9889, test_loss: 0.2730, test_acc: 0.9135
+ epoch 69/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2586, train_acc: 0.9883, test_loss: 0.2740, test_acc: 0.9124
+ epoch 70/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2568, train_acc: 0.9887, test_loss: 0.3134, test_acc: 0.8997
+ epoch 71/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2512, train_acc: 0.9894, test_loss: 0.3288, test_acc: 0.8960
+ epoch 72/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2519, train_acc: 0.9888, test_loss: 0.2792, test_acc: 0.9133
+ epoch 73/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2572, train_acc: 0.9888, test_loss: 0.2811, test_acc: 0.9075
+ epoch 74/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2488, train_acc: 0.9898, test_loss: 0.2860, test_acc: 0.9093
+ epoch 75/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2492, train_acc: 0.9902, test_loss: 0.4000, test_acc: 0.8840
+ epoch 76/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2550, train_acc: 0.9884, test_loss: 0.2943, test_acc: 0.9062
+ epoch 77/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2506, train_acc: 0.9898, test_loss: 0.2710, test_acc: 0.9121
+ epoch 78/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2446, train_acc: 0.9902, test_loss: 0.3599, test_acc: 0.8866
+ epoch 79/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2476, train_acc: 0.9902, test_loss: 0.3183, test_acc: 0.8999
+ epoch 80/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2508, train_acc: 0.9903, test_loss: 0.3199, test_acc: 0.9010
+ epoch 81/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2441, train_acc: 0.9906, test_loss: 0.3106, test_acc: 0.9061
+ epoch 82/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2457, train_acc: 0.9898, test_loss: 0.2463, test_acc: 0.9190
+ epoch 83/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2518, train_acc: 0.9901, test_loss: 0.2394, test_acc: 0.9212
+ epoch 84/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2491, train_acc: 0.9901, test_loss: 0.3031, test_acc: 0.9048
+ epoch 85/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2434, train_acc: 0.9905, test_loss: 0.2834, test_acc: 0.9099
+ epoch 86/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2412, train_acc: 0.9904, test_loss: 0.2913, test_acc: 0.9069
+ epoch 87/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2452, train_acc: 0.9898, test_loss: 0.2331, test_acc: 0.9253
+ epoch 88/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2376, train_acc: 0.9910, test_loss: 0.2910, test_acc: 0.9093
+ epoch 89/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2431, train_acc: 0.9908, test_loss: 0.2753, test_acc: 0.9124
+ epoch 90/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2424, train_acc: 0.9913, test_loss: 0.2703, test_acc: 0.9144
+ epoch 91/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2372, train_acc: 0.9913, test_loss: 0.2804, test_acc: 0.9123
+ epoch 92/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2389, train_acc: 0.9907, test_loss: 0.2697, test_acc: 0.9135
+ epoch 93/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2359, train_acc: 0.9914, test_loss: 0.2969, test_acc: 0.9061
+ epoch 94/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2398, train_acc: 0.9910, test_loss: 0.2530, test_acc: 0.9199
+ epoch 95/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2389, train_acc: 0.9905, test_loss: 0.3462, test_acc: 0.9014
+ epoch 96/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2361, train_acc: 0.9913, test_loss: 0.2662, test_acc: 0.9142
+ epoch 97/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2383, train_acc: 0.9911, test_loss: 0.2945, test_acc: 0.9129
+ epoch 98/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2387, train_acc: 0.9906, test_loss: 0.2463, test_acc: 0.9200
+ epoch 99/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2386, train_acc: 0.9916, test_loss: 0.2892, test_acc: 0.9102
+ epoch 100/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2328, train_acc: 0.9913, test_loss: 0.2383, test_acc: 0.9192
+ epoch 101/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2401, train_acc: 0.9916, test_loss: 0.2588, test_acc: 0.9169
+ epoch 102/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2329, train_acc: 0.9918, test_loss: 0.2696, test_acc: 0.9162
+ epoch 103/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2326, train_acc: 0.9919, test_loss: 0.2677, test_acc: 0.9171
+ epoch 104/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2297, train_acc: 0.9921, test_loss: 0.3255, test_acc: 0.8990
+ epoch 105/640:
+iteration: 1000/1000, cost_time: 259s, train_loss: 0.2316, train_acc: 0.9916, test_loss: 0.2433, test_acc: 0.9190
+ epoch 106/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2243, train_acc: 0.9924, test_loss: 0.3000, test_acc: 0.9070
+ epoch 107/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2301, train_acc: 0.9920, test_loss: 0.2597, test_acc: 0.9176
+ epoch 108/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2354, train_acc: 0.9910, test_loss: 0.2947, test_acc: 0.9065
+ epoch 109/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2359, train_acc: 0.9916, test_loss: 0.3141, test_acc: 0.9030
+ epoch 110/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2295, train_acc: 0.9922, test_loss: 0.2516, test_acc: 0.9196
+ epoch 111/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2292, train_acc: 0.9920, test_loss: 0.2926, test_acc: 0.9107
+ epoch 112/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2254, train_acc: 0.9935, test_loss: 0.2426, test_acc: 0.9205
+ epoch 113/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2310, train_acc: 0.9913, test_loss: 0.2415, test_acc: 0.9227
+ epoch 114/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2263, train_acc: 0.9923, test_loss: 0.2472, test_acc: 0.9220
+ epoch 115/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2280, train_acc: 0.9922, test_loss: 0.2568, test_acc: 0.9186
+ epoch 116/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2258, train_acc: 0.9914, test_loss: 0.3025, test_acc: 0.9071
+ epoch 117/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2287, train_acc: 0.9924, test_loss: 0.3240, test_acc: 0.8975
+ epoch 118/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2281, train_acc: 0.9918, test_loss: 0.2463, test_acc: 0.9197
+ epoch 119/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2264, train_acc: 0.9927, test_loss: 0.2729, test_acc: 0.9148
+ epoch 120/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2231, train_acc: 0.9931, test_loss: 0.2538, test_acc: 0.9176
+ epoch 121/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2260, train_acc: 0.9929, test_loss: 0.2614, test_acc: 0.9163
+ epoch 122/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2239, train_acc: 0.9923, test_loss: 0.2644, test_acc: 0.9183
+ epoch 123/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2267, train_acc: 0.9929, test_loss: 0.2606, test_acc: 0.9179
+ epoch 124/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2226, train_acc: 0.9930, test_loss: 0.2708, test_acc: 0.9162
+ epoch 125/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2266, train_acc: 0.9918, test_loss: 0.2703, test_acc: 0.9158
+ epoch 126/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2220, train_acc: 0.9930, test_loss: 0.2744, test_acc: 0.9136
+ epoch 127/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2236, train_acc: 0.9926, test_loss: 0.2726, test_acc: 0.9123
+ epoch 128/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2237, train_acc: 0.9922, test_loss: 0.2355, test_acc: 0.9228
+ epoch 129/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2191, train_acc: 0.9934, test_loss: 0.2702, test_acc: 0.9152
+ epoch 130/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2209, train_acc: 0.9931, test_loss: 0.2921, test_acc: 0.9089
+ epoch 131/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2211, train_acc: 0.9932, test_loss: 0.2578, test_acc: 0.9179
+ epoch 132/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2186, train_acc: 0.9923, test_loss: 0.2954, test_acc: 0.9080
+ epoch 133/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2212, train_acc: 0.9927, test_loss: 0.2926, test_acc: 0.9105
+ epoch 134/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2163, train_acc: 0.9931, test_loss: 0.2453, test_acc: 0.9249
+ epoch 135/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2238, train_acc: 0.9929, test_loss: 0.2265, test_acc: 0.9279
+ epoch 136/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2149, train_acc: 0.9926, test_loss: 0.2832, test_acc: 0.9109
+ epoch 137/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2174, train_acc: 0.9928, test_loss: 0.2407, test_acc: 0.9241
+ epoch 138/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2222, train_acc: 0.9925, test_loss: 0.2414, test_acc: 0.9223
+ epoch 139/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2159, train_acc: 0.9934, test_loss: 0.2730, test_acc: 0.9167
+ epoch 140/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2200, train_acc: 0.9936, test_loss: 0.2750, test_acc: 0.9107
+ epoch 141/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2126, train_acc: 0.9937, test_loss: 0.2681, test_acc: 0.9183
+ epoch 142/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2172, train_acc: 0.9930, test_loss: 0.2428, test_acc: 0.9239
+ epoch 143/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2100, train_acc: 0.9936, test_loss: 0.2964, test_acc: 0.9112
+ epoch 144/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2132, train_acc: 0.9938, test_loss: 0.2592, test_acc: 0.9192
+ epoch 145/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2170, train_acc: 0.9935, test_loss: 0.2681, test_acc: 0.9144
+ epoch 146/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2152, train_acc: 0.9934, test_loss: 0.2812, test_acc: 0.9149
+ epoch 147/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2133, train_acc: 0.9937, test_loss: 0.2830, test_acc: 0.9125
+ epoch 148/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.2125, train_acc: 0.9932, test_loss: 0.2407, test_acc: 0.9262
+ epoch 149/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2156, train_acc: 0.9934, test_loss: 0.2679, test_acc: 0.9193
+ epoch 150/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2130, train_acc: 0.9930, test_loss: 0.2577, test_acc: 0.9211
+ epoch 151/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2111, train_acc: 0.9939, test_loss: 0.3025, test_acc: 0.9086
+ epoch 152/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2114, train_acc: 0.9940, test_loss: 0.3308, test_acc: 0.9019
+ epoch 153/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2113, train_acc: 0.9933, test_loss: 0.2921, test_acc: 0.9097
+ epoch 154/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2100, train_acc: 0.9939, test_loss: 0.2845, test_acc: 0.9140
+ epoch 155/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2130, train_acc: 0.9940, test_loss: 0.2765, test_acc: 0.9158
+ epoch 156/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2062, train_acc: 0.9938, test_loss: 0.3419, test_acc: 0.8927
+ epoch 157/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2067, train_acc: 0.9940, test_loss: 0.2732, test_acc: 0.9184
+ epoch 158/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2052, train_acc: 0.9941, test_loss: 0.2680, test_acc: 0.9185
+ epoch 159/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2065, train_acc: 0.9944, test_loss: 0.2300, test_acc: 0.9269
+ epoch 160/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2082, train_acc: 0.9941, test_loss: 0.2352, test_acc: 0.9257
+ epoch 161/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2049, train_acc: 0.9941, test_loss: 0.2452, test_acc: 0.9217
+ epoch 162/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2069, train_acc: 0.9938, test_loss: 0.2320, test_acc: 0.9281
+ epoch 163/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2070, train_acc: 0.9942, test_loss: 0.2349, test_acc: 0.9231
+ epoch 164/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2064, train_acc: 0.9943, test_loss: 0.2554, test_acc: 0.9199
+ epoch 165/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2072, train_acc: 0.9934, test_loss: 0.2766, test_acc: 0.9163
+ epoch 166/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2009, train_acc: 0.9937, test_loss: 0.2337, test_acc: 0.9269
+ epoch 167/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2059, train_acc: 0.9942, test_loss: 0.2772, test_acc: 0.9183
+ epoch 168/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2088, train_acc: 0.9938, test_loss: 0.2421, test_acc: 0.9242
+ epoch 169/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.2030, train_acc: 0.9945, test_loss: 0.2576, test_acc: 0.9197
+ epoch 170/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2065, train_acc: 0.9946, test_loss: 0.2402, test_acc: 0.9207
+ epoch 171/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2006, train_acc: 0.9942, test_loss: 0.2365, test_acc: 0.9245
+ epoch 172/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2025, train_acc: 0.9944, test_loss: 0.2455, test_acc: 0.9235
+ epoch 173/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2061, train_acc: 0.9943, test_loss: 0.2226, test_acc: 0.9313
+ epoch 174/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2017, train_acc: 0.9937, test_loss: 0.2187, test_acc: 0.9307
+ epoch 175/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2003, train_acc: 0.9945, test_loss: 0.2890, test_acc: 0.9136
+ epoch 176/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2056, train_acc: 0.9942, test_loss: 0.2363, test_acc: 0.9278
+ epoch 177/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2003, train_acc: 0.9950, test_loss: 0.2376, test_acc: 0.9260
+ epoch 178/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2009, train_acc: 0.9945, test_loss: 0.2539, test_acc: 0.9177
+ epoch 179/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.2029, train_acc: 0.9947, test_loss: 0.3287, test_acc: 0.9020
+ epoch 180/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.2028, train_acc: 0.9939, test_loss: 0.2521, test_acc: 0.9225
+ epoch 181/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1969, train_acc: 0.9949, test_loss: 0.2457, test_acc: 0.9247
+ epoch 182/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1949, train_acc: 0.9949, test_loss: 0.2918, test_acc: 0.9116
+ epoch 183/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1952, train_acc: 0.9946, test_loss: 0.2391, test_acc: 0.9267
+ epoch 184/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1930, train_acc: 0.9942, test_loss: 0.2572, test_acc: 0.9219
+ epoch 185/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1998, train_acc: 0.9941, test_loss: 0.2586, test_acc: 0.9219
+ epoch 186/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1993, train_acc: 0.9949, test_loss: 0.2428, test_acc: 0.9240
+ epoch 187/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1988, train_acc: 0.9943, test_loss: 0.2414, test_acc: 0.9270
+ epoch 188/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1929, train_acc: 0.9950, test_loss: 0.2441, test_acc: 0.9264
+ epoch 189/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1935, train_acc: 0.9947, test_loss: 0.2954, test_acc: 0.9103
+ epoch 190/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1960, train_acc: 0.9942, test_loss: 0.2622, test_acc: 0.9245
+ epoch 191/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1946, train_acc: 0.9949, test_loss: 0.2597, test_acc: 0.9207
+ epoch 192/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1960, train_acc: 0.9948, test_loss: 0.2203, test_acc: 0.9305
+ epoch 193/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1929, train_acc: 0.9953, test_loss: 0.2588, test_acc: 0.9227
+ epoch 194/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1952, train_acc: 0.9947, test_loss: 0.2447, test_acc: 0.9263
+ epoch 195/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1929, train_acc: 0.9954, test_loss: 0.2767, test_acc: 0.9185
+ epoch 196/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1955, train_acc: 0.9940, test_loss: 0.2359, test_acc: 0.9234
+ epoch 197/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1954, train_acc: 0.9953, test_loss: 0.2468, test_acc: 0.9219
+ epoch 198/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1925, train_acc: 0.9952, test_loss: 0.2295, test_acc: 0.9292
+ epoch 199/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1932, train_acc: 0.9947, test_loss: 0.2419, test_acc: 0.9236
+ epoch 200/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1904, train_acc: 0.9950, test_loss: 0.2684, test_acc: 0.9216
+ epoch 201/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1966, train_acc: 0.9940, test_loss: 0.2448, test_acc: 0.9219
+ epoch 202/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1875, train_acc: 0.9955, test_loss: 0.2345, test_acc: 0.9286
+ epoch 203/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1902, train_acc: 0.9955, test_loss: 0.2580, test_acc: 0.9202
+ epoch 204/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1857, train_acc: 0.9950, test_loss: 0.2479, test_acc: 0.9269
+ epoch 205/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1890, train_acc: 0.9955, test_loss: 0.2098, test_acc: 0.9336
+ epoch 206/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1877, train_acc: 0.9953, test_loss: 0.2292, test_acc: 0.9287
+ epoch 207/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1903, train_acc: 0.9951, test_loss: 0.2445, test_acc: 0.9271
+ epoch 208/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1883, train_acc: 0.9956, test_loss: 0.2571, test_acc: 0.9207
+ epoch 209/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1890, train_acc: 0.9953, test_loss: 0.2390, test_acc: 0.9246
+ epoch 210/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1882, train_acc: 0.9951, test_loss: 0.2691, test_acc: 0.9193
+ epoch 211/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1883, train_acc: 0.9953, test_loss: 0.2620, test_acc: 0.9221
+ epoch 212/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1884, train_acc: 0.9951, test_loss: 0.2610, test_acc: 0.9221
+ epoch 213/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1856, train_acc: 0.9953, test_loss: 0.2150, test_acc: 0.9328
+ epoch 214/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1865, train_acc: 0.9948, test_loss: 0.2436, test_acc: 0.9239
+ epoch 215/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1812, train_acc: 0.9957, test_loss: 0.2596, test_acc: 0.9182
+ epoch 216/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1852, train_acc: 0.9955, test_loss: 0.2439, test_acc: 0.9225
+ epoch 217/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1838, train_acc: 0.9953, test_loss: 0.2328, test_acc: 0.9264
+ epoch 218/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1859, train_acc: 0.9952, test_loss: 0.2292, test_acc: 0.9290
+ epoch 219/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1806, train_acc: 0.9952, test_loss: 0.2278, test_acc: 0.9305
+ epoch 220/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1821, train_acc: 0.9954, test_loss: 0.2732, test_acc: 0.9212
+ epoch 221/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1849, train_acc: 0.9958, test_loss: 0.2238, test_acc: 0.9325
+ epoch 222/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1829, train_acc: 0.9955, test_loss: 0.2412, test_acc: 0.9263
+ epoch 223/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1811, train_acc: 0.9959, test_loss: 0.2115, test_acc: 0.9325
+ epoch 224/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1789, train_acc: 0.9961, test_loss: 0.2462, test_acc: 0.9238
+ epoch 225/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.1780, train_acc: 0.9958, test_loss: 0.2246, test_acc: 0.9311
+ epoch 226/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1850, train_acc: 0.9957, test_loss: 0.2617, test_acc: 0.9209
+ epoch 227/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1812, train_acc: 0.9950, test_loss: 0.2736, test_acc: 0.9180
+ epoch 228/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1761, train_acc: 0.9955, test_loss: 0.2642, test_acc: 0.9219
+ epoch 229/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1776, train_acc: 0.9958, test_loss: 0.2383, test_acc: 0.9264
+ epoch 230/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1814, train_acc: 0.9959, test_loss: 0.2355, test_acc: 0.9298
+ epoch 231/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1771, train_acc: 0.9958, test_loss: 0.2848, test_acc: 0.9154
+ epoch 232/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1777, train_acc: 0.9953, test_loss: 0.2345, test_acc: 0.9273
+ epoch 233/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1747, train_acc: 0.9961, test_loss: 0.2217, test_acc: 0.9297
+ epoch 234/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1766, train_acc: 0.9959, test_loss: 0.2186, test_acc: 0.9316
+ epoch 235/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1789, train_acc: 0.9959, test_loss: 0.3115, test_acc: 0.9051
+ epoch 236/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1778, train_acc: 0.9960, test_loss: 0.2485, test_acc: 0.9256
+ epoch 237/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1760, train_acc: 0.9956, test_loss: 0.2317, test_acc: 0.9285
+ epoch 238/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1734, train_acc: 0.9959, test_loss: 0.2430, test_acc: 0.9261
+ epoch 239/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1766, train_acc: 0.9960, test_loss: 0.2441, test_acc: 0.9222
+ epoch 240/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1731, train_acc: 0.9957, test_loss: 0.2723, test_acc: 0.9183
+ epoch 241/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1718, train_acc: 0.9958, test_loss: 0.2572, test_acc: 0.9228
+ epoch 242/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1729, train_acc: 0.9955, test_loss: 0.2214, test_acc: 0.9336
+ epoch 243/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1681, train_acc: 0.9964, test_loss: 0.2241, test_acc: 0.9312
+ epoch 244/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1793, train_acc: 0.9960, test_loss: 0.2247, test_acc: 0.9297
+ epoch 245/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1697, train_acc: 0.9962, test_loss: 0.2205, test_acc: 0.9312
+ epoch 246/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1687, train_acc: 0.9962, test_loss: 0.2348, test_acc: 0.9316
+ epoch 247/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1711, train_acc: 0.9963, test_loss: 0.2226, test_acc: 0.9312
+ epoch 248/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1667, train_acc: 0.9960, test_loss: 0.2374, test_acc: 0.9290
+ epoch 249/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1654, train_acc: 0.9965, test_loss: 0.2525, test_acc: 0.9219
+ epoch 250/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1694, train_acc: 0.9963, test_loss: 0.2409, test_acc: 0.9252
+ epoch 251/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1708, train_acc: 0.9960, test_loss: 0.2464, test_acc: 0.9273
+ epoch 252/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1674, train_acc: 0.9958, test_loss: 0.2429, test_acc: 0.9236
+ epoch 253/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1689, train_acc: 0.9962, test_loss: 0.2323, test_acc: 0.9278
+ epoch 254/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1653, train_acc: 0.9961, test_loss: 0.2368, test_acc: 0.9299
+ epoch 255/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1612, train_acc: 0.9967, test_loss: 0.2568, test_acc: 0.9228
+ epoch 256/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1656, train_acc: 0.9962, test_loss: 0.2197, test_acc: 0.9333
+ epoch 257/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1675, train_acc: 0.9959, test_loss: 0.2863, test_acc: 0.9156
+ epoch 258/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1663, train_acc: 0.9969, test_loss: 0.2200, test_acc: 0.9327
+ epoch 259/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1673, train_acc: 0.9962, test_loss: 0.2305, test_acc: 0.9304
+ epoch 260/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1642, train_acc: 0.9963, test_loss: 0.2259, test_acc: 0.9306
+ epoch 261/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1641, train_acc: 0.9965, test_loss: 0.2136, test_acc: 0.9337
+ epoch 262/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1632, train_acc: 0.9959, test_loss: 0.2261, test_acc: 0.9291
+ epoch 263/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1648, train_acc: 0.9965, test_loss: 0.2644, test_acc: 0.9250
+ epoch 264/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1614, train_acc: 0.9964, test_loss: 0.2498, test_acc: 0.9262
+ epoch 265/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1603, train_acc: 0.9969, test_loss: 0.2135, test_acc: 0.9355
+ epoch 266/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1604, train_acc: 0.9965, test_loss: 0.2503, test_acc: 0.9227
+ epoch 267/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1577, train_acc: 0.9966, test_loss: 0.2383, test_acc: 0.9296
+ epoch 268/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1604, train_acc: 0.9963, test_loss: 0.2485, test_acc: 0.9264
+ epoch 269/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1616, train_acc: 0.9967, test_loss: 0.2345, test_acc: 0.9304
+ epoch 270/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1623, train_acc: 0.9964, test_loss: 0.2041, test_acc: 0.9358
+ epoch 271/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1613, train_acc: 0.9966, test_loss: 0.2096, test_acc: 0.9360
+ epoch 272/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1578, train_acc: 0.9968, test_loss: 0.2164, test_acc: 0.9361
+ epoch 273/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1615, train_acc: 0.9964, test_loss: 0.2057, test_acc: 0.9345
+ epoch 274/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1531, train_acc: 0.9966, test_loss: 0.2103, test_acc: 0.9351
+ epoch 275/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1567, train_acc: 0.9972, test_loss: 0.2425, test_acc: 0.9281
+ epoch 276/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1537, train_acc: 0.9971, test_loss: 0.2179, test_acc: 0.9330
+ epoch 277/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1553, train_acc: 0.9969, test_loss: 0.2310, test_acc: 0.9321
+ epoch 278/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1583, train_acc: 0.9967, test_loss: 0.2185, test_acc: 0.9340
+ epoch 279/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1562, train_acc: 0.9970, test_loss: 0.2702, test_acc: 0.9200
+ epoch 280/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1545, train_acc: 0.9969, test_loss: 0.2200, test_acc: 0.9341
+ epoch 281/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1543, train_acc: 0.9970, test_loss: 0.2239, test_acc: 0.9339
+ epoch 282/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1548, train_acc: 0.9965, test_loss: 0.2029, test_acc: 0.9411
+ epoch 283/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1509, train_acc: 0.9971, test_loss: 0.2214, test_acc: 0.9326
+ epoch 284/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1547, train_acc: 0.9973, test_loss: 0.2277, test_acc: 0.9325
+ epoch 285/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1568, train_acc: 0.9962, test_loss: 0.2147, test_acc: 0.9322
+ epoch 286/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1552, train_acc: 0.9966, test_loss: 0.2537, test_acc: 0.9245
+ epoch 287/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1493, train_acc: 0.9965, test_loss: 0.2102, test_acc: 0.9355
+ epoch 288/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1478, train_acc: 0.9972, test_loss: 0.2120, test_acc: 0.9358
+ epoch 289/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1469, train_acc: 0.9970, test_loss: 0.2456, test_acc: 0.9245
+ epoch 290/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1471, train_acc: 0.9969, test_loss: 0.2505, test_acc: 0.9237
+ epoch 291/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1522, train_acc: 0.9967, test_loss: 0.2318, test_acc: 0.9292
+ epoch 292/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1510, train_acc: 0.9972, test_loss: 0.2223, test_acc: 0.9336
+ epoch 293/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1435, train_acc: 0.9969, test_loss: 0.2843, test_acc: 0.9158
+ epoch 294/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1477, train_acc: 0.9974, test_loss: 0.2094, test_acc: 0.9360
+ epoch 295/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1473, train_acc: 0.9974, test_loss: 0.2288, test_acc: 0.9320
+ epoch 296/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1488, train_acc: 0.9968, test_loss: 0.2485, test_acc: 0.9249
+ epoch 297/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1467, train_acc: 0.9974, test_loss: 0.2194, test_acc: 0.9348
+ epoch 298/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1461, train_acc: 0.9970, test_loss: 0.2139, test_acc: 0.9387
+ epoch 299/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1457, train_acc: 0.9973, test_loss: 0.2066, test_acc: 0.9392
+ epoch 300/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1432, train_acc: 0.9977, test_loss: 0.2563, test_acc: 0.9216
+ epoch 301/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1428, train_acc: 0.9973, test_loss: 0.1971, test_acc: 0.9410
+ epoch 302/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1391, train_acc: 0.9973, test_loss: 0.2136, test_acc: 0.9354
+ epoch 303/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1383, train_acc: 0.9978, test_loss: 0.2056, test_acc: 0.9372
+ epoch 304/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1476, train_acc: 0.9971, test_loss: 0.2269, test_acc: 0.9332
+ epoch 305/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1474, train_acc: 0.9969, test_loss: 0.2266, test_acc: 0.9322
+ epoch 306/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1429, train_acc: 0.9971, test_loss: 0.2201, test_acc: 0.9349
+ epoch 307/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1412, train_acc: 0.9976, test_loss: 0.2133, test_acc: 0.9381
+ epoch 308/640:
+iteration: 1000/1000, cost_time: 252s, train_loss: 0.1402, train_acc: 0.9974, test_loss: 0.2179, test_acc: 0.9325
+ epoch 309/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1382, train_acc: 0.9972, test_loss: 0.2211, test_acc: 0.9332
+ epoch 310/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1398, train_acc: 0.9976, test_loss: 0.2418, test_acc: 0.9267
+ epoch 311/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1379, train_acc: 0.9975, test_loss: 0.1996, test_acc: 0.9368
+ epoch 312/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1387, train_acc: 0.9974, test_loss: 0.2164, test_acc: 0.9365
+ epoch 313/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1358, train_acc: 0.9976, test_loss: 0.2273, test_acc: 0.9317
+ epoch 314/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1388, train_acc: 0.9974, test_loss: 0.2168, test_acc: 0.9354
+ epoch 315/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1403, train_acc: 0.9969, test_loss: 0.2732, test_acc: 0.9201
+ epoch 316/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1341, train_acc: 0.9977, test_loss: 0.2079, test_acc: 0.9387
+ epoch 317/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1389, train_acc: 0.9973, test_loss: 0.2076, test_acc: 0.9360
+ epoch 318/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1341, train_acc: 0.9975, test_loss: 0.2435, test_acc: 0.9260
+ epoch 319/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1343, train_acc: 0.9974, test_loss: 0.2218, test_acc: 0.9324
+ epoch 320/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1348, train_acc: 0.9973, test_loss: 0.2092, test_acc: 0.9350
+ epoch 321/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1298, train_acc: 0.9975, test_loss: 0.2388, test_acc: 0.9313
+ epoch 322/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1352, train_acc: 0.9975, test_loss: 0.1945, test_acc: 0.9410
+ epoch 323/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1339, train_acc: 0.9977, test_loss: 0.2098, test_acc: 0.9371
+ epoch 324/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1347, train_acc: 0.9978, test_loss: 0.2286, test_acc: 0.9318
+ epoch 325/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1291, train_acc: 0.9977, test_loss: 0.2202, test_acc: 0.9330
+ epoch 326/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1347, train_acc: 0.9973, test_loss: 0.2047, test_acc: 0.9399
+ epoch 327/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1306, train_acc: 0.9981, test_loss: 0.2048, test_acc: 0.9378
+ epoch 328/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1305, train_acc: 0.9979, test_loss: 0.2351, test_acc: 0.9295
+ epoch 329/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1258, train_acc: 0.9977, test_loss: 0.2253, test_acc: 0.9356
+ epoch 330/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1296, train_acc: 0.9975, test_loss: 0.2378, test_acc: 0.9318
+ epoch 331/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1275, train_acc: 0.9977, test_loss: 0.2155, test_acc: 0.9354
+ epoch 332/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1293, train_acc: 0.9980, test_loss: 0.2360, test_acc: 0.9320
+ epoch 333/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1289, train_acc: 0.9976, test_loss: 0.2273, test_acc: 0.9340
+ epoch 334/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1265, train_acc: 0.9977, test_loss: 0.2460, test_acc: 0.9272
+ epoch 335/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1206, train_acc: 0.9978, test_loss: 0.2110, test_acc: 0.9409
+ epoch 336/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1272, train_acc: 0.9978, test_loss: 0.2192, test_acc: 0.9378
+ epoch 337/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1234, train_acc: 0.9979, test_loss: 0.2148, test_acc: 0.9350
+ epoch 338/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1210, train_acc: 0.9979, test_loss: 0.2407, test_acc: 0.9311
+ epoch 339/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1216, train_acc: 0.9982, test_loss: 0.1992, test_acc: 0.9412
+ epoch 340/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1219, train_acc: 0.9977, test_loss: 0.2014, test_acc: 0.9416
+ epoch 341/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1219, train_acc: 0.9978, test_loss: 0.2179, test_acc: 0.9351
+ epoch 342/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1193, train_acc: 0.9979, test_loss: 0.1907, test_acc: 0.9398
+ epoch 343/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1192, train_acc: 0.9978, test_loss: 0.2018, test_acc: 0.9416
+ epoch 344/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1225, train_acc: 0.9979, test_loss: 0.2085, test_acc: 0.9382
+ epoch 345/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1221, train_acc: 0.9981, test_loss: 0.2261, test_acc: 0.9397
+ epoch 346/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1175, train_acc: 0.9981, test_loss: 0.2126, test_acc: 0.9408
+ epoch 347/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1215, train_acc: 0.9979, test_loss: 0.2018, test_acc: 0.9400
+ epoch 348/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1201, train_acc: 0.9982, test_loss: 0.2334, test_acc: 0.9274
+ epoch 349/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1196, train_acc: 0.9979, test_loss: 0.2121, test_acc: 0.9379
+ epoch 350/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1189, train_acc: 0.9980, test_loss: 0.2284, test_acc: 0.9356
+ epoch 351/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1187, train_acc: 0.9979, test_loss: 0.2286, test_acc: 0.9337
+ epoch 352/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1175, train_acc: 0.9977, test_loss: 0.2301, test_acc: 0.9352
+ epoch 353/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1140, train_acc: 0.9984, test_loss: 0.2135, test_acc: 0.9397
+ epoch 354/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1164, train_acc: 0.9980, test_loss: 0.2020, test_acc: 0.9409
+ epoch 355/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1141, train_acc: 0.9982, test_loss: 0.2138, test_acc: 0.9397
+ epoch 356/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1149, train_acc: 0.9981, test_loss: 0.1917, test_acc: 0.9463
+ epoch 357/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1118, train_acc: 0.9980, test_loss: 0.2136, test_acc: 0.9396
+ epoch 358/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1116, train_acc: 0.9985, test_loss: 0.2047, test_acc: 0.9395
+ epoch 359/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1081, train_acc: 0.9985, test_loss: 0.2287, test_acc: 0.9355
+ epoch 360/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1111, train_acc: 0.9983, test_loss: 0.2282, test_acc: 0.9352
+ epoch 361/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1093, train_acc: 0.9983, test_loss: 0.2190, test_acc: 0.9372
+ epoch 362/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1084, train_acc: 0.9982, test_loss: 0.2135, test_acc: 0.9387
+ epoch 363/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1099, train_acc: 0.9982, test_loss: 0.1996, test_acc: 0.9393
+ epoch 364/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1082, train_acc: 0.9983, test_loss: 0.2084, test_acc: 0.9393
+ epoch 365/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1073, train_acc: 0.9985, test_loss: 0.2078, test_acc: 0.9381
+ epoch 366/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1053, train_acc: 0.9986, test_loss: 0.2184, test_acc: 0.9366
+ epoch 367/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1054, train_acc: 0.9985, test_loss: 0.2345, test_acc: 0.9308
+ epoch 368/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1142, train_acc: 0.9984, test_loss: 0.1831, test_acc: 0.9455
+ epoch 369/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1069, train_acc: 0.9983, test_loss: 0.2168, test_acc: 0.9393
+ epoch 370/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1033, train_acc: 0.9985, test_loss: 0.2207, test_acc: 0.9361
+ epoch 371/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1059, train_acc: 0.9984, test_loss: 0.2401, test_acc: 0.9311
+ epoch 372/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1007, train_acc: 0.9986, test_loss: 0.2184, test_acc: 0.9384
+ epoch 373/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.1041, train_acc: 0.9986, test_loss: 0.2118, test_acc: 0.9393
+ epoch 374/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.1028, train_acc: 0.9986, test_loss: 0.2064, test_acc: 0.9407
+ epoch 375/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.1073, train_acc: 0.9982, test_loss: 0.2029, test_acc: 0.9408
+ epoch 376/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.1031, train_acc: 0.9985, test_loss: 0.2039, test_acc: 0.9418
+ epoch 377/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.1050, train_acc: 0.9985, test_loss: 0.1861, test_acc: 0.9453
+ epoch 378/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0996, train_acc: 0.9986, test_loss: 0.2080, test_acc: 0.9419
+ epoch 379/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0990, train_acc: 0.9985, test_loss: 0.2069, test_acc: 0.9390
+ epoch 380/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0994, train_acc: 0.9986, test_loss: 0.1972, test_acc: 0.9432
+ epoch 381/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0960, train_acc: 0.9987, test_loss: 0.2116, test_acc: 0.9389
+ epoch 382/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0966, train_acc: 0.9986, test_loss: 0.2034, test_acc: 0.9393
+ epoch 383/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0991, train_acc: 0.9985, test_loss: 0.2129, test_acc: 0.9394
+ epoch 384/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0940, train_acc: 0.9989, test_loss: 0.2486, test_acc: 0.9297
+ epoch 385/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0992, train_acc: 0.9984, test_loss: 0.1989, test_acc: 0.9438
+ epoch 386/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0965, train_acc: 0.9985, test_loss: 0.1848, test_acc: 0.9471
+ epoch 387/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0908, train_acc: 0.9990, test_loss: 0.2009, test_acc: 0.9437
+ epoch 388/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0936, train_acc: 0.9990, test_loss: 0.1973, test_acc: 0.9418
+ epoch 389/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0981, train_acc: 0.9988, test_loss: 0.1921, test_acc: 0.9435
+ epoch 390/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0901, train_acc: 0.9991, test_loss: 0.2046, test_acc: 0.9419
+ epoch 391/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0917, train_acc: 0.9989, test_loss: 0.2220, test_acc: 0.9385
+ epoch 392/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0967, train_acc: 0.9985, test_loss: 0.2057, test_acc: 0.9413
+ epoch 393/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.0946, train_acc: 0.9985, test_loss: 0.1999, test_acc: 0.9440
+ epoch 394/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0916, train_acc: 0.9990, test_loss: 0.1850, test_acc: 0.9452
+ epoch 395/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0893, train_acc: 0.9988, test_loss: 0.1971, test_acc: 0.9442
+ epoch 396/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0923, train_acc: 0.9987, test_loss: 0.2041, test_acc: 0.9414
+ epoch 397/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0904, train_acc: 0.9988, test_loss: 0.2192, test_acc: 0.9402
+ epoch 398/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0884, train_acc: 0.9990, test_loss: 0.2011, test_acc: 0.9441
+ epoch 399/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0886, train_acc: 0.9990, test_loss: 0.2037, test_acc: 0.9405
+ epoch 400/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0880, train_acc: 0.9988, test_loss: 0.2004, test_acc: 0.9452
+ epoch 401/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0883, train_acc: 0.9988, test_loss: 0.2042, test_acc: 0.9441
+ epoch 402/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0915, train_acc: 0.9986, test_loss: 0.1995, test_acc: 0.9406
+ epoch 403/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0870, train_acc: 0.9987, test_loss: 0.2151, test_acc: 0.9405
+ epoch 404/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0840, train_acc: 0.9989, test_loss: 0.1994, test_acc: 0.9443
+ epoch 405/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0905, train_acc: 0.9986, test_loss: 0.2167, test_acc: 0.9367
+ epoch 406/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0848, train_acc: 0.9989, test_loss: 0.1983, test_acc: 0.9449
+ epoch 407/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0829, train_acc: 0.9988, test_loss: 0.2016, test_acc: 0.9439
+ epoch 408/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0874, train_acc: 0.9988, test_loss: 0.1837, test_acc: 0.9483
+ epoch 409/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0864, train_acc: 0.9990, test_loss: 0.2232, test_acc: 0.9372
+ epoch 410/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0846, train_acc: 0.9990, test_loss: 0.1913, test_acc: 0.9457
+ epoch 411/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0845, train_acc: 0.9987, test_loss: 0.1845, test_acc: 0.9463
+ epoch 412/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0824, train_acc: 0.9989, test_loss: 0.1823, test_acc: 0.9461
+ epoch 413/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0818, train_acc: 0.9990, test_loss: 0.1866, test_acc: 0.9470
+ epoch 414/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0817, train_acc: 0.9992, test_loss: 0.1819, test_acc: 0.9476
+ epoch 415/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0833, train_acc: 0.9987, test_loss: 0.2219, test_acc: 0.9396
+ epoch 416/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0843, train_acc: 0.9991, test_loss: 0.1922, test_acc: 0.9457
+ epoch 417/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0785, train_acc: 0.9992, test_loss: 0.1915, test_acc: 0.9461
+ epoch 418/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0811, train_acc: 0.9993, test_loss: 0.1890, test_acc: 0.9475
+ epoch 419/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0787, train_acc: 0.9991, test_loss: 0.1795, test_acc: 0.9498
+ epoch 420/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0785, train_acc: 0.9990, test_loss: 0.1983, test_acc: 0.9460
+ epoch 421/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0784, train_acc: 0.9989, test_loss: 0.1769, test_acc: 0.9513
+ epoch 422/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0776, train_acc: 0.9991, test_loss: 0.2092, test_acc: 0.9428
+ epoch 423/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0765, train_acc: 0.9989, test_loss: 0.1817, test_acc: 0.9498
+ epoch 424/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0740, train_acc: 0.9991, test_loss: 0.1871, test_acc: 0.9471
+ epoch 425/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0756, train_acc: 0.9991, test_loss: 0.2053, test_acc: 0.9441
+ epoch 426/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0753, train_acc: 0.9992, test_loss: 0.1914, test_acc: 0.9469
+ epoch 427/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0719, train_acc: 0.9990, test_loss: 0.2109, test_acc: 0.9441
+ epoch 428/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0716, train_acc: 0.9993, test_loss: 0.2074, test_acc: 0.9440
+ epoch 429/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0752, train_acc: 0.9991, test_loss: 0.2034, test_acc: 0.9453
+ epoch 430/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0712, train_acc: 0.9992, test_loss: 0.1828, test_acc: 0.9486
+ epoch 431/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0704, train_acc: 0.9989, test_loss: 0.1912, test_acc: 0.9468
+ epoch 432/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0704, train_acc: 0.9992, test_loss: 0.1851, test_acc: 0.9455
+ epoch 433/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0662, train_acc: 0.9992, test_loss: 0.2022, test_acc: 0.9458
+ epoch 434/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0740, train_acc: 0.9989, test_loss: 0.2017, test_acc: 0.9464
+ epoch 435/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0689, train_acc: 0.9991, test_loss: 0.1824, test_acc: 0.9518
+ epoch 436/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0682, train_acc: 0.9989, test_loss: 0.1840, test_acc: 0.9475
+ epoch 437/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0649, train_acc: 0.9991, test_loss: 0.2050, test_acc: 0.9451
+ epoch 438/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0653, train_acc: 0.9992, test_loss: 0.1915, test_acc: 0.9480
+ epoch 439/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0644, train_acc: 0.9992, test_loss: 0.1908, test_acc: 0.9477
+ epoch 440/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0662, train_acc: 0.9992, test_loss: 0.1901, test_acc: 0.9470
+ epoch 441/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0683, train_acc: 0.9990, test_loss: 0.2038, test_acc: 0.9427
+ epoch 442/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0656, train_acc: 0.9991, test_loss: 0.1996, test_acc: 0.9452
+ epoch 443/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0645, train_acc: 0.9992, test_loss: 0.1892, test_acc: 0.9469
+ epoch 444/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0637, train_acc: 0.9992, test_loss: 0.1990, test_acc: 0.9445
+ epoch 445/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0648, train_acc: 0.9992, test_loss: 0.1919, test_acc: 0.9471
+ epoch 446/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0613, train_acc: 0.9995, test_loss: 0.1945, test_acc: 0.9480
+ epoch 447/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0615, train_acc: 0.9993, test_loss: 0.1970, test_acc: 0.9493
+ epoch 448/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0626, train_acc: 0.9991, test_loss: 0.1977, test_acc: 0.9465
+ epoch 449/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0576, train_acc: 0.9993, test_loss: 0.1887, test_acc: 0.9497
+ epoch 450/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0589, train_acc: 0.9994, test_loss: 0.1898, test_acc: 0.9479
+ epoch 451/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0628, train_acc: 0.9992, test_loss: 0.1958, test_acc: 0.9463
+ epoch 452/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0596, train_acc: 0.9994, test_loss: 0.2054, test_acc: 0.9446
+ epoch 453/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0613, train_acc: 0.9993, test_loss: 0.1807, test_acc: 0.9491
+ epoch 454/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0603, train_acc: 0.9993, test_loss: 0.1800, test_acc: 0.9512
+ epoch 455/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0571, train_acc: 0.9994, test_loss: 0.1954, test_acc: 0.9472
+ epoch 456/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0551, train_acc: 0.9995, test_loss: 0.1760, test_acc: 0.9501
+ epoch 457/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0545, train_acc: 0.9993, test_loss: 0.1915, test_acc: 0.9465
+ epoch 458/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0569, train_acc: 0.9994, test_loss: 0.2024, test_acc: 0.9466
+ epoch 459/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0536, train_acc: 0.9994, test_loss: 0.1844, test_acc: 0.9502
+ epoch 460/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0562, train_acc: 0.9994, test_loss: 0.2225, test_acc: 0.9429
+ epoch 461/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0580, train_acc: 0.9995, test_loss: 0.2018, test_acc: 0.9480
+ epoch 462/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0536, train_acc: 0.9992, test_loss: 0.1829, test_acc: 0.9505
+ epoch 463/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0517, train_acc: 0.9995, test_loss: 0.1890, test_acc: 0.9487
+ epoch 464/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0479, train_acc: 0.9995, test_loss: 0.1899, test_acc: 0.9496
+ epoch 465/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0548, train_acc: 0.9994, test_loss: 0.1843, test_acc: 0.9513
+ epoch 466/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0523, train_acc: 0.9994, test_loss: 0.2083, test_acc: 0.9441
+ epoch 467/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0483, train_acc: 0.9996, test_loss: 0.1914, test_acc: 0.9480
+ epoch 468/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0500, train_acc: 0.9996, test_loss: 0.1935, test_acc: 0.9470
+ epoch 469/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0485, train_acc: 0.9994, test_loss: 0.2045, test_acc: 0.9471
+ epoch 470/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0468, train_acc: 0.9995, test_loss: 0.1884, test_acc: 0.9512
+ epoch 471/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0458, train_acc: 0.9997, test_loss: 0.1915, test_acc: 0.9506
+ epoch 472/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0463, train_acc: 0.9995, test_loss: 0.2004, test_acc: 0.9480
+ epoch 473/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0458, train_acc: 0.9993, test_loss: 0.2056, test_acc: 0.9466
+ epoch 474/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0489, train_acc: 0.9993, test_loss: 0.2025, test_acc: 0.9479
+ epoch 475/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0492, train_acc: 0.9995, test_loss: 0.1816, test_acc: 0.9516
+ epoch 476/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0458, train_acc: 0.9994, test_loss: 0.1732, test_acc: 0.9534
+ epoch 477/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0443, train_acc: 0.9997, test_loss: 0.1856, test_acc: 0.9497
+ epoch 478/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0452, train_acc: 0.9995, test_loss: 0.1970, test_acc: 0.9475
+ epoch 479/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0428, train_acc: 0.9993, test_loss: 0.1711, test_acc: 0.9552
+ epoch 480/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0419, train_acc: 0.9997, test_loss: 0.1826, test_acc: 0.9512
+ epoch 481/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0434, train_acc: 0.9996, test_loss: 0.1980, test_acc: 0.9472
+ epoch 482/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0427, train_acc: 0.9995, test_loss: 0.1845, test_acc: 0.9500
+ epoch 483/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0434, train_acc: 0.9996, test_loss: 0.1860, test_acc: 0.9531
+ epoch 484/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0414, train_acc: 0.9996, test_loss: 0.1767, test_acc: 0.9535
+ epoch 485/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0383, train_acc: 0.9997, test_loss: 0.1740, test_acc: 0.9535
+ epoch 486/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0398, train_acc: 0.9995, test_loss: 0.1968, test_acc: 0.9488
+ epoch 487/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0396, train_acc: 0.9996, test_loss: 0.1883, test_acc: 0.9506
+ epoch 488/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0394, train_acc: 0.9997, test_loss: 0.1876, test_acc: 0.9508
+ epoch 489/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0401, train_acc: 0.9995, test_loss: 0.1798, test_acc: 0.9540
+ epoch 490/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0381, train_acc: 0.9996, test_loss: 0.1795, test_acc: 0.9522
+ epoch 491/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0370, train_acc: 0.9997, test_loss: 0.1847, test_acc: 0.9515
+ epoch 492/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0393, train_acc: 0.9995, test_loss: 0.1794, test_acc: 0.9503
+ epoch 493/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0375, train_acc: 0.9995, test_loss: 0.1756, test_acc: 0.9527
+ epoch 494/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0332, train_acc: 0.9996, test_loss: 0.1838, test_acc: 0.9504
+ epoch 495/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0357, train_acc: 0.9997, test_loss: 0.1734, test_acc: 0.9551
+ epoch 496/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0326, train_acc: 0.9997, test_loss: 0.1780, test_acc: 0.9536
+ epoch 497/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0323, train_acc: 0.9997, test_loss: 0.1835, test_acc: 0.9518
+ epoch 498/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0320, train_acc: 0.9996, test_loss: 0.1701, test_acc: 0.9550
+ epoch 499/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0322, train_acc: 0.9997, test_loss: 0.1864, test_acc: 0.9526
+ epoch 500/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0329, train_acc: 0.9998, test_loss: 0.1777, test_acc: 0.9549
+ epoch 501/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0332, train_acc: 0.9997, test_loss: 0.1761, test_acc: 0.9538
+ epoch 502/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0313, train_acc: 0.9997, test_loss: 0.1730, test_acc: 0.9536
+ epoch 503/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0320, train_acc: 0.9996, test_loss: 0.1815, test_acc: 0.9527
+ epoch 504/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0309, train_acc: 0.9998, test_loss: 0.1748, test_acc: 0.9545
+ epoch 505/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0278, train_acc: 0.9998, test_loss: 0.1707, test_acc: 0.9566
+ epoch 506/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0303, train_acc: 0.9997, test_loss: 0.1725, test_acc: 0.9537
+ epoch 507/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0276, train_acc: 0.9998, test_loss: 0.1713, test_acc: 0.9542
+ epoch 508/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0289, train_acc: 0.9998, test_loss: 0.1648, test_acc: 0.9566
+ epoch 509/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0284, train_acc: 0.9997, test_loss: 0.1706, test_acc: 0.9566
+ epoch 510/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0264, train_acc: 0.9997, test_loss: 0.1641, test_acc: 0.9583
+ epoch 511/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0254, train_acc: 0.9999, test_loss: 0.1687, test_acc: 0.9554
+ epoch 512/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0257, train_acc: 0.9997, test_loss: 0.1686, test_acc: 0.9562
+ epoch 513/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0240, train_acc: 0.9996, test_loss: 0.1676, test_acc: 0.9560
+ epoch 514/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0258, train_acc: 0.9997, test_loss: 0.1626, test_acc: 0.9567
+ epoch 515/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0241, train_acc: 0.9998, test_loss: 0.1697, test_acc: 0.9558
+ epoch 516/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0250, train_acc: 0.9997, test_loss: 0.1715, test_acc: 0.9557
+ epoch 517/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0227, train_acc: 0.9996, test_loss: 0.1738, test_acc: 0.9572
+ epoch 518/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0225, train_acc: 0.9998, test_loss: 0.1716, test_acc: 0.9578
+ epoch 519/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0236, train_acc: 0.9999, test_loss: 0.1686, test_acc: 0.9570
+ epoch 520/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0235, train_acc: 0.9998, test_loss: 0.1629, test_acc: 0.9594
+ epoch 521/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0222, train_acc: 0.9998, test_loss: 0.1695, test_acc: 0.9572
+ epoch 522/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0196, train_acc: 0.9997, test_loss: 0.1680, test_acc: 0.9569
+ epoch 523/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0220, train_acc: 0.9999, test_loss: 0.1660, test_acc: 0.9579
+ epoch 524/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0203, train_acc: 0.9997, test_loss: 0.1594, test_acc: 0.9596
+ epoch 525/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0210, train_acc: 0.9997, test_loss: 0.1659, test_acc: 0.9561
+ epoch 526/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0209, train_acc: 0.9997, test_loss: 0.1515, test_acc: 0.9590
+ epoch 527/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0211, train_acc: 0.9998, test_loss: 0.1553, test_acc: 0.9587
+ epoch 528/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0182, train_acc: 0.9999, test_loss: 0.1595, test_acc: 0.9597
+ epoch 529/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0199, train_acc: 0.9998, test_loss: 0.1570, test_acc: 0.9590
+ epoch 530/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0189, train_acc: 0.9998, test_loss: 0.1575, test_acc: 0.9573
+ epoch 531/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0175, train_acc: 0.9999, test_loss: 0.1587, test_acc: 0.9600
+ epoch 532/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0165, train_acc: 0.9999, test_loss: 0.1558, test_acc: 0.9605
+ epoch 533/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0156, train_acc: 0.9997, test_loss: 0.1545, test_acc: 0.9587
+ epoch 534/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0154, train_acc: 0.9999, test_loss: 0.1598, test_acc: 0.9599
+ epoch 535/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0174, train_acc: 0.9998, test_loss: 0.1667, test_acc: 0.9582
+ epoch 536/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0157, train_acc: 0.9998, test_loss: 0.1599, test_acc: 0.9616
+ epoch 537/640:
+iteration: 1000/1000, cost_time: 252s, train_loss: 0.0162, train_acc: 0.9997, test_loss: 0.1554, test_acc: 0.9604
+ epoch 538/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0165, train_acc: 0.9997, test_loss: 0.1570, test_acc: 0.9591
+ epoch 539/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0160, train_acc: 0.9998, test_loss: 0.1597, test_acc: 0.9599
+ epoch 540/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0134, train_acc: 0.9998, test_loss: 0.1566, test_acc: 0.9612
+ epoch 541/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0133, train_acc: 0.9998, test_loss: 0.1585, test_acc: 0.9599
+ epoch 542/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0128, train_acc: 0.9999, test_loss: 0.1533, test_acc: 0.9607
+ epoch 543/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0116, train_acc: 0.9998, test_loss: 0.1566, test_acc: 0.9612
+ epoch 544/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0110, train_acc: 0.9999, test_loss: 0.1516, test_acc: 0.9628
+ epoch 545/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0128, train_acc: 0.9999, test_loss: 0.1550, test_acc: 0.9627
+ epoch 546/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0117, train_acc: 0.9998, test_loss: 0.1540, test_acc: 0.9608
+ epoch 547/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0122, train_acc: 0.9998, test_loss: 0.1563, test_acc: 0.9604
+ epoch 548/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0105, train_acc: 0.9998, test_loss: 0.1465, test_acc: 0.9628
+ epoch 549/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0112, train_acc: 0.9997, test_loss: 0.1565, test_acc: 0.9609
+ epoch 550/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0098, train_acc: 0.9999, test_loss: 0.1463, test_acc: 0.9644
+ epoch 551/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0110, train_acc: 0.9999, test_loss: 0.1445, test_acc: 0.9627
+ epoch 552/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0093, train_acc: 0.9999, test_loss: 0.1517, test_acc: 0.9626
+ epoch 553/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0098, train_acc: 0.9999, test_loss: 0.1462, test_acc: 0.9642
+ epoch 554/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0094, train_acc: 0.9998, test_loss: 0.1512, test_acc: 0.9620
+ epoch 555/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0099, train_acc: 0.9998, test_loss: 0.1507, test_acc: 0.9629
+ epoch 556/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0099, train_acc: 0.9998, test_loss: 0.1483, test_acc: 0.9624
+ epoch 557/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0091, train_acc: 0.9998, test_loss: 0.1487, test_acc: 0.9627
+ epoch 558/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0096, train_acc: 0.9997, test_loss: 0.1483, test_acc: 0.9627
+ epoch 559/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0092, train_acc: 0.9998, test_loss: 0.1452, test_acc: 0.9623
+ epoch 560/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0096, train_acc: 0.9999, test_loss: 0.1415, test_acc: 0.9638
+ epoch 561/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0084, train_acc: 0.9999, test_loss: 0.1431, test_acc: 0.9632
+ epoch 562/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0081, train_acc: 0.9999, test_loss: 0.1428, test_acc: 0.9647
+ epoch 563/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0086, train_acc: 0.9998, test_loss: 0.1433, test_acc: 0.9642
+ epoch 564/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0081, train_acc: 0.9998, test_loss: 0.1479, test_acc: 0.9622
+ epoch 565/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0077, train_acc: 0.9999, test_loss: 0.1479, test_acc: 0.9636
+ epoch 566/640:
+iteration: 1000/1000, cost_time: 252s, train_loss: 0.0082, train_acc: 0.9998, test_loss: 0.1485, test_acc: 0.9625
+ epoch 567/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0075, train_acc: 0.9999, test_loss: 0.1417, test_acc: 0.9636
+ epoch 568/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.0062, train_acc: 0.9999, test_loss: 0.1415, test_acc: 0.9642
+ epoch 569/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0066, train_acc: 0.9999, test_loss: 0.1457, test_acc: 0.9630
+ epoch 570/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0069, train_acc: 0.9998, test_loss: 0.1468, test_acc: 0.9627
+ epoch 571/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0067, train_acc: 0.9998, test_loss: 0.1507, test_acc: 0.9632
+ epoch 572/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0065, train_acc: 0.9998, test_loss: 0.1487, test_acc: 0.9626
+ epoch 573/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0065, train_acc: 0.9997, test_loss: 0.1453, test_acc: 0.9640
+ epoch 574/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0057, train_acc: 0.9999, test_loss: 0.1420, test_acc: 0.9636
+ epoch 575/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0066, train_acc: 0.9998, test_loss: 0.1471, test_acc: 0.9636
+ epoch 576/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0056, train_acc: 0.9998, test_loss: 0.1444, test_acc: 0.9644
+ epoch 577/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0057, train_acc: 0.9998, test_loss: 0.1446, test_acc: 0.9629
+ epoch 578/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0052, train_acc: 0.9999, test_loss: 0.1466, test_acc: 0.9620
+ epoch 579/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0057, train_acc: 0.9998, test_loss: 0.1398, test_acc: 0.9640
+ epoch 580/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0049, train_acc: 0.9999, test_loss: 0.1422, test_acc: 0.9639
+ epoch 581/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0056, train_acc: 0.9997, test_loss: 0.1425, test_acc: 0.9659
+ epoch 582/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0051, train_acc: 0.9998, test_loss: 0.1420, test_acc: 0.9646
+ epoch 583/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0055, train_acc: 0.9997, test_loss: 0.1413, test_acc: 0.9647
+ epoch 584/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0049, train_acc: 0.9998, test_loss: 0.1381, test_acc: 0.9658
+ epoch 585/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0052, train_acc: 0.9997, test_loss: 0.1375, test_acc: 0.9657
+ epoch 586/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0052, train_acc: 0.9998, test_loss: 0.1395, test_acc: 0.9656
+ epoch 587/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0047, train_acc: 0.9998, test_loss: 0.1359, test_acc: 0.9658
+ epoch 588/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0046, train_acc: 0.9998, test_loss: 0.1394, test_acc: 0.9650
+ epoch 589/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0040, train_acc: 0.9998, test_loss: 0.1366, test_acc: 0.9658
+ epoch 590/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0044, train_acc: 0.9999, test_loss: 0.1394, test_acc: 0.9645
+ epoch 591/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0046, train_acc: 0.9997, test_loss: 0.1377, test_acc: 0.9652
+ epoch 592/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0043, train_acc: 0.9998, test_loss: 0.1380, test_acc: 0.9650
+ epoch 593/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0043, train_acc: 0.9997, test_loss: 0.1396, test_acc: 0.9659
+ epoch 594/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0040, train_acc: 0.9997, test_loss: 0.1404, test_acc: 0.9644
+ epoch 595/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0043, train_acc: 0.9997, test_loss: 0.1406, test_acc: 0.9646
+ epoch 596/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0038, train_acc: 0.9999, test_loss: 0.1380, test_acc: 0.9645
+ epoch 597/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0040, train_acc: 0.9997, test_loss: 0.1379, test_acc: 0.9653
+ epoch 598/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0039, train_acc: 0.9996, test_loss: 0.1371, test_acc: 0.9655
+ epoch 599/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0041, train_acc: 0.9997, test_loss: 0.1405, test_acc: 0.9648
+ epoch 600/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0036, train_acc: 0.9997, test_loss: 0.1406, test_acc: 0.9652
+ epoch 601/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0041, train_acc: 0.9996, test_loss: 0.1404, test_acc: 0.9645
+ epoch 602/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0041, train_acc: 0.9995, test_loss: 0.1392, test_acc: 0.9650
+ epoch 603/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0035, train_acc: 0.9996, test_loss: 0.1401, test_acc: 0.9652
+ epoch 604/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0037, train_acc: 0.9996, test_loss: 0.1388, test_acc: 0.9655
+ epoch 605/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0033, train_acc: 0.9996, test_loss: 0.1397, test_acc: 0.9652
+ epoch 606/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0037, train_acc: 0.9996, test_loss: 0.1403, test_acc: 0.9653
+ epoch 607/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0037, train_acc: 0.9995, test_loss: 0.1391, test_acc: 0.9658
+ epoch 608/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0040, train_acc: 0.9995, test_loss: 0.1372, test_acc: 0.9658
+ epoch 609/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0035, train_acc: 0.9995, test_loss: 0.1377, test_acc: 0.9655
+ epoch 610/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0038, train_acc: 0.9993, test_loss: 0.1392, test_acc: 0.9653
+ epoch 611/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0039, train_acc: 0.9995, test_loss: 0.1385, test_acc: 0.9648
+ epoch 612/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0032, train_acc: 0.9996, test_loss: 0.1376, test_acc: 0.9656
+ epoch 613/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0035, train_acc: 0.9995, test_loss: 0.1375, test_acc: 0.9648
+ epoch 614/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0035, train_acc: 0.9995, test_loss: 0.1374, test_acc: 0.9648
+ epoch 615/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0035, train_acc: 0.9994, test_loss: 0.1364, test_acc: 0.9658
+ epoch 616/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0033, train_acc: 0.9995, test_loss: 0.1364, test_acc: 0.9657
+ epoch 617/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0035, train_acc: 0.9994, test_loss: 0.1371, test_acc: 0.9660
+ epoch 618/640:
+iteration: 1000/1000, cost_time: 252s, train_loss: 0.0034, train_acc: 0.9994, test_loss: 0.1357, test_acc: 0.9655
+ epoch 619/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0036, train_acc: 0.9992, test_loss: 0.1363, test_acc: 0.9655
+ epoch 620/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0031, train_acc: 0.9995, test_loss: 0.1368, test_acc: 0.9656
+ epoch 621/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0034, train_acc: 0.9994, test_loss: 0.1361, test_acc: 0.9656
+ epoch 622/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0029, train_acc: 0.9996, test_loss: 0.1363, test_acc: 0.9649
+ epoch 623/640:
+iteration: 1000/1000, cost_time: 259s, train_loss: 0.0035, train_acc: 0.9994, test_loss: 0.1364, test_acc: 0.9657
+ epoch 624/640:
+iteration: 1000/1000, cost_time: 256s, train_loss: 0.0035, train_acc: 0.9993, test_loss: 0.1361, test_acc: 0.9655
+ epoch 625/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0036, train_acc: 0.9992, test_loss: 0.1364, test_acc: 0.9658
+ epoch 626/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0034, train_acc: 0.9994, test_loss: 0.1367, test_acc: 0.9660
+ epoch 627/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0032, train_acc: 0.9993, test_loss: 0.1366, test_acc: 0.9654
+ epoch 628/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0030, train_acc: 0.9995, test_loss: 0.1352, test_acc: 0.9659
+ epoch 629/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0031, train_acc: 0.9995, test_loss: 0.1355, test_acc: 0.9658
+ epoch 630/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0037, train_acc: 0.9993, test_loss: 0.1363, test_acc: 0.9660
+ epoch 631/640:
+iteration: 1000/1000, cost_time: 254s, train_loss: 0.0031, train_acc: 0.9993, test_loss: 0.1359, test_acc: 0.9654
+ epoch 632/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0031, train_acc: 0.9993, test_loss: 0.1361, test_acc: 0.9656
+ epoch 633/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0033, train_acc: 0.9994, test_loss: 0.1357, test_acc: 0.9656
+ epoch 634/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0032, train_acc: 0.9993, test_loss: 0.1359, test_acc: 0.9656
+ epoch 635/640:
+iteration: 1000/1000, cost_time: 258s, train_loss: 0.0037, train_acc: 0.9993, test_loss: 0.1356, test_acc: 0.9655
+ epoch 636/640:
+iteration: 1000/1000, cost_time: 257s, train_loss: 0.0033, train_acc: 0.9993, test_loss: 0.1363, test_acc: 0.9654
+ epoch 637/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0031, train_acc: 0.9995, test_loss: 0.1354, test_acc: 0.9651
+ epoch 638/640:
+iteration: 1000/1000, cost_time: 255s, train_loss: 0.0030, train_acc: 0.9995, test_loss: 0.1355, test_acc: 0.9656
+ epoch 639/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0036, train_acc: 0.9992, test_loss: 0.1360, test_acc: 0.9657
+ epoch 640/640:
+iteration: 1000/1000, cost_time: 253s, train_loss: 0.0037, train_acc: 0.9992, test_loss: 0.1359, test_acc: 0.9656
+Model saved in file: ./model/retrain_lr_update_log_0.1_score2
