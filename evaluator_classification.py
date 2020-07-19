@@ -31,6 +31,8 @@ def _open_a_Session():
 class DataSet:
     def __init__(self):
         self.num_classes = 10 if TASK_NAME == "cifar-10" else 100
+        self.mean = None  # for normalize test data by train var
+        self.std = None  # for normalize test data by train var
         self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
              self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs()
     
@@ -46,10 +48,10 @@ class DataSet:
         else:
             train_files = ['train']
             test_files = ['test']
-        all_train_data, all_train_label = self._load(train_files)
+        all_train_data, all_train_label = self._load(train_files, flag="train")
         train_data, train_label, valid_data, valid_label = \
             self._shuffle_and_split_valid(all_train_data, all_train_label)
-        test_data, test_label = self._load(test_files)
+        test_data, test_label = self._load(test_files, flag="test")
         if INSTANT_PRINT:
             print("======Data Process Done======")
         return all_train_data, all_train_label, train_data, train_label, valid_data, valid_label, test_data, test_label
@@ -61,7 +63,7 @@ class DataSet:
         label = batch[b'labels'] if TASK_NAME == 'cifar-10' else batch[b'fine_labels']
         return data, label
 
-    def _load(self, files):
+    def _load(self, files, flag="train"):
         file_name = 'cifar-10-batches-py' if TASK_NAME == 'cifar-10' else 'cifar-100-python'
         data_dir = os.path.join(DATA_PATH, file_name)
         data, label = self._load_one(os.path.join(data_dir, files[0]))
@@ -74,7 +76,7 @@ class DataSet:
         data = data.reshape([-1, 3, IMAGE_SIZE, IMAGE_SIZE])
         data = data.transpose([0, 2, 3, 1])
         # pre-process
-        data = self._normalize(data)
+        data = self._normalize(data, flag=flag)
         return data, label
 
     def _shuffle_and_split_valid(self, data, label):
@@ -92,15 +94,15 @@ class DataSet:
         valid_label = label[:eval_trian_bound]
         return train_data, train_label, valid_data, valid_label
 
-    def _normalize(self, x_train):
-        x_train = x_train.astype('float32')
-        x_train[:, :, :, 0] = (x_train[:, :, :, 0] - np.mean(x_train[:, :, :, 0]))\
-             / np.std(x_train[:, :, :, 0])
-        x_train[:, :, :, 1] = (x_train[:, :, :, 1] - np.mean(x_train[:, :, :, 1]))\
-             / np.std(x_train[:, :, :, 1])
-        x_train[:, :, :, 2] = (x_train[:, :, :, 2] - np.mean(x_train[:, :, :, 2]))\
-             / np.std(x_train[:, :, :, 2])
-        return x_train
+    def _normalize(self, data, flag="train"):
+        data = data.astype('float32')
+        if flag == "train":
+            self.mean = [np.mean(data[:, :, :, 0]), np.mean(data[:, :, :, 1]), np.mean(data[:, :, :, 2])]
+            self.std = [np.std(data[:, :, :, 0]), np.std(data[:, :, :, 1]), np.std(data[:, :, :, 2])]
+        data[:, :, :, 0] = (data[:, :, :, 0] - self.mean[0]) / self.std[0]
+        data[:, :, :, 1] = (data[:, :, :, 1] - self.mean[1]) / self.std[1]
+        data[:, :, :, 2] = (data[:, :, :, 2] - self.mean[2]) / self.std[2]
+        return data
 
     def data_augment(self, x):
         x = copy.deepcopy(x)  # avoid that it is operated on original data
