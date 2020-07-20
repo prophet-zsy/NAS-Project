@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from predictor import Feature
-import os
+import os, math
 
 
 cur_path = os.getcwd()
@@ -102,7 +102,8 @@ class TopologyEval:
             input_2 = graph.get_tensor_by_name("Placeholder_1:0")
             logits = graph.get_tensor_by_name("Softmax:0")
             pred = tf.argmax(logits, 1)  # return confidence
-            for i in range(int(len(x_1)/batch_size)+1):
+            # for i in range(int(len(x_1)/batch_size)+1):
+            for i in range(math.ceil(len(x_1)/batch_size)):
                 start = i*batch_size
                 end = (i+1)*batch_size if (i+1)*batch_size<len(x_1) else len(x_1)
                 out = sess.run(pred, feed_dict={input_1: x_1[start:end], input_2: x_2[start:end]})
