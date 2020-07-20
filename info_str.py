@@ -19,6 +19,8 @@ init_ing = 'NAS: Initializing...'
 enum_ing = 'NAS: Enumerating all possible networks!'
 enum_toponet_nums = "NAS: We got {0[0]} topo networks, and we will evaluate {0[1]} of them in every block!"
 filter_net = "NAS: We rm {0[0]} topo networks by priori, and {0[1]} networks left!"
+filter_topo_stop_cnt = "NAS: We can not rm any net int this round, count {0[0]}"
+filter_topo_get_first_part = "NAS: We have been not able to rm any net for many rounds, so we get first {0[0]} networks for game!"
 evatopo_consist_ratio = "NAS: The ratio that cmp(a,b) and cmp(b,a) is consistency is {0[0]}"
 start_search = "NAS: search work start, start_time: {0[0]}"
 search_block_start = 'NAS: Searching for block {0[0]}/{0[1]}, start_time: {0[2]}'
@@ -64,6 +66,8 @@ MF_TEMP = {
     'nas_enuming': enum_ing,
     'nas_enum_nums': enum_toponet_nums,
     "nas_filter_net": filter_net,
+    "nas_filter_topo_stop_cnt": filter_topo_stop_cnt,
+    "nas_filter_topo_get_first_part": filter_topo_get_first_part,
     'nas_evatopo_consistency_ratio': evatopo_consist_ratio,
     'nas_start_search': start_search,
     'nas_search_blk': search_block_start,
