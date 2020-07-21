@@ -279,8 +279,6 @@ class DataFlowGraph:
 
     def _construct_blk(self, blk_input, graph_full, cell_list, train_flag, blk_id):
         topo_order = self._toposort(graph_full)
-        if DEBUG:
-            print("topo_order", topo_order)
         nodelen = len(graph_full)
         # input list for every cell in network
         inputs = [blk_input for _ in range(nodelen)]
@@ -289,16 +287,10 @@ class DataFlowGraph:
         getinput[0] = True
         with tf.variable_scope('block' + str(blk_id)) as scope:
             for node in topo_order:
-                if DEBUG:
-                    print("constructing", node)
-                    print(cell_list[node])
-                    print("inputs", inputs[node])
                 layer = self._make_layer(inputs[node], cell_list[node], node, train_flag)
                 self.run_ops['blk{}_node{}'.format(blk_id, node)] = layer
                 # update inputs information of the cells below this cell
                 for j in graph_full[node]:
-                    if DEBUG:
-                        print("give data to node", j)
                     if getinput[j]:  # if this cell already got inputs from other cells precedes it
                         inputs[j] = self._pad(inputs[j], layer)
                     else:
@@ -356,24 +348,44 @@ class DataFlowGraph:
         return layer
 
     def _makeconv(self, x, hplist, node, train_flag):
+        # 1*1 conv to make the channel resize smaller
+        with tf.variable_scope('1_1_conv' + str(node)) as scope:
+            inputdim = x.shape[3]
+            kernel = self._get_variable('weights',
+                                        shape=[1, 1, inputdim, hplist.filter_size])
+            x = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
+            x = self._batch_norm(x, train_flag)
+            x = self._activation_layer(hplist.activation, x, scope)
+
         with tf.variable_scope('conv' + str(node)) as scope:
             inputdim = x.shape[3]
             kernel = self._get_variable('weights',
                                         shape=[hplist.kernel_size, hplist.kernel_size, inputdim, hplist.filter_size])
             x = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
-            biases = self._get_variable('biases', hplist.filter_size)
-            x = self._batch_norm(tf.nn.bias_add(x, biases), train_flag)
+            # biases = self._get_variable('biases', hplist.filter_size)
+            # x = self._batch_norm(tf.nn.bias_add(x, biases), train_flag)
+            x = self._batch_norm(x, train_flag)
             x = self._activation_layer(hplist.activation, x, scope)
         return x
 
     def _makesep_conv(self, inputs, hplist, node, train_flag):
-        with tf.variable_scope('conv' + str(node)) as scope:
+        # 1*1 conv to make the channel resize smaller
+        with tf.variable_scope('1_1_conv' + str(node)) as scope:
+            inputdim = inputs.shape[3]
+            kernel = self._get_variable('weights',
+                                        shape=[1, 1, inputdim, hplist.filter_size])
+            inputs = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
+            inputs = self._batch_norm(inputs, train_flag)
+            inputs = self._activation_layer(hplist.activation, inputs, scope)
+
+        with tf.variable_scope('sep_conv' + str(node)) as scope:
             inputdim = inputs.shape[3]
             dfilter = self._get_variable('weights', shape=[hplist.kernel_size, hplist.kernel_size, inputdim, 1])
-            pfilter = self._get_variable('pointwise_filter', [1, 1, inputdim, hplist.filter_size])
+            pfilter = self._get_variable('pointwise_filter', shape=[1, 1, inputdim, hplist.filter_size])
             conv = tf.nn.separable_conv2d(inputs, dfilter, pfilter, strides=[1, 1, 1, 1], padding='SAME')
-            biases = self._get_variable('biases', hplist.filter_size)
-            bn = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            # biases = self._get_variable('biases', hplist.filter_size)
+            # bn = self._batch_norm(tf.nn.bias_add(conv, biases), train_flag)
+            bn = self._batch_norm(conv, train_flag)
             conv_layer = self._activation_layer(hplist.activation, bn, scope)
         return conv_layer
 
