@@ -6,14 +6,12 @@ import sys, os, time, copy
 from base import Cell, NetworkItem
 from info_str import NAS_CONFIG
 from utils import NAS_LOG, Logger, EvaScheduleItem
-EVA_COFIG = NAS_CONFIG['eva']
+from tiny_imagenet_input import get_data_mode
 
 # config params for eva alone
 INSTANT_PRINT = False  # set True only in run the eva alone
 DEBUG = False
-IMAGE_SIZE = 32
 DATA_RATIO_FOR_EVAL = 0.2  # only for train
-TASK_NAME = EVA_COFIG['task_name']
 DATA_PATH = "./data/"
 MODEL_PATH = "./model"
 BATCH_SIZE = 50  # 50
@@ -21,6 +19,23 @@ DROP_OUT_KEEP_RATE = 0.5  # only for train
 INITIAL_LEARNING_RATE = 0.025  # 0.025
 WEIGHT_DECAY = 0.0003
 MOMENTUM_RATE = 0.9
+
+EVA_COFIG = NAS_CONFIG['eva']
+TASK_NAME = EVA_COFIG['task_name']
+if TASK_NAME == "cifar-10":
+    NUM_CLASSES = 10
+    IMAGE_SIZE = 32
+    # IMAGE_NUMS = 50000
+elif TASK_NAME == "cifar-100":
+    NUM_CLASSES = 100
+    IMAGE_SIZE = 32
+    # IMAGE_NUMS = 50000
+elif TASK_NAME == "tiny-imagenet":
+    NUM_CLASSES = 200
+    IMAGE_SIZE = 64
+    # IMAGE_NUMS = 100000
+else:
+    raise Exception("Wrong task_name")
 
 def _open_a_Session():
     config = tf.ConfigProto()
@@ -30,18 +45,36 @@ def _open_a_Session():
 
 class DataSet:
     def __init__(self):
-        self.num_classes = 10 if TASK_NAME == "cifar-10" else 100
+        self.num_classes = NUM_CLASSES
         self.mean = None  # for normalize test data by train var
         self.std = None  # for normalize test data by train var
-        self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
-             self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs()
+        if TASK_NAME == "cifar-10" or TASK_NAME == "cifar-100":
+            self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
+                self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs_cifar()
+        elif TASK_NAME == "tiny-imagenet":
+            self.all_train_data, self.all_train_label, self.train_data, self.train_label,\
+                self.valid_data, self.valid_label, self.test_data, self.test_label = self.inputs_tinyimagenet()
+        else:
+            raise Exception("Wrong task_name")
     
     def get_train_data(self, data_size):
         return self.train_data[:data_size], self.train_label[:data_size]
 
-    def inputs(self):
-        if INSTANT_PRINT:
-            print("======Loading data======")
+    def inputs_tinyimagenet(self):
+        # train data
+        all_train_data, all_train_label = get_data_mode('train', DATA_PATH, self.num_classes)
+        all_train_data = self._normalize(all_train_data, flag="train")
+        all_train_label = np.array([[float(i == label)
+                           for i in range(self.num_classes)] for label in all_train_label])
+        train_data, train_label, valid_data, valid_label = self._shuffle_and_split_valid(all_train_data, all_train_label)
+        # test data
+        test_data, test_label = get_data_mode('val', DATA_PATH, self.num_classes)
+        test_data = self._normalize(test_data, flag="test")
+        test_label = np.array([[float(i == label)
+                                      for i in range(self.num_classes)] for label in test_label])
+        return all_train_data, all_train_label, train_data, train_label, valid_data, valid_label, test_data, test_label
+
+    def inputs_cifar(self):
         if TASK_NAME == 'cifar-10':
             test_files = ['test_batch']
             train_files = ['data_batch_%d' % d for d in range(1, 6)]
@@ -52,8 +85,6 @@ class DataSet:
         train_data, train_label, valid_data, valid_label = \
             self._shuffle_and_split_valid(all_train_data, all_train_label)
         test_data, test_label = self._load(test_files, flag="test")
-        if INSTANT_PRINT:
-            print("======Data Process Done======")
         return all_train_data, all_train_label, train_data, train_label, valid_data, valid_label, test_data, test_label
 
     def _load_one(self, file):
@@ -107,7 +138,7 @@ class DataSet:
     def data_augment(self, x):
         x = copy.deepcopy(x)  # avoid that it is operated on original data
         x = self._random_flip_leftright(x)
-        x = self._random_crop(x, [32, 32], 4)
+        x = self._random_crop(x, [IMAGE_SIZE, IMAGE_SIZE], 4)
         x = self._cutout(x)
         return x
 
@@ -143,7 +174,7 @@ class DataSet:
 
 class DataFlowGraph:
     def __init__(self, task_item):  # DataFlowGraph object and task_item are one to one correspondent
-        self.num_classes = 10 if TASK_NAME == "cifar-10" else 100
+        self.num_classes = NUM_CLASSES
         self.input_shape = [BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3]
         self.output_shape = [BATCH_SIZE, self.num_classes]
         
