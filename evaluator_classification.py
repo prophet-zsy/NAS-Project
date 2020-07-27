@@ -553,7 +553,7 @@ class Evaluator:
                 train_data, train_label = self.data_set.all_train_data, self.data_set.all_train_label
                 valid_data, valid_label = train_data[len(train_data):], train_label[len(train_label):]
             train_data = self.data_set.data_augment(train_data)
-                
+            
             if INSTANT_PRINT:
                 print("epoch {}/{}".format(ep, self.epoch))
             start_epoch = time.time()

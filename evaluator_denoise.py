@@ -346,6 +346,13 @@ class DataFlowGraph:
         self.run_ops['pred_img'] = pred_img
         self.run_ops['merged'] = merged
 
+    def _count_model_params(self):
+        tf_variables = [var for var in tf.trainable_variables() if var.name.startswith("block")]
+        num_vars = 0
+        for var in tf_variables:
+            num_vars += np.prod([dim.value for dim in var.get_shape()])
+        return num_vars
+
     def _psnr(self, original_img, pred_img):
         mse = tf.losses.mean_squared_error(labels=original_img, predictions=pred_img)
         psnr = tf.multiply(10.0, (tf.log(255.0 ** 2 / mse) / tf.log(10.0)), name="acc")
@@ -393,6 +400,17 @@ class DataFlowGraph:
         output = tf.where(tf.greater(a, b), 
                           tf.concat([tf.pad(inputs1, [[0, 0], [0, pad], [0, pad], [0, 0]]), inputs2], 3),
                           tf.concat([inputs1, tf.pad(inputs2, [[0, 0], [0, pad], [0, pad], [0, 0]])], 3))
+        # a = int(inputs1.shape[1])
+        # b = int(inputs2.shape[1])
+        # pad = abs(a - b)
+        # if inputs1.shape[1] > inputs2.shape[1]:
+        #     tmp = tf.pad(inputs2, [[0, 0], [0, pad], [0, pad], [0, 0]])
+        #     output = tf.concat([tmp, inputs1], 3)
+        # elif inputs1.shape[1] < inputs2.shape[1]:
+        #     tmp = tf.pad(inputs1, [[0, 0], [0, pad], [0, pad], [0, 0]])
+        #     output = tf.concat([inputs2, tmp], 3)
+        # else:
+        #     output = tf.concat([inputs2, inputs1], 3)
         return output
 
     @staticmethod
@@ -614,6 +632,7 @@ class Evaluator:
         self._log_item_info(task_item)
         computing_graph = DataFlowGraph(task_item)
         computing_graph._construct_graph()
+        task_item.model_params = computing_graph._count_model_params()  # count the params of the model
         score = self._train(computing_graph, task_item)
         if not task_item.network_item:  # we test the model saved by load it again
             score = self._test(computing_graph)
