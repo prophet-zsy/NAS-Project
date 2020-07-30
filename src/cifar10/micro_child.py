@@ -320,7 +320,7 @@ class MicroChild(Model):
               aux_logits = global_avg_pool(aux_logits,
                                            data_format=self.data_format)
               inp_c = aux_logits.get_shape()[1].value
-              w = create_weight("w", [inp_c, 10])
+              w = create_weight("w", [inp_c, self.classes])
               aux_logits = tf.matmul(aux_logits, w)
               self.aux_logits = aux_logits
 

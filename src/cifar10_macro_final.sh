@@ -2,38 +2,69 @@
 
 export PYTHONPATH="$(pwd)"
 
-fixed_arc="0"
-fixed_arc="$fixed_arc 3 0"
-fixed_arc="$fixed_arc 0 1 0"
-fixed_arc="$fixed_arc 2 0 0 1"
-fixed_arc="$fixed_arc 2 0 0 0 0"
-fixed_arc="$fixed_arc 3 1 1 0 1 0"
-fixed_arc="$fixed_arc 2 0 0 0 0 0 1"
-fixed_arc="$fixed_arc 2 0 1 1 0 1 1 1"
-fixed_arc="$fixed_arc 1 0 1 1 1 0 1 0 1"
-fixed_arc="$fixed_arc 0 0 0 0 0 0 0 0 0 0"
-fixed_arc="$fixed_arc 2 0 0 0 0 0 1 0 0 0 0"
-fixed_arc="$fixed_arc 0 1 0 0 1 1 0 0 0 0 1 1"
-fixed_arc="$fixed_arc 2 0 1 0 0 0 0 0 1 0 1 1 0"
-fixed_arc="$fixed_arc 1 0 0 1 0 0 0 1 1 1 0 1 0 1"
-fixed_arc="$fixed_arc 0 1 1 0 1 0 1 0 0 0 0 0 1 0 0"
-fixed_arc="$fixed_arc 2 0 0 1 0 0 0 0 0 0 0 1 0 1 0 1"
-fixed_arc="$fixed_arc 2 0 1 0 0 0 1 0 0 1 1 1 1 0 0 1 0"
-fixed_arc="$fixed_arc 2 0 0 0 0 1 0 1 0 1 0 0 1 0 1 0 0 1"
-fixed_arc="$fixed_arc 3 0 1 1 0 1 0 0 0 0 0 1 0 1 0 1 0 0 0"
-fixed_arc="$fixed_arc 3 0 1 1 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1"
-fixed_arc="$fixed_arc 0 1 0 0 1 0 1 1 0 0 0 1 0 0 0 0 0 1 1 0 0"
-fixed_arc="$fixed_arc 3 0 1 0 1 1 0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 0"
-fixed_arc="$fixed_arc 0 1 0 1 0 1 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 0 0"
-fixed_arc="$fixed_arc 0 1 1 0 0 0 1 1 1 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0"
+# fixed_arc="0"
+# fixed_arc="$fixed_arc 3 0"
+# fixed_arc="$fixed_arc 0 1 0"
+# fixed_arc="$fixed_arc 2 0 0 1"
+# fixed_arc="$fixed_arc 2 0 0 0 0"
+# fixed_arc="$fixed_arc 3 1 1 0 1 0"
+# fixed_arc="$fixed_arc 2 0 0 0 0 0 1"
+# fixed_arc="$fixed_arc 2 0 1 1 0 1 1 1"
+# fixed_arc="$fixed_arc 1 0 1 1 1 0 1 0 1"
+# fixed_arc="$fixed_arc 0 0 0 0 0 0 0 0 0 0"
+# fixed_arc="$fixed_arc 2 0 0 0 0 0 1 0 0 0 0"
+# fixed_arc="$fixed_arc 0 1 0 0 1 1 0 0 0 0 1 1"
+# fixed_arc="$fixed_arc 2 0 1 0 0 0 0 0 1 0 1 1 0"
+# fixed_arc="$fixed_arc 1 0 0 1 0 0 0 1 1 1 0 1 0 1"
+# fixed_arc="$fixed_arc 0 1 1 0 1 0 1 0 0 0 0 0 1 0 0"
+# fixed_arc="$fixed_arc 2 0 0 1 0 0 0 0 0 0 0 1 0 1 0 1"
+# fixed_arc="$fixed_arc 2 0 1 0 0 0 1 0 0 1 1 1 1 0 0 1 0"
+# fixed_arc="$fixed_arc 2 0 0 0 0 1 0 1 0 1 0 0 1 0 1 0 0 1"
+# fixed_arc="$fixed_arc 3 0 1 1 0 1 0 0 0 0 0 1 0 1 0 1 0 0 0"
+# fixed_arc="$fixed_arc 3 0 1 1 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 1"
+# fixed_arc="$fixed_arc 0 1 0 0 1 0 1 1 0 0 0 1 0 0 0 0 0 1 1 0 0"
+# fixed_arc="$fixed_arc 3 0 1 0 1 1 0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 0"
+# fixed_arc="$fixed_arc 0 1 0 1 0 1 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 0 0"
+# fixed_arc="$fixed_arc 0 1 1 0 0 0 1 1 1 0 1 0 0 0 1 0 1 0 0 1 1 0 0 0"
+
+# self search final c100
+# fixed_arc="2"
+# fixed_arc="$fixed_arc 5 0"
+# fixed_arc="$fixed_arc 3 0 0"
+# fixed_arc="$fixed_arc 3 0 1 0"
+# fixed_arc="$fixed_arc 3 0 0 1 0"
+# fixed_arc="$fixed_arc 3 0 0 0 1 0"
+# fixed_arc="$fixed_arc 3 0 0 0 0 1 1"
+# fixed_arc="$fixed_arc 1 0 0 0 0 1 0 1"
+# fixed_arc="$fixed_arc 5 0 1 0 1 1 0 0 0"
+# fixed_arc="$fixed_arc 5 0 0 1 0 0 1 0 1 0"
+# fixed_arc="$fixed_arc 1 0 1 1 0 1 0 0 0 1 1"
+# fixed_arc="$fixed_arc 3 0 0 0 1 1 0 1 1 0 1 1"
+
+# self search final c10
+fixed_arc="5"
+fixed_arc="$fixed_arc 0 1"
+fixed_arc="$fixed_arc 3 0 0"
+fixed_arc="$fixed_arc 5 1 0 1"
+fixed_arc="$fixed_arc 5 1 0 1 0"
+fixed_arc="$fixed_arc 1 0 0 1 0 1"
+fixed_arc="$fixed_arc 0 0 1 0 1 0 0"
+fixed_arc="$fixed_arc 2 0 0 0 1 0 0 0"
+fixed_arc="$fixed_arc 1 0 0 1 0 0 0 0 0"
+fixed_arc="$fixed_arc 3 0 1 0 0 1 0 0 0 1"
+fixed_arc="$fixed_arc 2 0 0 0 0 0 1 1 0 1 0"
+fixed_arc="$fixed_arc 0 1 0 1 1 0 1 0 0 0 0 0"
+# val_acc=0.9609
 
 
-CUDA_VISIBLE_DEVICES=0 python3.5 cifar10/main.py \
+
+
+CUDA_VISIBLE_DEVICES=1 python3.5 cifar10/main.py \
   --data_format="NCHW" \
   --search_for="macro" \
   --reset_output_dir \
-  --data_path="../data/cifar100" \
-  --output_dir="outputs_macro_final_cifar100" \
+  --data_path="../data/cifar10" \
+  --output_dir="outputs_macro_search_final_cifar10" \
   --batch_size=100 \
   --num_epochs=310 \
   --log_every=50 \

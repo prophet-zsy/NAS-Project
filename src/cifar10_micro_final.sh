@@ -2,15 +2,24 @@
 
 export PYTHONPATH="$(pwd)"
 
-fixed_arc="0 2 0 0 0 4 0 1 0 4 1 1 1 0 0 1 0 2 1 1"
-fixed_arc="$fixed_arc 1 0 1 0 0 3 0 2 1 1 3 1 1 0 0 4 0 3 1 1"
+# paper origin arc
+# fixed_arc="0 2 0 0 0 4 0 1 0 4 1 1 1 0 0 1 0 2 1 1"
+# fixed_arc="$fixed_arc 1 0 1 0 0 3 0 2 1 1 3 1 1 0 0 4 0 3 1 1"
+# self search c10
+# fixed_arc="1 0 0 2 1 0 1 1 1 3 0 1 1 4 0 1 1 0 1 1"
+# fixed_arc="$fixed_arc 1 2 0 1 0 0 0 0 1 0 0 2 0 4 0 0 1 0 0 1"
 
-CUDA_VISIBLE_DEVICES=0 python3.5 cifar10/main.py \
+# self search c100
+fixed_arc="1 3 0 4 0 4 0 4 1 3 1 0 1 1 1 4 1 0 0 0"
+fixed_arc="$fixed_arc 1 3 0 4 0 3 0 3 1 4 0 4 4 1 1 1 1 2 4 0"
+
+
+CUDA_VISIBLE_DEVICES=1 python3.5 cifar10/main.py \
   --data_format="NCHW" \
   --search_for="micro" \
   --reset_output_dir \
-  --data_path="../data/cifar10" \
-  --output_dir="outputs_micro_final_cifar100" \
+  --data_path="../data/cifar100" \
+  --output_dir="outputs_micro_search_final_cifar100" \
   --batch_size=144 \
   --num_epochs=630 \
   --log_every=50 \
