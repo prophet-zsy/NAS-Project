@@ -380,13 +380,13 @@ class DataFlowGraph:
 
     def _makeconv(self, x, hplist, node, train_flag):
         # 1*1 conv to make the channel resize smaller
-        with tf.variable_scope('1_1_conv' + str(node)) as scope:
-            inputdim = x.shape[3]
-            kernel = self._get_variable('weights',
-                                        shape=[1, 1, inputdim, hplist.filter_size])
-            x = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
-            x = self._batch_norm(x, train_flag)
-            x = self._activation_layer(hplist.activation, x, scope)
+        # with tf.variable_scope('1_1_conv' + str(node)) as scope:
+        #     inputdim = x.shape[3]
+        #     kernel = self._get_variable('weights',
+        #                                 shape=[1, 1, inputdim, hplist.filter_size])
+        #     x = tf.nn.conv2d(x, kernel, [1, 1, 1, 1], padding='SAME')
+        #     x = self._batch_norm(x, train_flag)
+        #     x = self._activation_layer(hplist.activation, x, scope)
 
         with tf.variable_scope('conv' + str(node)) as scope:
             inputdim = x.shape[3]
@@ -642,7 +642,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(-1)
-    cur_epoch = eval._set_epoch(640)
+    cur_epoch = eval._set_epoch(500)
     
     # graph_full = [[1]]
     # cell_list = [Cell('conv', 64, 3, 'relu')]
@@ -798,17 +798,36 @@ if __name__ == '__main__':
     # print(e)
 
     # 0.933 cifar-10 without sep_conv historybest finetune refactor 6/11
-    graph_full = [[1, 4, 2], [2, 3], [3, 5], [5], [2]]
-    cell_list = [Cell('conv', 48, 3, 'relu6'), Cell('conv', 32, 5, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 64, 3, 'relu'), Cell('conv', 48, 3, 'relu6')]
+    # graph_full = [[1, 4, 2], [2, 3], [3, 5], [5], [2]]
+    # cell_list = [Cell('conv', 48, 3, 'relu6'), Cell('conv', 32, 5, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 64, 3, 'relu'), Cell('conv', 48, 3, 'relu6')]
+    # network1 = NetworkItem(0, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 5, 3], [2, 3], [3], [7], [3], [6], [3]]
+    # cell_list = [Cell('conv', 48, 5, 'relu'), Cell('conv', 64, 3, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('conv', 48, 5, 'leakyrelu'), Cell('conv', 64, 1, 'relu6'), Cell('conv', 128, 1, 'relu'), Cell('conv', 64, 1, 'relu')]
+    # network2 = NetworkItem(1, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 5, 2], [2, 3], [3], [7], [2], [6], [3]]
+    # cell_list = [Cell('conv', 128, 1, 'relu6'), Cell('conv', 64, 5, 'leakyrelu'), Cell('conv', 64, 5, 'leakyrelu'), Cell('conv', 64, 5, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('conv', 64, 5, 'relu'), Cell('conv', 128, 1, 'relu')]
+    # network3 = NetworkItem(2, graph_full, cell_list, "")
+    # graph_full = [[1, 4, 2, 3], [2, 3], [3], [6], [5], [3]]
+    # cell_list = [Cell('conv', 128, 1, 'relu'), Cell('conv', 192, 1, 'leakyrelu'), Cell('conv', 128, 5, 'relu'), Cell('conv', 192, 1, 'relu'), Cell('conv', 192, 5, 'leakyrelu'), Cell('conv', 192, 1, 'leakyrelu')]
+    # network4 = NetworkItem(3, graph_full, cell_list, "")
+
+    # task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
+    #      pre_blk=[network1, network2, network3, network4], ft_sign=True, bestNN=True, rd=0, nn_left=0, spl_batch_num=6, epoch=cur_epoch, data_size=cur_data_size)
+    # e = eval.evaluate(task_item)
+    # print(e)
+
+    # 0.960 cifar-10 huawei 7-20 num 7 exp
+    graph_full = [[1, 6, 9, 3], [2, 3, 4], [3, 4], [4, 10], [5], [10], [7], [8], [4], [5]]
+    cell_list = [Cell('conv', 64, 1, 'relu'), Cell('conv', 64, 3, 'leakyrelu'), Cell('conv', 64, 5, 'relu'), Cell('conv', 48, 1, 'leakyrelu'), Cell('conv', 64, 3, 'relu6'), Cell('conv', 32, 3, 'relu'), Cell('conv', 48, 5, 'relu'), Cell('conv', 64, 3, 'relu'), Cell('conv', 32, 5, 'relu'), Cell('conv', 48, 3, 'leakyrelu')]
     network1 = NetworkItem(0, graph_full, cell_list, "")
-    graph_full = [[1, 4, 5, 3], [2, 3], [3], [7], [3], [6], [3]]
-    cell_list = [Cell('conv', 48, 5, 'relu'), Cell('conv', 64, 3, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('conv', 48, 5, 'leakyrelu'), Cell('conv', 64, 1, 'relu6'), Cell('conv', 128, 1, 'relu'), Cell('conv', 64, 1, 'relu')]
+    graph_full = [[1, 2, 3], [2, 6], [3, 4], [4, 7, 5], [5], [8], [4], [5]]
+    cell_list = [Cell('conv', 128, 5, 'leakyrelu'), Cell('conv', 48, 5, 'leakyrelu'), Cell('conv', 64, 3, 'relu6'), Cell('conv', 128, 3, 'leakyrelu'), Cell('conv', 48, 3, 'relu'), Cell('conv', 48, 1, 'leakyrelu'), Cell('conv', 64, 1, 'leakyrelu'), Cell('conv', 128, 5, 'leakyrelu')]
     network2 = NetworkItem(1, graph_full, cell_list, "")
-    graph_full = [[1, 4, 5, 2], [2, 3], [3], [7], [2], [6], [3]]
-    cell_list = [Cell('conv', 128, 1, 'relu6'), Cell('conv', 64, 5, 'leakyrelu'), Cell('conv', 64, 5, 'leakyrelu'), Cell('conv', 64, 5, 'relu'), Cell('conv', 128, 1, 'relu6'), Cell('conv', 64, 5, 'relu'), Cell('conv', 128, 1, 'relu')]
+    graph_full = [[1, 6, 7, 2, 3], [2, 3, 4], [3, 4], [4, 5], [5], [9], [5], [8], [5]] 
+    cell_list = [Cell('conv', 64, 3, 'leakyrelu'), Cell('conv', 64, 3, 'leakyrelu'), Cell('conv', 128, 5, 'leakyrelu'), Cell('conv', 128, 1, 'leakyrelu'), Cell('conv', 192, 5, 'relu6'), Cell('conv', 64, 1, 'relu'), Cell('conv', 192, 1, 'leakyrelu'), Cell('conv', 192, 1, 'relu'), Cell('conv', 192, 3, 'leakyrelu')]
     network3 = NetworkItem(2, graph_full, cell_list, "")
-    graph_full = [[1, 4, 2, 3], [2, 3], [3], [6], [5], [3]]
-    cell_list = [Cell('conv', 128, 1, 'relu'), Cell('conv', 192, 1, 'leakyrelu'), Cell('conv', 128, 5, 'relu'), Cell('conv', 192, 1, 'relu'), Cell('conv', 192, 5, 'leakyrelu'), Cell('conv', 192, 1, 'leakyrelu')]
+    graph_full = [[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]]
+    cell_list = [Cell('conv', 192, 1, 'relu'), Cell('conv', 128, 1, 'relu'), Cell('conv', 256, 5, 'relu6'), Cell('conv', 128, 5, 'relu6'), Cell('conv', 192, 3, 'leakyrelu'), Cell('conv', 128, 3, 'leakyrelu'), Cell('conv', 128, 3, 'relu6'), Cell('conv', 128, 1, 'leakyrelu'), Cell('conv', 192, 1, 'leakyrelu'), Cell('conv', 256, 1, 'leakyrelu'), Cell('conv', 192, 3, 'relu6')]
     network4 = NetworkItem(3, graph_full, cell_list, "")
 
     task_item = EvaScheduleItem(nn_id=0, alig_id=0, graph_template=[], item=None,\
