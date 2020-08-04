@@ -33,6 +33,7 @@ parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
 args = parser.parse_args()
 
+
 log_format = '%(asctime)s %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
     format=log_format, datefmt='%m/%d %I:%M:%S %p')
