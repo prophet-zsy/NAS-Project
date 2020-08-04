@@ -16,11 +16,12 @@ import torchvision.transforms as transforms
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
-from model import NetworkImageNet as Network
+from model import NetworkDenoise as Network
+from denoise_data import DenoiseDataSetPrepare, BasicDataset
 
 
-parser = argparse.ArgumentParser("imagenet")
-parser.add_argument('--data', type=str, default='../data/imagenet/', help='location of the data corpus')
+parser = argparse.ArgumentParser("denoise")
+parser.add_argument('--data', type=str, default='../data/denoise/', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=128, help='batch size')
 parser.add_argument('--learning_rate', type=float, default=0.1, help='init learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
@@ -53,29 +54,13 @@ fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
 
-CLASSES = 1000
-
-
-class CrossEntropyLabelSmooth(nn.Module):
-
-  def __init__(self, num_classes, epsilon):
-    super(CrossEntropyLabelSmooth, self).__init__()
-    self.num_classes = num_classes
-    self.epsilon = epsilon
-    self.logsoftmax = nn.LogSoftmax(dim=1)
-
-  def forward(self, inputs, targets):
-    log_probs = self.logsoftmax(inputs)
-    targets = torch.zeros_like(log_probs).scatter_(1, targets.unsqueeze(1), 1)
-    targets = (1 - self.epsilon) * targets + self.epsilon / self.num_classes
-    loss = (-targets * log_probs).mean(0).sum()
-    return loss
-
 
 def main():
   if not torch.cuda.is_available():
     logging.info('no gpu device available')
     sys.exit(1)
+
+  DenoiseDataSetPrepare(args.data_path, args.batch_size)   # make sure the denoise data is prepared
 
   np.random.seed(args.seed)
   torch.cuda.set_device(args.gpu)
@@ -87,7 +72,7 @@ def main():
   logging.info("args = %s", args)
 
   genotype = eval("genotypes.%s" % args.arch)
-  model = Network(args.init_channels, CLASSES, args.layers, args.auxiliary, genotype)
+  model = Network(args.init_channels, args.layers, args.auxiliary, genotype)
   if args.parallel:
     model = nn.DataParallel(model).cuda()
   else:
@@ -95,10 +80,8 @@ def main():
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
-  criterion = nn.CrossEntropyLoss()
+  criterion = torch.nn.MSELoss(reduce=True, size_average=True)
   criterion = criterion.cuda()
-  criterion_smooth = CrossEntropyLabelSmooth(CLASSES, args.label_smooth)
-  criterion_smooth = criterion_smooth.cuda()
 
   optimizer = torch.optim.SGD(
     model.parameters(),
@@ -108,35 +91,24 @@ def main():
     )
 
   traindir = os.path.join(args.data, 'train')
-  validdir = os.path.join(args.data, 'val')
-  normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-  train_data = dset.ImageFolder(
-    traindir,
-    transforms.Compose([
-      transforms.RandomResizedCrop(224),
-      transforms.RandomHorizontalFlip(),
-      transforms.ColorJitter(
-        brightness=0.4,
-        contrast=0.4,
-        saturation=0.4,
-        hue=0.2),
-      transforms.ToTensor(),
-      normalize,
-    ]))
-  valid_data = dset.ImageFolder(
-    validdir,
-    transforms.Compose([
-      transforms.Resize(256),
-      transforms.CenterCrop(224),
-      transforms.ToTensor(),
-      normalize,
-    ]))
+  validdir = os.path.join(args.data, 'test')
+
+  trian_noisy_dir = os.path.join(traindir, "noisy")
+  trian_clear_dir = os.path.join(traindir, "original")
+  train_dataset = BasicDataset(traindir, trian_noisy_dir, trian_clear_dir)
+  val_ratio = 0.1
+  n_val = int(len(train_dataset) * val_ratio)
+  n_train = len(train_dataset) - n_val
+  train_dataset, val_dataset = torch.utils.data.random_split(train_dataset, [n_train, n_val])
+  # test_noisy_dir = os.path.join(validdir, "noisy")
+  # test_clear_dir = os.path.join(validdir, "original")
+  # test_dataset = BasicDataset(validdir, test_noisy_dir, test_clear_dir)
 
   train_queue = torch.utils.data.DataLoader(
-    train_data, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=4)
+    train_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=4)
 
   valid_queue = torch.utils.data.DataLoader(
-    valid_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=4)
+    val_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=4)
 
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.decay_period, gamma=args.gamma)
 
@@ -146,7 +118,7 @@ def main():
     logging.info('epoch %d lr %e', epoch, scheduler.get_lr()[0])
     model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
 
-    train_acc, train_obj = train(train_queue, model, criterion_smooth, optimizer)
+    train_acc, train_obj = train(train_queue, model, criterion, optimizer)
     logging.info('train_acc %f', train_acc)
 
     valid_acc_top1, valid_acc_top5, valid_obj = infer(valid_queue, model, criterion)

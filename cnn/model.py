@@ -83,6 +83,27 @@ class AuxiliaryHeadCIFAR(nn.Module):
     return x
 
 
+class AuxiliaryHeadDenoise(nn.Module):
+
+  def __init__(self, C, out_c=3):
+    """assuming input size 8x8"""
+    super(AuxiliaryHeadDenoise, self).__init__()
+    self.features = nn.Sequential(
+      nn.ReLU(inplace=True),
+      nn.Conv2d(C, 128, 1, bias=False),
+      nn.BatchNorm2d(128),
+      nn.ReLU(inplace=True),
+      nn.Conv2d(128, 32, 2, bias=False),
+      nn.BatchNorm2d(32),
+      nn.ReLU(inplace=True),
+      nn.Conv2d(32, out_c, 2, bias=False)
+    )
+
+  def forward(self, x):
+    x = self.features(x)
+    return x
+
+
 class AuxiliaryHeadImageNet(nn.Module):
 
   def __init__(self, C, num_classes):
@@ -211,4 +232,59 @@ class NetworkImageNet(nn.Module):
     out = self.global_pooling(s1)
     logits = self.classifier(out.view(out.size(0), -1))
     return logits, logits_aux
+
+
+class NetworkDenoise(nn.Module):
+
+  def __init__(self, C, layers, auxiliary, genotype):
+    super(NetworkDenoise, self).__init__()
+    self._layers = layers
+    self._auxiliary = auxiliary
+
+    self.stem0 = nn.Sequential(
+      nn.Conv2d(3, C // 2, kernel_size=3, stride=1, padding=1, bias=False),  # original stride = 2
+      nn.BatchNorm2d(C // 2),
+      nn.ReLU(inplace=True),
+      nn.Conv2d(C // 2, C, 3, stride=1, padding=1, bias=False),  # original stride = 2
+      nn.BatchNorm2d(C),
+    )
+
+    self.stem1 = nn.Sequential(
+      nn.ReLU(inplace=True),
+      nn.Conv2d(C, C, 3, stride=1, padding=1, bias=False),  # original stride = 2
+      nn.BatchNorm2d(C),
+    )
+
+    C_prev_prev, C_prev, C_curr = C, C, C
+
+    self.cells = nn.ModuleList()
+    reduction_prev = True
+    for i in range(layers):
+      if i in [layers // 3, 2 * layers // 3]:
+        C_curr *= 2
+        reduction = False   # original is True,  we rm pooling (stride = 2) in denoise
+      else:
+        reduction = False
+      cell = Cell(genotype, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
+      reduction_prev = reduction
+      self.cells += [cell]
+      C_prev_prev, C_prev = C_prev, cell.multiplier * C_curr
+      if i == 2 * layers // 3:
+        C_to_auxiliary = C_prev
+
+    if auxiliary:
+      self.auxiliary_head = AuxiliaryHeadDenoise(C_to_auxiliary, out_c=3)
+
+  def forward(self, input):
+    logits_aux = None
+    s0 = self.stem0(input)
+    s1 = self.stem1(s0)
+    for i, cell in enumerate(self.cells):
+      s0, s1 = s1, cell(s0, s1, self.drop_path_prob)
+      if i == 2 * self._layers // 3:
+        if self._auxiliary and self.training:
+          logits_aux = self.auxiliary_head(s1)
+    logits = s1
+    return logits, logits_aux
+
 
