@@ -12,6 +12,8 @@ from sampler import Sampler
 task_name = NAS_CONFIG['eva']['task_name']
 if task_name == "denoise":
     from evaluator_denoise import Evaluator
+elif task_name == "SIDD":
+    from evaluator_denoise_SIDD import Evaluator
 else:
     from evaluator_classification import Evaluator
 
