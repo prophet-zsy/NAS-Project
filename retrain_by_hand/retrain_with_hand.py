@@ -6,16 +6,16 @@ from utils_1 import *
 from image_ops import *
 from common_ops import *
 
-CUTOUT_SIZE = None
+CUTOUT = True
 BATCH_SIZE = 100
 SEED = None
 # number of epochs to decay
 LR_DEC_EVERY = 10000
 DATA_FORMAT = "NHWC"
-# DATA_PATH = "../data/cifar-10-batches-py"
-# NUM_CLASSES = 10
-DATA_PATH = "../data/cifar-100-python"
-NUM_CLASSES = 100
+DATA_PATH = "../data/cifar-10-batches-py"
+NUM_CLASSES = 10
+# DATA_PATH = "../data/cifar-100-python"
+# NUM_CLASSES = 100
 
 GPU = 1
 NUM_VALIDS = 0
@@ -134,13 +134,14 @@ def prepare_data(images, labels):
       x = tf.pad(x, [[4, 4], [4, 4], [0, 0]])
       x = tf.random_crop(x, [32, 32, 3], seed=SEED)
       x = tf.image.random_flip_left_right(x, seed=SEED)
-      if CUTOUT_SIZE is not None:
-        mask = tf.ones([CUTOUT_SIZE, CUTOUT_SIZE], dtype=tf.int32)
+      if CUTOUT:
+        cut_size = random.randint(0, IMAGE_SIZE // 2)
+        mask = tf.ones([cut_size, cut_size], dtype=tf.int32)
         start = tf.random_uniform([2], minval=0, maxval=32, dtype=tf.int32)
-        mask = tf.pad(mask, [[CUTOUT_SIZE + start[0], 32 - start[0]],
-                              [CUTOUT_SIZE + start[1], 32 - start[1]]])
-        mask = mask[CUTOUT_SIZE: CUTOUT_SIZE + 32,
-                    CUTOUT_SIZE: CUTOUT_SIZE + 32]
+        mask = tf.pad(mask, [[cut_size + start[0], 32 - start[0]],
+                              [cut_size + start[1], 32 - start[1]]])
+        mask = mask[cut_size: cut_size + 32,
+                    cut_size: cut_size + 32]
         mask = tf.reshape(mask, [32, 32, 1])
         mask = tf.tile(mask, [1, 1, 3])
         x = tf.where(tf.equal(mask, 0), x=x, y=tf.zeros_like(x))
@@ -190,19 +191,44 @@ def prepare_data(images, labels):
 
 
 def conv_custom(inputs, blk_id, node_id, out_channel, kernel_size, activation, is_training=False):
+  # make the channel double for 0.9656
+  out_channel *= 2
+  
   x = inputs[node_id]  # get the input correspond to the node
+  # concat for all the skipping 
   x = tf.concat(x, 3)  # list to tensor
+  # add for all the skipping 
+  # new_x = x[0]
+  # for item in x[1:]:
+  #   new_x = new_x + item
+  # x = new_x
+
   input_channel = x.get_shape()[3].value
   activation_dict = {
     "relu": lambda x: tf.nn.relu(x),
     "leakyrelu": lambda x: tf.nn.leaky_relu(x),
     "relu6":lambda x: tf.nn.relu6(x)
   }
-  with tf.variable_scope(str(blk_id) + 'conv' + str(node_id)) as scope:
+
+  # add 1*1conv
+  # with tf.variable_scope(str(blk_id) + '1_1_conv' + str(node_id)) as scope:    
+  #   w = create_weight("w", [1, 1, input_channel, 48])  # when use it please change the following input_channel into 48
+  #   x = tf.nn.conv2d(x, w, [1, 1, 1, 1], "SAME", data_format=DATA_FORMAT)
+  #   x = batch_norm(x, is_training, data_format=DATA_FORMAT)
+  #   x = activation_dict["relu"](x)
+
+  with tf.variable_scope(str(blk_id) + 'conv' + str(node_id)) as scope:    
     w = create_weight("w", [kernel_size, kernel_size, input_channel, out_channel])
     x = tf.nn.conv2d(x, w, [1, 1, 1, 1], "SAME", data_format=DATA_FORMAT)
     x = batch_norm(x, is_training, data_format=DATA_FORMAT)
     x = activation_dict[activation](x)
+
+  # add 1*1conv for add ops at the end of skipping end, when using it we change the concat into add 
+  # with tf.variable_scope(str(blk_id) + '1_1_conv' + str(node_id)) as scope:    
+  #   w = create_weight("w", [1, 1, out_channel, 48])
+  #   x = tf.nn.conv2d(x, w, [1, 1, 1, 1], "SAME", data_format=DATA_FORMAT)
+  #   x = batch_norm(x, is_training, data_format=DATA_FORMAT)
+  #   x = activation_dict["relu"](x)
   return x
 
 def toposort(graph):
@@ -282,6 +308,7 @@ def train(blks, data_x, data_y):
   global_step = tf.Variable(0, trainable=False, name='global_step')
   decay_steps = int(NUM_TRAIN_BATCHES * EPOCH)
   lr = tf.train.cosine_decay(INITIAL_LEARNING_RATE, global_step, decay_steps, 0.0001)
+  # lr = tf.train.polynomial_decay(INITIAL_LEARNING_RATE, global_step, decay_steps, 0.0, 0.5, cycle=True)
 
   opt = tf.train.MomentumOptimizer(lr, MOMENTUM_RATE, name='Momentum',
                                     use_nesterov=True)
@@ -307,7 +334,7 @@ if __name__ == '__main__':
   x_train, y_train, x_valid, y_valid, x_test, y_test = prepare_data(images, labels)
   # print(x_train); print(y_train); print(x_valid); print(y_valid); print(x_test); print(y_test)
 
-  # 0.960
+  # 0.960  c10
   blks = \
   [
   [[[1, 6, 9, 3], [2, 3, 4], [3, 4], [4, 10], [5], [10], [7], [8], [4], [5]], 
@@ -319,6 +346,20 @@ if __name__ == '__main__':
   [[[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]], 
   [('conv', 192, 1, 'relu'), ('conv', 128, 1, 'relu'), ('conv', 256, 5, 'relu6'), ('conv', 128, 5, 'relu6'), ('conv', 192, 3, 'leakyrelu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 192, 3, 'relu6')]],
   ]
+
+  # 0.9656 c10 (0.954 double channel)
+  # blks = \
+  # [
+  # [[[1, 3, 4, 2, 6, 5], [2, 6], [6], [6], [5, 6], [6]],
+  # [('conv', 64, 3, 'relu'), ('conv', 48, 3, 'relu'), ('conv', 48, 3, 'relu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 32, 3, 'relu'), ('conv', 32, 1, 'relu'), ('conv', 64, 3, 'relu')]],
+  # [[[1, 3, 4, 2, 5, 6], [2, 6], [6], [2, 6], [5, 6], [6]],
+  # [('conv', 128, 3, 'relu'), ('conv', 128, 3, 'relu'), ('conv', 192, 3, 'relu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 192, 3, 'relu'), ('conv', 128, 3, 'relu'), ('conv', 192, 3, 'relu')]],
+  # [[[1, 3, 4], [2], [4], [4]],
+  # [('conv', 256, 3, 'relu'), ('conv', 256, 3, 'relu'), ('conv', 192, 3, 'relu'), ('conv', 192, 3, 'leakyrelu'), ('conv', 256, 3, 'relu')]],
+  # [[[1, 3, 4], [2], [4], [4]],
+  # [('conv', 256, 3, 'relu'), ('conv', 256, 3, 'relu'), ('conv', 192, 3, 'relu'), ('conv', 192, 3, 'leakyrelu'), ('conv', 256, 3, 'relu')]],
+  # ]
+
   train_loss, train_acc, train_op = train(blks, x_train, y_train)
   if NUM_VALIDS != 0:
     valid_loss, valid_acc = valid(blks, x_valid, y_valid)

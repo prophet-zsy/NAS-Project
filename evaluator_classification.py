@@ -642,7 +642,7 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(-1)
-    cur_epoch = eval._set_epoch(500)
+    cur_epoch = eval._set_epoch(1000)
     
     # graph_full = [[1]]
     # cell_list = [Cell('conv', 64, 3, 'relu')]
