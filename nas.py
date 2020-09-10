@@ -529,7 +529,10 @@ def _search_blk(block_id, eva, ds, npool_tem):
     
     net_pool = copy.deepcopy(npool_tem)
     _init_npool_sampler(net_pool, block_id)
-    net_pool = _filter_topo_and_init_ops(net_pool, block_id)
+    # if there are only one net, we do not use the priori to process the net, 
+    # and enter the retrain stagess
+    if len(net_pool) > 1:
+        net_pool = _filter_topo_and_init_ops(net_pool, block_id)
     
     round = 0
     time_game = TimeCnt()
