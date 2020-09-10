@@ -158,6 +158,8 @@ class TaskScheduler:
         self.gpu_list = queue.Queue()
         for gpu in range(self.gpu_num):
             self.gpu_list.put(gpu)
+        # if you put the discrete the id of gpu, please use the following method and comment the two lines above
+        # self.gpu_list.put(1)
         
         # for counting task(every task has a unique task_id)
         self.task_id = 0
