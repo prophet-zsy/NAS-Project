@@ -1,26 +1,26 @@
 {
   "nas_main": {
     "pattern": "Block",
-    "num_gpu": 2,
-    "block_num": 4,
-    "num_opt_best": 5,
+    "num_gpu": 1,
+    "block_num": 2,
+    "num_opt_best": 3,
     "finetune_threshold": 10000,
-    "spl_network_round": 3,
+    "spl_network_round": 2,
     "max_player_nums": 32,
     "eliminate_policy": "history_best",
     "add_data_mode": "linear",
     "add_data_per_round": 100,
-    "init_data_size": 1000,
+    "init_data_size": 100,
     "data_increase_scale": 1.5,
-    "add_data_for_confirm_train": 200,
-    "add_data_for_retrain": 200,
+    "add_data_for_confirm_train": 100,
+    "add_data_for_retrain": 100,
     "repeat_num": 1,
     "subp_eva_debug": 0,
     "subp_pred_filter_debug": 0,
     "pred_mask": 0,
-    "filter_mask":0,
+    "filter_mask": 0,
     "eva_mask": 0,
-    "link_node": false,
+    "link_node": true,
     "retrain_switch": 1
   },
   "enum":{
@@ -30,10 +30,10 @@
     "enum_debug": 0
   },
   "eva": {
-    "task_name": "cifar-100",
-    "search_epoch": 1,
-    "confirm_epoch": 2,
-    "retrain_epoch": 3
+    "task_name": "cifar-10",
+    "search_epoch": 2,
+    "confirm_epoch": 3,
+    "retrain_epoch": 4
   },
   "opt": {
       "sample_size": 3,
@@ -66,19 +66,6 @@
           "relu6"
         ]
       },
-      "pooling": {
-        "pooling_type": [
-          "avg",
-          "max"
-        ],
-        "kernel_size": [
-          2,
-          3,
-          6,
-          7,
-          8
-        ]
-      },
       "sep_conv": {
         "filter_size": [
           [32, 48, 64],
@@ -96,6 +83,19 @@
           "relu",
           "leakyrelu",
           "relu6"
+        ]
+      },
+      "pooling": {
+        "pooling_type": [
+          "avg",
+          "max"
+        ],
+        "kernel_size": [
+          2,
+          3,
+          6,
+          7,
+          8
         ]
       }
     }

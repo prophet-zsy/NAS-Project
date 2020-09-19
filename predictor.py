@@ -3,20 +3,22 @@ import os
 from info_str import _cur_ver_dir
 import numpy as np
 from enumerater import Enumerater
-from use_priori.predict_op.label_encoding import decoder, encoder, getClassNum
-from keras.utils.np_utils import to_categorical
-from keras.models import model_from_json
+from predict_op.label_encoding import decoder, encoder, getClassNum
+import tensorflow as tf
 import time
 
+
 MAX_NETWORK_LENGTH = 71
-#model_json_path = './predict_op/model.json'
-#model_weights_path = './predict_op/model.json.h5'
 
-net_data_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op/data', 'net.npy')
-label_data_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op/data', 'label.npy')
+#net_data_path = './predict_op/data/net.npy'
+#label_data_path = './predict_op/data/label.npy'
 
-model_json_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op', 'model.json')
-model_weights_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op', 'model.json.h5')
+#net_data_path = os.path.join(_cur_ver_dir, 'predict_op/data', 'net.npy')
+#label_data_path = os.path.join(_cur_ver_dir, 'predict_op/data', 'label.npy')
+#
+#model_json_path = os.path.join(_cur_ver_dir, 'predict_op', 'model.json')
+#model_weights_path = os.path.join(_cur_ver_dir, 'predict_op', 'model.json.h5')
+model_path = os.path.join(_cur_ver_dir,'use_priori/predict_op/','model.pb')
 
 # TODO Predictor.train -> Predictor.train_model (defined in interface.md)
 # TODO DO NOT overuse @staticmethod. It can be your private function in predictor.py.
@@ -241,10 +243,22 @@ class Feature:
 
 class Predictor:
     def __init__(self):
-        with open(model_json_path, 'r') as file:
-            model_json = file.read()
-        self.model = model_from_json(model_json)
-        self.model.load_weights(model_weights_path)
+        self.sess = tf.Session()
+        # saver = tf.train.import_meta_graph('./predict_op/ckpt/tfmodel-40000.meta')
+        # saver.restore(self.sess, tf.train.latest_checkpoint('./predict_op/ckpt'))
+        with tf.gfile.FastGFile(model_path, 'rb') as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+            self.sess.graph.as_default()
+            tf.import_graph_def(graph_def, name='')
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
+        self.graph = tf.get_default_graph()
+        self.input = self.graph.get_tensor_by_name("input:0")
+        self.input_y = self.graph.get_tensor_by_name("input_y:0")
+        self.pred = self.graph.get_tensor_by_name("output/GatherV2:0")
+        self.out = tf.argmax(self.pred, 1)
+        self.save_out = []
 
     def _list2mat(self, G):
         # 将领接表转换成邻接矩阵
@@ -259,20 +273,17 @@ class Predictor:
     def _graph_concat(self, graphs):
         if len(graphs) == 1:
             return graphs[0]
-        elif len(graphs) > 1:
+        else:
             new_graph_length = 0
             for g in graphs:
                 new_graph_length += len(g)
             new_graph = np.zeros((new_graph_length, new_graph_length), dtype=int)
-            x_index = 0  # the staring connection position of next graph
-            y_index = 0
+            index = 0  # the staring connection position of next graph
             for g in graphs:
-                new_graph[x_index:x_index + len(g), y_index:y_index + len(g)] = g
-                if y_index + len(g) < new_graph_length:
-                    new_graph[x_index + len(g) - 1][y_index + len(g)] = 1
-                x_index = x_index + len(g)
-                y_index = y_index + len(g)
-
+                new_graph[index:index + len(g), index:index + len(g)] = g
+                if index + len(g) < new_graph_length:
+                    new_graph[index + len(g) - 1][index + len(g)] = 1
+                index = index + len(g)
             return new_graph
 
     def _get_new_order(self, links, graph_size):
@@ -365,20 +376,18 @@ class Predictor:
         label = np.load(label_data_path)
         return network_feature, label
 
-    def _save_data(self, net, label):
-        np.save(net_data_path, net)
-        np.save(label_data_path, label)
+    # def _save_data(self, net, label):
+    #     np.save(net_data_path, net)
+    #     np.save(label_data_path, label)
 
     def _predict(self, inputs):
         # 根据输入特征预测操作
         inputs = np.array(inputs)
         inputs = np.reshape(inputs, (1, inputs.shape[0], inputs.shape[1]))
-        # model = load_model(model_json_path, model_weights_path)
-        predict_y = self.model.predict(inputs)
-        predict_y = np.reshape(predict_y, (predict_y.shape[1], predict_y.shape[2]))
-        output = []
-        for i in range(len(inputs[0])):
-            output.append(np.argmax(predict_y[i]))
+        label = np.zeros(shape=[inputs.shape[1], getClassNum()])
+        label = self._padding(label, MAX_NETWORK_LENGTH)
+        label = np.reshape(label, (1, label.shape[0], label.shape[1]))
+        output = self.sess.run(self.out, feed_dict={self.input:inputs,self.input_y:label})
         return output
 
     # 模块接口
@@ -400,6 +409,7 @@ class Predictor:
         inputs = Feature(new_graph)._feature_nodes()
         inputs = self._padding(inputs, MAX_NETWORK_LENGTH)
         class_list = self._predict(inputs)
+        self.save_out.extend(class_list[len(new_graph) - len(graph_full):len(new_graph)])
         ops = self._class_id_2_parameter(graphs_orders[-1],
                                                     class_list[len(new_graph) - len(graph_full):len(new_graph)])
         return ops
@@ -409,45 +419,16 @@ class Predictor:
         Retrain the predictor model with networks that
         get high accuracy on the validation set
         
-        :param graph_full: a Network Topology
+        :param graph_full: Network Topology set
         :param cell_list: Cell list
         :returns: None.
         '''
-        x_train = []
-        y_train = []
-        net, label = self._read_data(net_data_path, label_data_path)
-        for k in net:
-            x_train.append(k)
-        for k in label:
-            y_train.append(k)
-        graphs_mat, _ = self._trans(graph_full)
-        for graph in graphs_mat:
-            x = Feature(graph)._feature_nodes()
-            x = self._padding(x, MAX_NETWORK_LENGTH)
-            x_train.append(x)
-        x_train = np.array(x_train)
-        for cell in cell_list:
-            cell = self._my_param_style(cell)
-            y = encoder(cell)
-            y = to_categorical(y, getClassNum())
-            y = self._padding(y, MAX_NETWORK_LENGTH)
-            y_train.append(y)
-        y_train = np.array(y_train)
+        #TODO retrain code
 
-        self._save_model(model=self.model,
-                         json_path='./predict_op/outdated_model.json',
-                         weights_path='./predict_op/outdated_model.json.h5')
 
-        self.model.compile(loss='categorical_crossentropy',
-                           optimizer='rmsprop',
-                           metrics=['accuracy'])
-        self.model.fit(x_train, y_train, batch_size=32, epochs=500)
 
-        self._save_model(model=self.model,
-                         json_path=model_json_path,
-                         weights_path=model_weights_path)
 
-        self._save_data(x_train, y_train)
+
 
 
 
@@ -457,9 +438,9 @@ if __name__ == '__main__':
     #                  , ('conv', 128, 1, 'relu'), ('conv', 512, 5, 'relu')]]
     # pred = Predictor()
     # Blocks = []
-    # pred.train([], [])
+    # pred.train_model([], [])
 
-    enu = Enumerater(depth=6, width=3)
+    enu = Enumerater()
     network_pool = enu.enumerate()
     print(len(network_pool))
     start = time.time()
@@ -474,7 +455,8 @@ if __name__ == '__main__':
         if i%100 == 0:
             print("iterator:", i)
         i += 1
-        print(gra)
         print(cell_list)
+    ans = np.array(pred.save_out)
+    np.save('tf_result.npy', ans)
     end = time.time()
     print(end-start)
