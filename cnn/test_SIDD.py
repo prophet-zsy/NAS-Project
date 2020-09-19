@@ -101,7 +101,7 @@ def infer(test_queue, model, criterion):
     input = torch.from_numpy(input)
     input = input.permute(0,3,1,2)
 
-    mini_batch_size = 10
+    mini_batch_size = 1
     res = []
     for i in range(0, input.shape[0], mini_batch_size):
       tem_input = input[i: i + mini_batch_size]
