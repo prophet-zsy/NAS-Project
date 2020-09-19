@@ -15,11 +15,11 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model import NetworkDenoise as Network
 from denoise_data import DenoiseDataSetPrepare, BasicDataset
-from utils import save_image_tensor
+from utils import save_image_tensor, image_splitor
 
 
 parser = argparse.ArgumentParser("denoise")
-parser.add_argument('--data', type=str, default='../data/denoise/', help='location of the data corpus')
+parser.add_argument('--data', type=str, default='../data/SIDD_Small_sRGB_Only/', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
@@ -87,21 +87,44 @@ def infer(test_queue, model, criterion):
   top1 = utils.AvgrageMeter()
   model.eval()
 
+  img_split = image_splitor(100)
+
   for step, item in enumerate(test_queue):
     idx = item['idx']
     input = item['image']
     target = item['label']
-    input = Variable(input, volatile=True).cuda()
-    target = Variable(target, volatile=True).cuda(async=True)
 
-    logits, _ = model(input)
+    # cut the img
+    input = input.permute(0,2,3,1)  # from NCHW to NHWC in torch
+    input = input.numpy()
+    input = img_split._split_huge_img(input)
+    input = torch.from_numpy(input)
+    input = input.permute(0,3,1,2)
+
+    mini_batch_size = 10
+    res = []
+    for i in range(0, input.shape[0], mini_batch_size):
+      tem_input = input[i: i + mini_batch_size]
+      tem_input = Variable(tem_input, volatile=True).cuda()
+
+      logits, _ = model(tem_input)
+      res.append(logits)
+    input = torch.cat(res, 0)
+
+    # concat the img
+    input = input.permute(0,2,3,1)  # from NCHW to NHWC in torch
+    input = input.numpy()
+    input = img_split._recover_huge_img(input)
+    input = torch.from_numpy(input)
+    input = input.permute(0,3,1,2)
 
     save_pred_dir = os.path.join(args.data, 'test', 'pred')
     if not os.path.exists(save_pred_dir):
       os.mkdir(save_pred_dir)
     file_name = os.path.join(save_pred_dir, idx[0]+'.png')
     save_image_tensor(logits, file_name)
-    
+
+    target = Variable(target, volatile=True).cuda(async=True)    
     loss = criterion(logits, target)
 
     psnr = utils.psnr(logits, target)

@@ -22,15 +22,15 @@ from denoise_data import DenoiseDataSetPrepare, BasicDataset
 
 parser = argparse.ArgumentParser("denoise")
 parser.add_argument('--data', type=str, default='../data/denoise/', help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=128, help='batch size')
+parser.add_argument('--batch_size', type=int, default=100, help='batch size') # 16
 parser.add_argument('--learning_rate', type=float, default=0.1, help='init learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-5, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=100, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-parser.add_argument('--epochs', type=int, default=250, help='num of training epochs')
-parser.add_argument('--init_channels', type=int, default=48, help='num of init channels')
-parser.add_argument('--layers', type=int, default=14, help='total number of layers')
+parser.add_argument('--epochs', type=int, default=1, help='num of training epochs') # 250
+parser.add_argument('--init_channels', type=int, default=4, help='num of init channels') # 32
+parser.add_argument('--layers', type=int, default=2, help='total number of layers') # 7
 parser.add_argument('--auxiliary', action='store_true', default=False, help='use auxiliary tower')
 parser.add_argument('--auxiliary_weight', type=float, default=0.4, help='weight for auxiliary loss')
 parser.add_argument('--drop_path_prob', type=float, default=0, help='drop path probability')
@@ -60,7 +60,7 @@ def main():
     logging.info('no gpu device available')
     sys.exit(1)
 
-  DenoiseDataSetPrepare(args.data_path, args.batch_size)   # make sure the denoise data is prepared
+  DenoiseDataSetPrepare(args.data, args.batch_size)   # make sure the denoise data is prepared
 
   np.random.seed(args.seed)
   torch.cuda.set_device(args.gpu)
@@ -121,9 +121,8 @@ def main():
     train_acc, train_obj = train(train_queue, model, criterion, optimizer)
     logging.info('train_acc %f', train_acc)
 
-    valid_acc_top1, valid_acc_top5, valid_obj = infer(valid_queue, model, criterion)
+    valid_acc_top1, valid_obj = infer(valid_queue, model, criterion)
     logging.info('valid_acc_top1 %f', valid_acc_top1)
-    logging.info('valid_acc_top5 %f', valid_acc_top5)
 
     is_best = False
     if valid_acc_top1 > best_acc_top1:
@@ -144,7 +143,9 @@ def train(train_queue, model, criterion, optimizer):
   top5 = utils.AvgrageMeter()
   model.train()
 
-  for step, (input, target) in enumerate(train_queue):
+  for step, item in enumerate(train_queue):
+    input = item['image']
+    target = item['label']
     target = target.cuda(async=True)
     input = input.cuda()
     input = Variable(input)
@@ -161,14 +162,13 @@ def train(train_queue, model, criterion, optimizer):
     nn.utils.clip_grad_norm(model.parameters(), args.grad_clip)
     optimizer.step()
 
-    prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+    psnr = utils.psnr(logits, target)
     n = input.size(0)
-    objs.update(loss.data[0], n)
-    top1.update(prec1.data[0], n)
-    top5.update(prec5.data[0], n)
+    objs.update(loss.data.item(), n)
+    top1.update(psnr.data.item(), n)
 
     if step % args.report_freq == 0:
-      logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+      logging.info('train %03d %e %f', step, objs.avg, top1.avg)
 
   return top1.avg, objs.avg
 
@@ -179,23 +179,24 @@ def infer(valid_queue, model, criterion):
   top5 = utils.AvgrageMeter()
   model.eval()
 
-  for step, (input, target) in enumerate(valid_queue):
+  for step, item in enumerate(valid_queue):
+    input = item['image']
+    target = item['label']
     input = Variable(input, volatile=True).cuda()
     target = Variable(target, volatile=True).cuda(async=True)
 
     logits, _ = model(input)
     loss = criterion(logits, target)
 
-    prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+    prec1 = utils.psnr(logits, target)
     n = input.size(0)
-    objs.update(loss.data[0], n)
-    top1.update(prec1.data[0], n)
-    top5.update(prec5.data[0], n)
+    objs.update(loss.data.item(), n)
+    top1.update(prec1.data.item(), n)
 
     if step % args.report_freq == 0:
-      logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+      logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
 
-  return top1.avg, top5.avg, objs.avg
+  return top1.avg, objs.avg
 
 
 if __name__ == '__main__':

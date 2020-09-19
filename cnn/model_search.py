@@ -184,7 +184,7 @@ class NetworkDenoise(nn.Module):
     for i in range(layers):
       if i in [layers//3, 2*layers//3]:
         C_curr *= 2
-        reduction = True
+        reduction = False  # original True 
       else:
         reduction = False
       cell = Cell(steps, multiplier, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
@@ -209,6 +209,19 @@ class NetworkDenoise(nn.Module):
         weights = F.softmax(self.alphas_normal, dim=-1)
       s0, s1 = s1, cell(s0, s1, weights)
     logits = s1
+    #  following is added to convert the img to tensor
+    in_C = logits.shape[1]
+    self.to_img = nn.Sequential(
+      nn.ReLU(inplace=True),
+      nn.Conv2d(in_C, in_C//2, 3, stride=1, padding=1, bias=False),
+      nn.BatchNorm2d(in_C//2),
+      nn.ReLU(inplace=True),
+      nn.Conv2d(in_C//2, 3, 3, stride=1, padding=1, bias=False),
+      nn.BatchNorm2d(3),
+    )
+    self.to_img.cuda()
+    logits = self.to_img(logits)
+    logits = input - logits
     return logits
 
   def _loss(self, input, target):

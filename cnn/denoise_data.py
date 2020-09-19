@@ -286,9 +286,9 @@ class BasicDataset(Dataset):
         self.data_dir = data_dir
         self.denoise_dir = denoise_dir
         self.label_dir = label_dir
-        if os.path.exists(self.data_dir + "img_noisy_pats.npy"):  # read train data from npy directly
-            self.data = np.load(self.data_dir + "img_noisy_pats.npy")
-            self.label = np.load(self.data_dir + "img_clean_pats.npy")
+        if os.path.exists(os.path.join(self.data_dir, "img_noisy_pats.npy")):  # read train data from npy directly
+            self.data = np.load(os.path.join(self.data_dir, "img_noisy_pats.npy"))
+            self.label = np.load(os.path.join(self.data_dir, "img_clean_pats.npy"))
 
             self.ids = [i for i in range(len(self.data))]
         else:
@@ -314,14 +314,14 @@ class BasicDataset(Dataset):
         return img_trans
 
     def __getitem__(self, i):
-        if os.path.exists(self.data_dir + "img_noisy_pats.npy"):  # read train data from npy directly
+        if os.path.exists(os.path.join(self.data_dir, "img_noisy_pats.npy")):  # read train data from npy directly
             idx = self.ids[i]
             img = self.data[idx]
             label = self.label[idx]
         else:
             idx = self.ids[i]
-            label_file = glob(self.label_dir + idx + '.*')
-            img_file = glob(self.denoise_dir + idx + '.*')
+            label_file = glob(self.label_dir + '/' + idx + '.*')
+            img_file = glob(self.denoise_dir + '/' + idx + '.*')
 
             assert len(label_file) == 1, \
                 "Either no label or multiple labels found for the ID {}: {}".format(idx, label_file)
@@ -336,9 +336,15 @@ class BasicDataset(Dataset):
             img = self.preprocess(img)
             label = self.preprocess(label)
 
+        img = torch.from_numpy(img).type(torch.FloatTensor)
+        label = torch.from_numpy(label).type(torch.FloatTensor)
+        img = img.permute(2,0,1)  # from to HWC to CHW in torch
+        label = label.permute(2,0,1)  # from to HWC to CHW in torch
+
         return {
-            'image': torch.from_numpy(img).type(torch.FloatTensor),
-            'label': torch.from_numpy(label).type(torch.FloatTensor)
+            'idx': idx,
+            'image': img,
+            'label': label
         }
 
 
