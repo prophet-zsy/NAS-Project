@@ -3,7 +3,7 @@ import os
 from info_str import _cur_ver_dir
 import numpy as np
 from enumerater import Enumerater
-from predict_op.label_encoding import decoder, encoder, getClassNum
+from use_priori.predict_op.label_encoding import decoder, encoder, getClassNum
 import tensorflow as tf
 import time
 

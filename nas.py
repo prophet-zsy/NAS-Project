@@ -461,7 +461,6 @@ def _init_ops(net_pool):
     import keras
     keras.backend.clear_session()
     from predictor import Predictor
-    
     pred = Predictor() if not MAIN_CONFIG["pred_mask"] else None
     _sample(net_pool, batch_num=MAIN_CONFIG['spl_network_round'], pred=pred)
     return net_pool
