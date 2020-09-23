@@ -5,6 +5,7 @@ import numpy as np
 from enumerater import Enumerater
 from use_priori.predict_op.label_encoding import decoder, encoder, getClassNum
 import tensorflow as tf
+from tensorflow.python.framework import graph_util
 import time
 
 
@@ -13,17 +14,20 @@ MAX_NETWORK_LENGTH = 71
 #net_data_path = './predict_op/data/net.npy'
 #label_data_path = './predict_op/data/label.npy'
 
-#net_data_path = os.path.join(_cur_ver_dir, 'predict_op/data', 'net.npy')
-#label_data_path = os.path.join(_cur_ver_dir, 'predict_op/data', 'label.npy')
+net_data_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op/data', 'net.npy')
+label_data_path = os.path.join(_cur_ver_dir, 'use_priori/predict_op/data', 'label.npy')
 #
 #model_json_path = os.path.join(_cur_ver_dir, 'predict_op', 'model.json')
 #model_weights_path = os.path.join(_cur_ver_dir, 'predict_op', 'model.json.h5')
 model_path = os.path.join(_cur_ver_dir,'use_priori/predict_op/','model.pb')
+ckpt_path = os.path.join(_cur_ver_dir,'use_priori/predict_op/','ckpt',)
+meta_path = os.path.join(ckpt_path, 'tfmodel.meta')
 
 # TODO Predictor.train -> Predictor.train_model (defined in interface.md)
 # TODO DO NOT overuse @staticmethod. It can be your private function in predictor.py.
 # TODO Wrtie Predictor.predict & Predictor.train_model discriptions.
 # TODO Let each functions be less than 30 line and 80 characters per line.
+
 
 class Feature:
     def __init__(self, graph):
@@ -262,9 +266,11 @@ class Predictor:
     （3）将提取的特征输入预测模型
     '''
     def __init__(self):
+        """
+
+        :rtype: object
+        """
         self.sess = tf.Session()
-        # saver = tf.train.import_meta_graph('./predict_op/ckpt/tfmodel-40000.meta')
-        # saver.restore(self.sess, tf.train.latest_checkpoint('./predict_op/ckpt'))
         with tf.gfile.FastGFile(model_path, 'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
@@ -395,9 +401,12 @@ class Predictor:
         label = np.load(label_data_path)
         return network_feature, label
 
-    # def _save_data(self, net, label):
-    #     np.save(net_data_path, net)
-    #     np.save(label_data_path, label)
+    def _to_categorical(self, labels, num_classes):
+        num_labels = len(labels)
+        labels_one_hot = np.zeros((num_labels,num_classes))
+        index_offset = np.arange(num_labels) * num_classes
+        labels_one_hot.flat[index_offset + labels] = 1
+        return labels_one_hot
 
     def _predict(self, inputs):
         # 根据输入特征预测操作
@@ -437,52 +446,95 @@ class Predictor:
         class_list = self._predict(inputs)
         self.save_out.extend(class_list[len(new_graph) - len(graph_full):len(new_graph)])
         ops = self._class_id_2_parameter(graphs_orders[-1],
-                                                    class_list[len(new_graph) - len(graph_full):len(new_graph)])
+            class_list[len(new_graph) - len(graph_full):len(new_graph)])
         return ops
 
-    def train_model(self, graph_full, cell_list):
+    def train_model(self, graph_group, cell_list_group):
         '''
         Retrain the predictor model with networks that
         get high accuracy on the validation set
         
-        :param graph_full: Network Topology set
-        :param cell_list: Cell list
+        :param graph_group: Network Topology set
+        :param cell_list_group: Cell list
         :returns: None.
         '''
-        #TODO retrain code
+        x_train = []
+        y_train = []
+        net, label = self._read_data(net_data_path, label_data_path)
+        for k in net:
+            x_train.append(k)
+        for k in label:
+            y_train.append(k)
+        graphs_mat, _ = self._trans(graph_group)
+        for graph in graphs_mat:
+            x = Feature(graph)._feature_nodes()
+            x = self._padding(x, MAX_NETWORK_LENGTH)
+            x_train.append(x)
+        x_train = np.array(x_train)
+        for cell in cell_list_group:
+            cell = self._my_param_style(cell)
+            y = encoder(cell)
+            y = self._to_categorical(y, getClassNum())
+            y = self._padding(y, MAX_NETWORK_LENGTH)
+            y_train.append(y)
+        y_train = np.array(y_train)
 
+        train_step = 10000
+        saver = tf.train.import_meta_graph(meta_path)
+        with tf.Session() as sess:
+            saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
+            graph = tf.get_default_graph()
+            input = graph.get_tensor_by_name('input_1:0')
+            input_y = graph.get_tensor_by_name("input_y_1:0")
+            train_op = graph.get_operation_by_name('RMSProp')
+            acc = graph.get_tensor_by_name("Mean:0")
+            for i in range(train_step):
+                sess.run(train_op, feed_dict={input: x_train, input_y: y_train})
+                if i % 100 == 0:
+                    print(sess.run(acc, feed_dict={input: x_train, input_y: y_train}))
+            saver.save(sess, save_path=ckpt_path+'tfmodel')
+        self._ckpt_to_pb(ckpt_path, model_path, 'output/GatherV2')
 
-
-
-
-
+    def _ckpt_to_pb(self, model_checkpoint_path, out_path, output_node_names):
+        saver = tf.train.import_meta_graph(model_checkpoint_path + ".meta", clear_devices=True)
+        graph = tf.get_default_graph()
+        input_graph_def = graph.as_graph_def()
+        with tf.Session() as sess:
+            saver.restore(sess, model_checkpoint_path)
+            output_graph_def = graph_util.convert_variables_to_constants(
+                sess=sess,
+                input_graph_def=input_graph_def,
+                output_node_names=output_node_names.split(",")
+            )
+            with tf.gfile.GFile(out_path, "wb") as f:
+                f.write(output_graph_def.SerializeToString())
 
 
 if __name__ == '__main__':
     # graph = [[[1], [2], [3], [4], [5], []]]
     # cell_list = [[('conv', 256, 3, 'relu'), ('conv', 192, 3, 'relu'), ('conv', 512, 1, 'relu'), ('pooling', 'max', 4)
     #                  , ('conv', 128, 1, 'relu'), ('conv', 512, 5, 'relu')]]
-    # pred = Predictor()
-    # Blocks = []
-    # pred.train_model([], [])
-
-    enu = Enumerater()
-    network_pool = enu.enumerate()
-    print(len(network_pool))
-    start = time.time()
-    i = 0
     pred = Predictor()
-    for ind in range(2, len(network_pool)):
-        gra = network_pool[ind].graph_part
+    Blocks = []
+    pred.train_model([], [])
 
-        #Blocks = [network_pool[ind - 2].graph_part, network_pool[ind - 1].graph_part]
-        Blocks = []
-        cell_list = pred.predictor(Blocks, gra)
-        if i%100 == 0:
-            print("iterator:", i)
-        i += 1
-        print(cell_list)
-    ans = np.array(pred.save_out)
-    np.save('tf_result.npy', ans)
-    end = time.time()
-    print(end-start)
+    # enu = Enumerater()
+    # network_pool = enu.enumerate()
+    # print(len(network_pool))
+    # start = time.time()
+    # i = 0
+    # pred = Predictor()
+    # for ind in range(2, len(network_pool)):
+    #     gra = network_pool[ind].graph_part
+    #
+    #     #Blocks = [network_pool[ind - 2].graph_part, network_pool[ind - 1].graph_part]
+    #     Blocks = []
+    #     cell_list = pred.predictor(Blocks, gra)
+    #     if i%100 == 0:
+    #         print("iterator:", i)
+    #     i += 1
+    #     print(cell_list)
+    # ans = np.array(pred.save_out)
+    # np.save('tf_result.npy', ans)
+    # end = time.time()
+    # print(end-start)
