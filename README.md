@@ -21,7 +21,7 @@
 	    <td>num_gpu</td>
 	    <td>可用gpu个数</td>
 	    <td>2</td>
-	    <td>根绝实际机器上的gpu个数来填写</td>
+	    <td>根据实际机器上的gpu个数来填写</td>
 	</tr>
 	<tr>
 	    <td>block_num</td>
