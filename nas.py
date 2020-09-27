@@ -416,8 +416,8 @@ def _filter_topo(net_pool, blk_id):
         NAS_LOG << ("nas_not_filter_topo", len(net_pool), MAIN_CONFIG["max_player_nums"])
         return net_pool
 
-    import keras
-    keras.backend.clear_session()
+    # import keras
+    # keras.backend.clear_session()
     from TopologyEval import TopologyEval
 
     pred_consistent_cnt = 0
@@ -458,8 +458,8 @@ def _filter_topo(net_pool, blk_id):
     return net_pool
 
 def _init_ops(net_pool):
-    import keras
-    keras.backend.clear_session()
+    # import keras
+    # keras.backend.clear_session()
     from predictor import Predictor
     pred = Predictor() if not MAIN_CONFIG["pred_mask"] else None
     _sample(net_pool, batch_num=MAIN_CONFIG['spl_network_round'], pred=pred)
