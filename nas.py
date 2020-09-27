@@ -421,8 +421,8 @@ def _filter_topo(net_pool, blk_id):
         NAS_LOG << ("nas_not_filter_topo", len(net_pool), MAIN_CONFIG["max_player_nums"])
         return net_pool
 
-    import keras
-    keras.backend.clear_session()
+    # import keras
+    # keras.backend.clear_session()
     from topology_eval import TopologyEval
 
     pred_consistent_cnt = 0
@@ -463,8 +463,8 @@ def _filter_topo(net_pool, blk_id):
     return net_pool
 
 def _init_ops(net_pool):
-    import keras
-    keras.backend.clear_session()
+    # import keras
+    # keras.backend.clear_session()
     from predictor import Predictor
     
     pred = Predictor() if not MAIN_CONFIG["pred_mask"] else None
@@ -561,26 +561,6 @@ def _search_blk(block_id, eva, ds, npool_tem):
     Stage_Info['blk_info'][block_id]['blk_cost'] = blk_end
     return network_item
 
-def _retrain(eva, ds):
-    time_cnt = TimeCnt()
-    start_time = time_cnt.start()
-    NAS_LOG << ('nas_retrain', start_time)
-    cur_epoch = _epoch_ctrl(eva, stage="retrain")
-    cur_data_size = ds.control(stage="retrain")
-    task_item = EvaScheduleItem(nn_id=-1, alig_id=-1, graph_template=[], item=None,\
-                pre_blk=Network.pre_block, ft_sign=True, bestNN=True, rd=0, nn_left=-1,\
-                spl_batch_num=-1, epoch=cur_epoch, data_size=cur_data_size)
-    task_list = [task_item]
-    TSche.load_tasks(task_list)
-    TSche.exec_task(_subproc_eva, eva)
-    result = TSche.get_result()
-    retrain_score = result[0].score
-    retrain_end = time_cnt.stop()
-    NAS_LOG << ('nas_retrain_end', retrain_end, retrain_score)
-    Stage_Info['retrain_start'] = start_time
-    Stage_Info['retrain_cost'] = retrain_end
-    Stage_Info['retrain_epoch'] = cur_epoch
-    Stage_Info['retrain_data_size'] = cur_data_size
 
 class Nas:
     def __init__(self):
@@ -607,8 +587,7 @@ class Nas:
         _dump_stage(Stage_Info)
         for block in Network.pre_block:
             NAS_LOG << ('nas_pre_block', str(block.graph), str(block.cell_list))
-        if MAIN_CONFIG['retrain_switch']:
-            _retrain(self.eva, self.ds)
+
         os.system("tar -zcvf nas_log.tar.gz nas_config.json memory")
         os.system("tar -zcvf model.tar.gz model")
         return Network.pre_block
