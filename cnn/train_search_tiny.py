@@ -21,13 +21,13 @@ from architect import Architect
 
 parser = argparse.ArgumentParser("tiny-imagenet")
 parser.add_argument('--data', type=str, default='../data/tiny-imagenet-200/', help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=16, help='batch size')
+parser.add_argument('--batch_size', type=int, default=8, help='batch size')  # 16
 parser.add_argument('--learning_rate', type=float, default=0.025, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=0.001, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
-parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
+parser.add_argument('--gpu', type=int, default=1, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
 parser.add_argument('--init_channels', type=int, default=16, help='num of init channels')
 parser.add_argument('--layers', type=int, default=8, help='total number of layers')

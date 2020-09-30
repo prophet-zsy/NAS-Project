@@ -23,14 +23,15 @@ class image_splitor:
         self.img_w = data.shape[2]
         for i in range(0, self.img_h-1, self.pieces_len):
             for j in range(0, self.img_w-1, self.pieces_len):
-                end_h = i+self.pieces_len if i+self.pieces_len <= self.img_h else self.img_h
-                end_w = j+self.pieces_len if j+self.pieces_len <= self.img_w else self.img_w
-                # print(data[:,i:end_h,j:end_w,:].shape)
-                data_for_append = np.pad(data[:,i:end_h,j:end_w,:],((0,0),(0,i+100-end_h),(0,j+100-end_w),(0,0)),'constant')
-                if i == 0 and j == 0:
-                    new_data = data_for_append
-                else:
-                    new_data = np.concatenate([new_data, data_for_append], axis=0)
+              print(i, j)
+              end_h = i+self.pieces_len if i+self.pieces_len <= self.img_h else self.img_h
+              end_w = j+self.pieces_len if j+self.pieces_len <= self.img_w else self.img_w
+              # print(data[:,i:end_h,j:end_w,:].shape)
+              data_for_append = np.pad(data[:,i:end_h,j:end_w,:],((0,0),(0,i+100-end_h),(0,j+100-end_w),(0,0)),'constant')
+              if i == 0 and j == 0:
+                  new_data = data_for_append
+              else:
+                  new_data = np.concatenate([new_data, data_for_append], axis=0)
         print("into {}".format(new_data.shape), flush=True)
         return new_data
 

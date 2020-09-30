@@ -32,7 +32,7 @@ parser.add_argument('--report_freq', type=float, default=50, help='report freque
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
 parser.add_argument('--init_channels', type=int, default=8, help='num of init channels')
-parser.add_argument('--layers', type=int, default=8, help='total number of layers')
+parser.add_argument('--layers', type=int, default=4, help='total number of layers')  # 8
 parser.add_argument('--model_path', type=str, default='saved_models', help='path to save the model')
 parser.add_argument('--cutout', action='store_true', default=False, help='use cutout')
 parser.add_argument('--cutout_length', type=int, default=16, help='cutout length')
@@ -105,10 +105,10 @@ def main():
   # test_dataset = BasicDataset(validdir, test_noisy_dir, test_clear_dir)
 
   train_queue = torch.utils.data.DataLoader(
-    train_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=4)
+    train_dataset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=0)
 
   valid_queue = torch.utils.data.DataLoader(
-    val_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=4)
+    val_dataset, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=0)
 
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.decay_period, gamma=args.gamma)
 

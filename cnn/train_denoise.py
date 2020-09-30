@@ -27,10 +27,10 @@ parser.add_argument('--learning_rate', type=float, default=0.1, help='init learn
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-5, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=100, help='report frequency')
-parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-parser.add_argument('--epochs', type=int, default=1, help='num of training epochs') # 250
-parser.add_argument('--init_channels', type=int, default=4, help='num of init channels') # 32
-parser.add_argument('--layers', type=int, default=2, help='total number of layers') # 7
+parser.add_argument('--gpu', type=int, default=1, help='gpu device id')
+parser.add_argument('--epochs', type=int, default=250, help='num of training epochs') # 250
+parser.add_argument('--init_channels', type=int, default=8, help='num of init channels') # 32
+parser.add_argument('--layers', type=int, default=4, help='total number of layers') # 7
 parser.add_argument('--auxiliary', action='store_true', default=False, help='use auxiliary tower')
 parser.add_argument('--auxiliary_weight', type=float, default=0.4, help='weight for auxiliary loss')
 parser.add_argument('--drop_path_prob', type=float, default=0, help='drop path probability')

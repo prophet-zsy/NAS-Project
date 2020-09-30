@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser("denoise")
 parser.add_argument('--data', type=str, default='../data/SIDD_Small_sRGB_Only/', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
-parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
+parser.add_argument('--gpu', type=int, default=1, help='gpu device id')
 parser.add_argument('--init_channels', type=int, default=4, help='num of init channels')
 parser.add_argument('--layers', type=int, default=2, help='total number of layers')
 parser.add_argument('--model_path', type=str, default='./eval-EXP-20200919-124157/model_best.pth.tar', help='path of pretrained model')
@@ -104,10 +104,12 @@ def infer(test_queue, model, criterion):
     mini_batch_size = 1
     res = []
     for i in range(0, input.shape[0], mini_batch_size):
+      print("ranging...", i)
       tem_input = input[i: i + mini_batch_size]
       tem_input = Variable(tem_input, volatile=True).cuda()
-
       logits, _ = model(tem_input)
+      # tem_input = tem_input.cpu()
+      # torch.cuda.empty_cache()
       res.append(logits)
     input = torch.cat(res, 0)
 
