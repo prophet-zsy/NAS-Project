@@ -1,6 +1,8 @@
 import time, random, os, sys, re, copy
 import numpy as np
 import traceback
+import torch
+torch.cuda.set_device(0)
 from base import Network, NetworkItem
 from utils import TaskScheduler, EvaScheduleItem, PredScheduleItem
 from utils import DataSize, _epoch_ctrl, NAS_LOG, Logger, TimeCnt
@@ -15,7 +17,8 @@ if task_name == "denoise":
 elif task_name == "SIDD":
     from evaluator_denoise_SIDD import Evaluator
 else:
-    from evaluator_classification import Evaluator
+    # from evaluator_classification import Evaluator
+    from evaluator_classification_torch import Evaluator
 
 MAIN_CONFIG = NAS_CONFIG['nas_main']
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -23,7 +26,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 TSche = TaskScheduler()
 
 
-def _subproc_eva(task_item, result_buffer, signal, eva):
+def _subproc_eva(task_item, result_buffer, signal, sinal_lock, eva):
     NAS_LOG = Logger()
     task_item.pid = os.getpid()
     time_cnt = TimeCnt()
@@ -50,8 +53,10 @@ def _subproc_eva(task_item, result_buffer, signal, eva):
     #  use in subprocess
     if result_buffer and signal:
         result_buffer.put(task_item)
+        sinal_lock.acquire()
         signal.set()
-        
+        sinal_lock.release()
+
     return task_item
 
 def _err_log(NAS_LOG, task_item, error):
@@ -186,7 +191,7 @@ def _eva_net(task_list, eva, async_exec=False):
     if MAIN_CONFIG['subp_eva_debug']:
         result = []
         for task_item in task_list:
-            task_item = _subproc_eva(task_item, None, None, eva)
+            task_item = _subproc_eva(task_item, None, None, None, eva)
             result.append(task_item)
     else:
         TSche.load_tasks(task_list)
@@ -286,7 +291,7 @@ def _confirm_train(eva, best_nn, best_index, ds):
     if MAIN_CONFIG['subp_eva_debug']:
         result = []
         for task_item in task_list:
-            task_item = _subproc_eva(task_item, None, None, eva)
+            task_item = _subproc_eva(task_item, None, None, None, eva)
             result.append(task_item)
     else:
         TSche.load_tasks(task_list)
@@ -465,7 +470,7 @@ def _init_ops(net_pool):
     _sample(net_pool, batch_num=MAIN_CONFIG['spl_network_round'], pred=pred)
     return net_pool
 
-def _subproc_use_priori(task_item, result_buffer, signal):
+def _subproc_use_priori(task_item, result_buffer, signal, sinal_lock):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(task_item.gpu_info)
     task_item.pid = os.getpid()
 
@@ -478,7 +483,9 @@ def _subproc_use_priori(task_item, result_buffer, signal):
     # use in subprocess
     if result_buffer and signal:
         result_buffer.put(task_item)
+        sinal_lock.acquire()
         signal.set()
+        sinal_lock.release()
 
     return task_item.net_pool
 
@@ -498,7 +505,7 @@ def _filter_topo_and_init_ops(net_pool, blk_id):
 
     task_item = PredScheduleItem(net_pool, blk_id)
     if MAIN_CONFIG['subp_pred_filter_debug']:
-        net_pool = _subproc_use_priori(task_item, None, None)
+        net_pool = _subproc_use_priori(task_item, None, None, None)
     else:
         TSche.load_tasks([task_item])
         TSche.exec_task(_subproc_use_priori)
@@ -565,9 +572,17 @@ def _retrain(eva, ds):
                 pre_blk=Network.pre_block, ft_sign=True, bestNN=True, rd=0, nn_left=-1,\
                 spl_batch_num=-1, epoch=cur_epoch, data_size=cur_data_size)
     task_list = [task_item]
-    TSche.load_tasks(task_list)
-    TSche.exec_task(_subproc_eva, eva)
-    result = TSche.get_result()
+
+    if MAIN_CONFIG['subp_eva_debug']:
+        result = []
+        for task_item in task_list:
+            task_item = _subproc_eva(task_item, None, None, None, eva)
+            result.append(task_item)
+    else:
+        TSche.load_tasks(task_list)
+        TSche.exec_task(_subproc_eva, eva)
+        result = TSche.get_result()
+
     retrain_score = result[0].score
     retrain_end = time_cnt.stop()
     NAS_LOG << ('nas_retrain_end', retrain_end, retrain_score)

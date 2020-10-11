@@ -639,7 +639,7 @@ class Evaluator:
 if __name__ == '__main__':
     INSTANT_PRINT = True
     DEBUG = False
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
     eval = Evaluator()
     cur_data_size = eval._set_data_size(-1)
     cur_epoch = eval._set_epoch(1000)
@@ -731,7 +731,7 @@ if __name__ == '__main__':
     # cell_list = [Cell('conv', 256, 1, 'relu'), Cell('sep_conv', 128, 3, 'relu'), Cell('sep_conv', 256, 3, 'leakyrelu'), Cell('conv', 256, 5, 'leakyrelu'), Cell('sep_conv', 192, 1, 'leakyrelu'), Cell('sep_conv', 128, 1, 'leakyrelu'), Cell('conv', 128, 1, 'relu'), Cell('conv', 192, 5, 'leakyrelu')]
     # network4 = NetworkItem(3, graph_full, cell_list, "")
 
-    # 0.95 cifar-10
+    # 0.95 cifar-10 ==> now with sep_conv it is 0.1
     # graph_full = [[1, 4, 5, 6, 8, 3, 7, 10], [2, 10], [3, 10], [10], [3, 10], [3, 10], [7, 10], [3, 10], [9, 3], [3, 10]]
     # cell_list = [Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 5, 'relu'), Cell('sep_conv', 32, 1, 'leakyrelu'), Cell('sep_conv', 16, 5, 'relu'), Cell('conv', 32, 1, 'leakyrelu'), Cell('conv', 32, 3, 'leakyrelu'), Cell('conv', 32, 5, 'relu6'), Cell('conv', 16, 3, 'relu6'), Cell('sep_conv', 32, 3, 'relu6'), Cell('conv', 32, 5, 'leakyrelu')]
     # network1 = NetworkItem(0, graph_full, cell_list, "")

@@ -2,10 +2,12 @@ import os, sys, queue, time, random, re, json, math, cv2
 import numpy as np
 import datetime, traceback, pickle
 import multiprocessing, copy, signal
+from multiprocessing import Semaphore
 from base import Network, NetworkItem, Cell
 from info_str import NAS_CONFIG, MF_TEMP
 
 # signal.signal(signal.SIGCHLD,signal.SIG_IGN)
+# mp = multiprocessing.get_context('spawn')
 
 
 def _dump_stage(stage_info):
@@ -149,6 +151,7 @@ class TaskScheduler:
         # for multiprocessing communication
         self.result_buffer = multiprocessing.Queue()
         self.signal = multiprocessing.Event()
+        self.signal_lock = Semaphore(1)
         
         # store all the running sub process object, and we will use it when make sure the subprocess return
         self.sub_process = {}
@@ -198,11 +201,12 @@ class TaskScheduler:
             task_item.gpu_info = gpu
             task_item.task_id = self.get_task_id()
             # exec task
-            subp = multiprocessing.Process(target=task_func, args=[task_item, self.result_buffer, self.signal, *args])
+            subp = multiprocessing.Process(target=task_func, args=[task_item, self.result_buffer, self.signal, self.signal_lock, *args])
             subp.start()
             # sign up the subpid
             self.sub_process[subp.pid] = subp
         self.signal.clear()
+        self.signal_lock.release()
 
     def load_part_result(self):
         """load one or more results if there are tasks completed
@@ -210,16 +214,17 @@ class TaskScheduler:
         # while self.all_alive():  # when all the subp is alive
         #     self.signal.wait(timeout=100)  # check the subp every 100s
         self.signal.wait()
+        self.signal_lock.acquire()
         # while not self.result_buffer.empty():  # empty() is unreliable!!!
         # while self.result_buffer.qsize() > 0:  # qsize() is unreliable!!!
         while True:
             try:
                 task_item = self.result_buffer.get(timeout=2)
-            except:
+            except Exception as e:
                 break
             self.result_list.append(task_item)
             self.gpu_list.put(task_item.gpu_info)  # return gpu
-            self.makesure_sub_return(task_item.pid)
+            # self.makesure_sub_return(task_item.pid)
 
     def exec_task(self, task_func, *args, **kwargs):
         """Sync: waiting for all the tasks completed before return
@@ -232,13 +237,16 @@ class TaskScheduler:
         result = self.result_list
         self.result_list = []
         return result
+        
 #  for test...
-def task_fun(task_item, result_buffer, signal, *args, **kwargs):
+def task_fun(task_item, result_buffer, signal, sinal_lock, *args, **kwargs):
     import tensorflow as tf
     print("computing gpu {} task {}".format(task_item.gpu_info, task_item.alig_id))
     time.sleep(random.randint(2,20))
     result_buffer.put(task_item)
+    sinal_lock.acquire()
     signal.set()
+    sinal_lock.release()
 
 class Logger(object):
     def __init__(self):
