@@ -22,7 +22,7 @@ parser.add_argument('--report_freq', type=float, default=50, help='report freque
 parser.add_argument('--gpu', type=int, default=1, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=1500, help='num of training epochs')
 parser.add_argument('--model_path', type=str, default='saved_models', help='path to save the model')
-parser.add_argument('--auxiliary', action='store_true', default=True, help='use auxiliary tower')
+parser.add_argument('--auxiliary', action='store_true', default=False, help='use auxiliary tower')
 parser.add_argument('--auxiliary_weight', type=float, default=0.4, help='weight for auxiliary loss')
 parser.add_argument('--cutout', action='store_true', default=True, help='use cutout')
 parser.add_argument('--cutout_length', type=int, default=16, help='cutout length')
@@ -298,17 +298,43 @@ class Network(nn.Module):
 
 def main():
     #  0.96 c10
-  blks = \
-  [
-  [[[1, 6, 9, 3], [2, 3, 4], [3, 4], [4, 10], [5], [10], [7], [8], [4], [5]], 
-  [('conv', 64, 1, 'relu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 64, 5, 'relu'), ('conv', 48, 1, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 32, 3, 'relu'), ('conv', 48, 5, 'relu'), ('conv', 64, 3, 'relu'), ('conv', 32, 5, 'relu'), ('conv', 48, 3, 'leakyrelu')]],
-  [[[1, 2, 3], [2, 6], [3, 4], [4, 7, 5], [5], [8], [4], [5]], 
-  [('conv', 128, 5, 'leakyrelu'), ('conv', 48, 5, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 128, 3, 'leakyrelu'), ('conv', 48, 3, 'relu'), ('conv', 48, 1, 'leakyrelu'), ('conv', 64, 1, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu')]],
-  [[[1, 6, 7, 2, 3], [2, 3, 4], [3, 4], [4, 5], [5], [9], [5], [8], [5]], 
-  [('conv', 64, 3, 'leakyrelu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 5, 'relu6'), ('conv', 64, 1, 'relu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 192, 1, 'relu'), ('conv', 192, 3, 'leakyrelu')]],
-  [[[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]], 
-  [('conv', 192, 1, 'relu'), ('conv', 128, 1, 'relu'), ('conv', 256, 5, 'relu6'), ('conv', 128, 5, 'relu6'), ('conv', 192, 3, 'leakyrelu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 192, 3, 'relu6')]],
-  ]
+#   blks = \
+#   [
+#   [[[1, 6, 9, 3], [2, 3, 4], [3, 4], [4, 10], [5], [10], [7], [8], [4], [5]], 
+#   [('conv', 64, 1, 'relu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 64, 5, 'relu'), ('conv', 48, 1, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 32, 3, 'relu'), ('conv', 48, 5, 'relu'), ('conv', 64, 3, 'relu'), ('conv', 32, 5, 'relu'), ('conv', 48, 3, 'leakyrelu')]],
+#   [[[1, 2, 3], [2, 6], [3, 4], [4, 7, 5], [5], [8], [4], [5]], 
+#   [('conv', 128, 5, 'leakyrelu'), ('conv', 48, 5, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 128, 3, 'leakyrelu'), ('conv', 48, 3, 'relu'), ('conv', 48, 1, 'leakyrelu'), ('conv', 64, 1, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu')]],
+#   [[[1, 6, 7, 2, 3], [2, 3, 4], [3, 4], [4, 5], [5], [9], [5], [8], [5]], 
+#   [('conv', 64, 3, 'leakyrelu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 5, 'relu6'), ('conv', 64, 1, 'relu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 192, 1, 'relu'), ('conv', 192, 3, 'leakyrelu')]],
+#   [[[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]], 
+#   [('conv', 192, 1, 'relu'), ('conv', 128, 1, 'relu'), ('conv', 256, 5, 'relu6'), ('conv', 128, 5, 'relu6'), ('conv', 192, 3, 'leakyrelu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 192, 3, 'relu6')]],
+#   ]
+# 0.96 c10 double channel
+#   blks = \
+#   [
+#   [[[1, 6, 9, 3], [2, 3, 4], [3, 4], [4, 10], [5], [10], [7], [8], [4], [5]], 
+#   [('conv', 128, 1, 'relu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 128, 5, 'relu'), ('conv', 96, 1, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 64, 3, 'relu'), ('conv', 96, 5, 'relu'), ('conv', 128, 3, 'relu'), ('conv', 64, 5, 'relu'), ('conv', 96, 3, 'leakyrelu')]],
+#   [[[1, 2, 3], [2, 6], [3, 4], [4, 7, 5], [5], [8], [4], [5]], 
+#   [('conv', 256, 5, 'leakyrelu'), ('conv', 96, 5, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 256, 3, 'leakyrelu'), ('conv', 96, 3, 'relu'), ('conv', 96, 1, 'leakyrelu'), ('conv', 128, 1, 'leakyrelu'), ('conv', 256, 5, 'leakyrelu')]],
+#   [[[1, 6, 7, 2, 3], [2, 3, 4], [3, 4], [4, 5], [5], [9], [5], [8], [5]], 
+#   [('conv', 128, 3, 'leakyrelu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 256, 5, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 384, 5, 'relu6'), ('conv', 128, 1, 'relu'), ('conv', 384, 1, 'leakyrelu'), ('conv', 384, 1, 'relu'), ('conv', 384, 3, 'leakyrelu')]],
+#   [[[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]], 
+#   [('conv', 384, 1, 'relu'), ('conv', 256, 1, 'relu'), ('conv', 512, 5, 'relu6'), ('conv', 256, 5, 'relu6'), ('conv', 384, 3, 'leakyrelu'), ('conv', 256, 3, 'leakyrelu'), ('conv', 256, 3, 'relu6'), ('conv', 256, 1, 'leakyrelu'), ('conv', 384, 1, 'leakyrelu'), ('conv', 512, 1, 'leakyrelu'), ('conv', 384, 3, 'relu6')]],
+#   ]
+#  0.96 c10  repeat the last blk
+#   blks = \
+#   [
+#   [[[1, 6, 9, 3], [2, 3, 4], [3, 4], [4, 10], [5], [10], [7], [8], [4], [5]], 
+#   [('conv', 64, 1, 'relu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 64, 5, 'relu'), ('conv', 48, 1, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 32, 3, 'relu'), ('conv', 48, 5, 'relu'), ('conv', 64, 3, 'relu'), ('conv', 32, 5, 'relu'), ('conv', 48, 3, 'leakyrelu')]],
+#   [[[1, 2, 3], [2, 6], [3, 4], [4, 7, 5], [5], [8], [4], [5]], 
+#   [('conv', 128, 5, 'leakyrelu'), ('conv', 48, 5, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 128, 3, 'leakyrelu'), ('conv', 48, 3, 'relu'), ('conv', 48, 1, 'leakyrelu'), ('conv', 64, 1, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu')]],
+#   [[[1, 6, 7, 2, 3], [2, 3, 4], [3, 4], [4, 5], [5], [9], [5], [8], [5]], 
+#   [('conv', 64, 3, 'leakyrelu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 5, 'relu6'), ('conv', 64, 1, 'relu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 192, 1, 'relu'), ('conv', 192, 3, 'leakyrelu')]],
+#   [[[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]], 
+#   [('conv', 192, 1, 'relu'), ('conv', 128, 1, 'relu'), ('conv', 256, 5, 'relu6'), ('conv', 128, 5, 'relu6'), ('conv', 192, 3, 'leakyrelu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 192, 3, 'relu6')]],
+#   [[[1, 6, 2, 3], [2, 8, 3, 4], [3, 5], [4, 5], [5], [11], [7], [5], [9], [10], [5]], 
+#   [('conv', 192, 1, 'relu'), ('conv', 128, 1, 'relu'), ('conv', 256, 5, 'relu6'), ('conv', 128, 5, 'relu6'), ('conv', 192, 3, 'leakyrelu'), ('conv', 128, 3, 'leakyrelu'), ('conv', 128, 3, 'relu6'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 1, 'leakyrelu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 192, 3, 'relu6')]],
+#   ]
 #    vgg encode
 #   blks = \
 #   [
@@ -345,7 +371,7 @@ def main():
 #         [('sep_conv', 128, 3, 'relu6'), ('sep_conv', 256, 1, 'relu6'), ('conv', 256, 3, 'leakyrelu'), ('sep_conv', 192, 1, 'relu'), ('conv', 192, 1, 'relu6'), ('conv', 256, 3, 'leakyrelu'), ('conv', 192, 1, 'leakyrelu'), ('sep_conv', 128, 3, 'relu'), ('conv', 128, 5, 'relu6')]
 #       ]
 #   ]
-#   0.954  ==>  0.9656, try it in torch
+#   0.954  ==>  0.9656, try it in torch , before double channel 0.9632
 #   blks = \
 #   [
 #       [
@@ -369,6 +395,42 @@ def main():
 #         ('conv', 192, 3, 'leakyrelu'), ('conv', 256, 3, 'relu')]
 #       ]
 #   ]
+#   0.954  ==>  0.9656, try it in torch , after double channel
+#   blks = \
+#   [
+#       [
+#         [[1, 4, 5, 2, 3, 6], [2, 3], [3], [7], [3], [6, 3], [3]],
+#         [('conv', 128, 3, 'relu'), ('conv', 96, 3, 'relu'), ('conv', 96, 3, 'relu'), ('conv', 128, 3, 'leakyrelu'),
+#         ('conv', 64, 3, 'relu'), ('conv', 64, 1, 'relu'), ('conv', 128, 3, 'relu')]
+#       ],
+#       [
+#         [[1, 4, 5, 2, 6, 3], [2, 3], [3], [7], [2, 3], [6, 3], [3]],
+#         [('conv', 256, 3, 'relu'), ('conv', 256, 3, 'relu'), ('conv', 384, 3, 'relu'), ('conv', 256, 3, 'leakyrelu'),
+#         ('conv', 384, 3, 'relu'), ('conv', 256, 3, 'relu'), ('conv', 384, 3, 'relu')]
+#       ],
+#       [
+#         [[1, 4, 3], [2], [3], [5], [3]],
+#         [('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'), ('conv', 384, 3, 'relu'),
+#         ('conv', 384, 3, 'leakyrelu'), ('conv', 512, 3, 'relu')]
+#       ],
+#       [
+#         [[1, 4, 3], [2], [3], [5], [3]],
+#         [('conv', 512, 3, 'relu'), ('conv', 512, 3, 'relu'), ('conv', 384, 3, 'relu'),
+#         ('conv', 384, 3, 'leakyrelu'), ('conv', 512, 3, 'relu')]
+#       ]
+#   ]
+#  0.9548, c10
+  blks =\
+    [
+    [[[1, 6, 7, 2, 3], [2, 4], [3, 4, 5], [4, 5, 10], [5, 10], [10], [4], [8], [9], [5]], 
+    [('conv', 64, 1, 'relu'), ('conv', 48, 1, 'relu'), ('conv', 32, 5, 'relu'), ('conv', 64, 1, 'leakyrelu'), ('conv', 32, 5, 'leakyrelu'), ('conv', 32, 3, 'relu'), ('conv', 64, 5, 'relu'), ('conv', 32, 1, 'leakyrelu'), ('conv', 32, 1, 'leakyrelu'), ('conv', 32, 5, 'relu')]],
+    [[[1, 6, 9, 3], [2, 3, 4], [3, 13, 4, 5], [4], [5], [14], [7], [8], [4], [10], [11], [12], [5], [5]], 
+    [('conv', 48, 3, 'relu'), ('conv', 64, 3, 'leakyrelu'), ('conv', 64, 5, 'relu6'), ('conv', 48, 5, 'relu'), ('conv', 48, 1, 'relu'), ('conv', 48, 5, 'leakyrelu'), ('conv', 128, 5, 'relu6'), ('conv', 64, 3, 'relu6'), ('conv', 48, 1, 'relu6'), ('conv', 128, 1, 'relu'), ('conv', 64, 1, 'relu'), ('conv', 48, 1, 'relu'), ('conv', 48, 3, 'relu'), ('conv', 48, 3, 'leakyrelu')]],
+    [[[1, 3], [2, 6, 9, 4], [3, 12, 4, 5], [4, 5], [5, 13], [13], [7], [8], [5], [10], [11], [5], [4]], 
+    [('conv', 128, 1, 'relu6'), ('conv', 192, 1, 'relu6'), ('conv', 64, 1, 'relu6'), ('conv', 192, 3, 'leakyrelu'), ('conv', 64, 3, 'relu6'), ('conv', 64, 5, 'relu6'), ('conv', 128, 5, 'relu6'), ('conv', 128, 3, 'relu6'), ('conv', 64, 5, 'leakyrelu'), ('conv', 128, 5, 'leakyrelu'), ('conv', 64, 5, 'relu6'), ('conv', 128, 1, 'leakyrelu'), ('conv', 192, 3, 'leakyrelu')]],
+    [[[1, 6, 3], [2, 10, 12, 3, 4], [3, 4, 5], [4, 5, 15], [5], [15], [7], [8], [9], [5], [11], [4], [13], [14], [5]], 
+    [('conv', 256, 1, 'relu'), ('conv', 256, 1, 'leakyrelu'), ('conv', 128, 1, 'relu'), ('conv', 128, 5, 'relu'), ('conv', 256, 3, 'relu'), ('conv', 128, 5, 'leakyrelu'), ('conv', 192, 5, 'relu'), ('conv', 256, 3, 'leakyrelu'), ('conv', 256, 3, 'relu6'), ('conv', 256, 5, 'relu'), ('conv', 256, 1, 'relu'), ('conv', 192, 5, 'relu6'), ('conv', 128, 5, 'relu'), ('conv', 192, 5, 'relu6'), ('conv', 256, 1, 'relu')]],
+    ]
 
 
   if not torch.cuda.is_available():
