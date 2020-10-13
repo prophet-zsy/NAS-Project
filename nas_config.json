@@ -13,6 +13,7 @@
     "init_data_size": 100,
     "data_increase_scale": 1.5,
     "add_data_for_confirm_train": 100,
+    "add_data_for_retrain": 100,
     "repeat_num": 1,
     "subp_eva_debug": 0,
     "subp_pred_filter_debug": 0,
