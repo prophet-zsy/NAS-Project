@@ -74,7 +74,7 @@ class Sampler:
         Optimization of sampling space based on Evaluation and optimization method.
         Args:
             1. table (1d int list, depending on dimension)
-            2. score（float, 0 ~ 1.0)
+            2. score (float, 0 ~ 1.0)
         No returns.
         """
         self.opt.update_model(table, score)  # here "-" represent that we minimize the loss

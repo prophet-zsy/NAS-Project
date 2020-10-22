@@ -2,7 +2,7 @@ import time, random, os, sys, re, copy
 import numpy as np
 import traceback
 import torch
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 from base import Network, NetworkItem
 from utils import TaskScheduler, EvaScheduleItem, PredScheduleItem
 from utils import DataSize, _epoch_ctrl, NAS_LOG, Logger, TimeCnt
@@ -86,7 +86,6 @@ def _save_net_info(net_rm, round, net_left):
             task_info.cost_time, task_info.gpu_info, task_info.round, task_info.nn_left, \
                 task_info.spl_batch_num, str(scheme.graph), str(scheme.cell_list), \
                     str(scheme.code), scheme.score)
-
 
 def _pred_ops(nn, pred, graph, table):
     pre_block = [elem.graph.copy() for elem in Network.pre_block]

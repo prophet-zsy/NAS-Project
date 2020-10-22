@@ -218,7 +218,12 @@ class Network(nn.Module):
             x = inputs[topo_order[-1]]
             x = torch.cat(x, 1)  # note : it is NCHW
 
-            x = self.reduce_pool(x)
+            # add pool in the end of the block at 1/3 and 2/3 position
+            # reduce_layer = [len(blks)//3, 2*len(blks)//3]
+            # add pool in the end of every block
+            reduce_layer = [i for i in range(len(blks))]
+            if blk_id in reduce_layer:
+                x = self.reduce_pool(x)
 
         x = self.global_pooling(x)
         x = self.classifier(x.view(x.size(0),-1))
@@ -330,6 +335,13 @@ class Evaluator:
             blks.append([blk.graph, [tuple(i) for i in blk.cell_list]])
         if task_item.network_item:
             blks.append([task_item.network_item.graph, [tuple(i) for i in task_item.network_item.cell_list]])
+        # repeat it 
+        new_blks = []
+        repeat_num = NAS_CONFIG["nas_main"]["repeat_num"]
+        for blk in blks:
+            for i in range(repeat_num):
+                new_blks.append(blk)
+        blks = new_blks
 
         if not torch.cuda.is_available():
             # logging.info('no gpu device available')
